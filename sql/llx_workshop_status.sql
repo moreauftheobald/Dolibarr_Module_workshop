@@ -1,0 +1,21 @@
+CREATE TABLE llx_workshop_status (
+  rowid integer AUTO_INCREMENT PRIMARY KEY,
+  date_creation datetime DEFAULT NULL,
+  tms timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  code varchar(255) DEFAULT NULL,
+  label varchar(255) DEFAULT NULL,
+  color varchar(255) DEFAULT NULL,
+  import_key varchar(255) DEFAULT NULL,
+  status varchar(255) DEFAULT NULL,
+  entity integer NOT NULL DEFAULT 0,
+  planable varchar(255) DEFAULT NULL,
+  clean_event varchar(255) DEFAULT NULL,
+  display_on_planning varchar(255) DEFAULT NULL,
+  rang integer DEFAULT 0,
+  check_virtual_stock varchar(255) DEFAULT NULL,
+  or_pointable varchar(255) DEFAULT NULL,
+  save_date_cloture varchar(255) DEFAULT NULL,
+  require_planned_date varchar(255) DEFAULT NULL,
+  update_vehicule_info varchar(255) DEFAULT NULL,
+  require_conf varchar(255) DEFAULT '1'
+) ENGINE=innodb;

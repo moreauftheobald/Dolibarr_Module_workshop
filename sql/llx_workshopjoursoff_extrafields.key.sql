@@ -1,0 +1,1 @@
+ALTER TABLE llx_workshopjoursoff_extrafields ADD UNIQUE INDEX uk_workshopjoursoff_extrafields_fk_object (fk_object);

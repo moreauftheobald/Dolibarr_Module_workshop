@@ -1,0 +1,22 @@
+CREATE TABLE llx_workshop_vehicule (
+  rowid integer AUTO_INCREMENT PRIMARY KEY,
+  date_creation datetime DEFAULT NULL,
+  tms timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  vin varchar(50) DEFAULT NULL,
+  entity integer NOT NULL DEFAULT 0,
+  status integer NOT NULL DEFAULT 0,
+  fk_vehicule_type varchar(255) DEFAULT NULL,
+  fk_vehicule_mark varchar(255) DEFAULT NULL,
+  modele varchar(255) DEFAULT NULL,
+  immatriculation varchar(255) DEFAULT NULL,
+  date_immat datetime DEFAULT NULL,
+  fk_soc integer DEFAULT 0,
+  km double DEFAULT 0,
+  km_date datetime DEFAULT NULL,
+  fk_contract_type varchar(255) DEFAULT NULL,
+  date_end_contract datetime DEFAULT NULL,
+  carrosserie longtext DEFAULT NULL,
+  dim_pneu varchar(255) DEFAULT NULL,
+  nb_pneu integer DEFAULT 0,
+  import_key varchar(255) DEFAULT NULL
+)ENGINE=innodb;

@@ -1,0 +1,1 @@
+ALTER TABLE llx_workshop_vehicule_c_vehicule_activity_type ADD UNIQUE INDEX uk_workshop_vehicule_c_vehicule_activity_type_code (code, entity);

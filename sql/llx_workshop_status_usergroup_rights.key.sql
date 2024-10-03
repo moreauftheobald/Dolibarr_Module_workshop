@@ -1,0 +1,7 @@
+ALTER TABLE llx_workshop_status_usergroup_rights ADD UNIQUE INDEX uk_or_status_usergroup_rights_status_code_ug(fk_workshopstatus, code, fk_usergroup);
+
+ALTER TABLE llx_workshop_status_usergroup_rights ADD INDEX idx_workshop_status_usergroup_rights_odst (fk_workshopstatus);
+ALTER TABLE llx_workshop_status_usergroup_rights ADD INDEX idx_workshop_status_usergroup_rights_ug (fk_usergroup);
+
+ALTER TABLE llx_workshop_status_usergroup_rights ADD CONSTRAINT fk_workshop_status_usergroup_rights_odst FOREIGN KEY (fk_workshopstatus) REFERENCES llx_workshop_status (rowid);
+ALTER TABLE llx_workshop_status_usergroup_rights ADD CONSTRAINT fk_workshop_status_usergroup_rights_ug FOREIGN KEY (fk_usergroup) REFERENCES llx_usergroup (rowid);

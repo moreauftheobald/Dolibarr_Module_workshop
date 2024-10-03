@@ -1,0 +1,1 @@
+ALTER TABLE llx_workshop_vehicule_c_vehicule_dimpneu ADD UNIQUE INDEX uk_workshop_vehicule_c_vehicule_dimpneu_code (code, entity);
