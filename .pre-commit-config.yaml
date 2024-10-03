@@ -71,7 +71,7 @@ repos:
       - id: duplicate-lang-lines
         stages: [manual]
         name: Find duplicate language lines
-        files: (?x)^(langs/en_US/.*\.lang)
+        files: (?x)^(langs/fr_FR/.*\.lang)
         language: script
         entry: ../../dev/tools/fixduplicatelanglines.sh
         pass_filenames: false
@@ -79,7 +79,7 @@ repos:
       - id: duplicate-lang-keys
         stages: [manual]
         name: Find duplicate language keys
-        files: (?x)^(langs/en_US/.*\.lang)
+        files: (?x)^(langs/fr_FR/.*\.lang)
         language: script
         entry: ../../dev/tools/fixduplicatelangkey.sh
         pass_filenames: false
