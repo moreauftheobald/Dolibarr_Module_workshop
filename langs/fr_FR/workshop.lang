@@ -1,4 +1,4 @@
-# Copyright (C) 2024 SuperAdmin <test@test.com>
+# Copyright (C) 2024 SuperAdmin 
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -11,17 +11,35 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+# along with this program.  If not, see .
 
 #
 # Generic
 #
 
 # Module label 'ModuleWorkshopName'
-ModuleWorkshopName = Workshop
+ModuleWorkshopName = Atelier
 # Module description 'ModuleWorkshopDesc'
 ModuleWorkshopDesc = Gestion atelier
+operationorders=Ordres de réparation
+#vehicules=Véhicules
 
+#
+# Rights
+#
+#Ordres de reparation
+Readoperationorders=Lire les ordres de réparation
+Createoperationorders=Créer des ordres de réparation
+Deleteoperationorders=Supprimer les ordres de réparation
+ReadWorkshopPlanning=Lire le Planning Atelier
+WriteWorkshopPlanning=Modifier le Planning Atelier
+ReadWorkshopMecanicsPlanning=Lire le Planning de pointage
+WriteWorkshopMecanicsPlanning=Modifier le planning de pointage
+# Vehicules
+Readvehicules=Lire les véhicules
+Readvehiculesext=Permission de lecture Avancée
+Writetevehicules=Créer les véhicules
+Deletevehicules=Supprimer les véhicules
 
 
 #
@@ -55,3 +73,13 @@ MyPageName = My page name
 #
 MyWidget = My widget
 MyWidgetDescription = My widget description
+
+#
+# Menu Items
+#
+ModuleWorkshopVehicules=Véhicules
+OperationOrders=Ordres de réparations
+NewOperationOrders=Nouvel Ordre de réparation
+Workshop=Atelier
+WorkshopPlanning=Planning Atelier
+MecanicsPlanning=Planning Pointages

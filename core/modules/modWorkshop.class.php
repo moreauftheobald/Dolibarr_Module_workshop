@@ -289,24 +289,66 @@ class modWorkshop extends DolibarrModules
 		$r = 0;
 		// Add here entries to declare new permissions
 		/* BEGIN MODULEBUILDER PERMISSIONS */
-		/*
+		
 		$o = 1;
-		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + 1); // Permission id (must not be already used)
-		$this->rights[$r][1] = 'Read objects of Workshop'; // Permission label
-		$this->rights[$r][4] = 'myobject';
+		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
+		$this->rights[$r][1] = 'Readoperationorders'; // Permission label
+		$this->rights[$r][4] = 'operationorders';
 		$this->rights[$r][5] = 'read'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'read'))
 		$r++;
-		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + 2); // Permission id (must not be already used)
-		$this->rights[$r][1] = 'Create/Update objects of Workshop'; // Permission label
-		$this->rights[$r][4] = 'myobject';
+		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
+		$this->rights[$r][1] = 'Createoperationorders'; // Permission label
+		$this->rights[$r][4] = 'operationorders';
 		$this->rights[$r][5] = 'write'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'write'))
 		$r++;
-		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + 3); // Permission id (must not be already used)
-		$this->rights[$r][1] = 'Delete objects of Workshop'; // Permission label
-		$this->rights[$r][4] = 'myobject';
+		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
+		$this->rights[$r][1] = 'Deleteoperationorders'; // Permission label
+		$this->rights[$r][4] = 'operationorders';
 		$this->rights[$r][5] = 'delete'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'delete'))
 		$r++;
-		*/
+		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
+		$this->rights[$r][1] = 'ReadWorkshopPlanning'; // Permission label
+		$this->rights[$r][4] = 'workshopplanning';
+		$this->rights[$r][5] = 'read'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'delete'))
+		$r++;
+		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
+		$this->rights[$r][1] = 'WriteWorkshopPlanning'; // Permission label
+		$this->rights[$r][4] = 'workshopplanning';
+		$this->rights[$r][5] = 'write'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'delete'))
+		$r++;
+		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
+		$this->rights[$r][1] = 'ReadWorkshopMecanicsPlanning'; // Permission label
+		$this->rights[$r][4] = 'workshopmecanicsplanning';
+		$this->rights[$r][5] = 'read'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'delete'))
+		$r++;
+		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
+		$this->rights[$r][1] = 'WriteWorkshopMecanicsPlanning'; // Permission label
+		$this->rights[$r][4] = 'workshopmecanicsplanning';
+		$this->rights[$r][5] = 'write'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'delete'))
+		$r++;
+		
+		$o=2;
+		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
+		$this->rights[$r][1] = 'Readvehicules'; // Permission label
+		$this->rights[$r][4] = 'vehicules';
+		$this->rights[$r][5] = 'read'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'read'))
+		$r++;
+	    $this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
+		$this->rights[$r][1] = 'Readvehiculesext'; // Permission label
+		$this->rights[$r][4] = 'vehicules';
+		$this->rights[$r][5] = 'readext'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'read'))
+		$r++;
+		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
+		$this->rights[$r][1] = 'Writetevehicules'; // Permission label
+		$this->rights[$r][4] = 'vehicules';
+		$this->rights[$r][5] = 'write'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'write'))
+		$r++;
+		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
+		$this->rights[$r][1] = 'Deletevehicules'; // Permission label
+		$this->rights[$r][4] = 'vehicules';
+		$this->rights[$r][5] = 'delete'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'delete'))
+		$r++;
+		
 		/* END MODULEBUILDER PERMISSIONS */
 
 
@@ -330,27 +372,113 @@ class modWorkshop extends DolibarrModules
 			'target'=>'',
 			'user'=>2, // 0=Menu for internal users, 1=external users, 2=both
 		);
+		
+
+		$this->menu[$r++] = array(
+			'fk_menu'=>'', // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
+			'type'=>'top', // This is a Top menu entry
+			'titre'=>'ModuleWorkshopVehicules',
+			'prefix' => img_picto('', 'fa-truck', 'class="pictofixedwidth valignmiddle"'),
+			'mainmenu'=>'vehicules',
+			'leftmenu'=>'',
+			'url'=>'/workshop/vehiculesindex.php',
+			'langs'=>'workshop@workshop', // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
+			'position'=>1000 + $r,
+			'enabled'=>'isModEnabled("workshop")', // Define condition to show or hide menu entry. Use 'isModEnabled("workshop")' if entry must be visible if module is enabled.
+			'perms'=>'1', // Use 'perms'=>'$user->hasRight("workshop", "myobject", "read")' if you want your menu with a permission rules
+			'target'=>'',
+			'user'=>2, // 0=Menu for internal users, 1=external users, 2=both
+		);
 		/* END MODULEBUILDER TOPMENU */
 
 		/* BEGIN MODULEBUILDER LEFTMENU MYOBJECT */
-		/*
+		
 		$this->menu[$r++]=array(
 			'fk_menu'=>'fk_mainmenu=workshop',      // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
 			'type'=>'left',                          // This is a Left menu entry
-			'titre'=>'MyObject',
-			'prefix' => img_picto('', $this->picto, 'class="pictofixedwidth valignmiddle paddingright"'),
+			'titre'=>'NewOperationOrders',
+			'prefix' => img_picto('', 'fa-plus', 'class="pictofixedwidth valignmiddle paddingright"'),
 			'mainmenu'=>'workshop',
-			'leftmenu'=>'myobject',
-			'url'=>'/workshop/workshopindex.php',
+			'leftmenu'=>'newoperationorders',
+			'url'=>'/workshop/or.php?action=create',
 			'langs'=>'workshop@workshop',	        // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
 			'position'=>1000+$r,
 			'enabled'=>'isModEnabled("workshop")', // Define condition to show or hide menu entry. Use 'isModEnabled("workshop")' if entry must be visible if module is enabled.
-			'perms'=>'$user->hasRight("workshop", "myobject", "read")',
+			'perms'=>'$user->hasRight("workshop", "operationorders", "write")',
 			'target'=>'',
 			'user'=>2,				                // 0=Menu for internal users, 1=external users, 2=both
-			'object'=>'MyObject'
+			'object'=>'OperationOrder'
 		);
+		
 		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=workshop',      // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
+			'type'=>'left',                          // This is a Left menu entry
+			'titre'=>'OperationOrders',
+			'prefix' => img_picto('', 'fa-file-invoice', 'class="pictofixedwidth valignmiddle paddingright"'),
+			'mainmenu'=>'workshop',
+			'leftmenu'=>'operationorders',
+			'url'=>'/workshop/or_list.php',
+			'langs'=>'workshop@workshop',	        // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop")', // Define condition to show or hide menu entry. Use 'isModEnabled("workshop")' if entry must be visible if module is enabled.
+			'perms'=>'$user->hasRight("workshop", "operationorders", "read")',
+			'target'=>'',
+			'user'=>2,				                // 0=Menu for internal users, 1=external users, 2=both
+			'object'=>'OperationOrder'
+		);
+		
+		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=workshop',      // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
+			'type'=>'left',                          // This is a Left menu entry
+			'titre'=>'Workshop',
+			'prefix' => img_picto('', 'fa-warehouse', 'class="pictofixedwidth valignmiddle paddingright"'),
+			'mainmenu'=>'workshop',
+			'leftmenu'=>'workshop_workshop',
+			'url'=>'/workshop/workshop.php',
+			'langs'=>'workshop@workshop',	        // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop")', // Define condition to show or hide menu entry. Use 'isModEnabled("workshop")' if entry must be visible if module is enabled.
+			'perms'=>1,
+			'target'=>'',
+			'user'=>2,				                // 0=Menu for internal users, 1=external users, 2=both
+			'object'=>'OperationOrder'
+		);
+		
+		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=workshop,fk_leftmenu=workshop_workshop',      // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
+			'type'=>'left',                          // This is a Left menu entry
+			'titre'=>'WorkshopPlanning',
+			'prefix' => img_picto('', 'fa-calendar-alt', 'class="pictofixedwidth valignmiddle paddingright"'),
+			'mainmenu'=>'workshop',
+			'leftmenu'=>'workshop_planning',
+			'url'=>'/workshop/workshop_planning.php',
+			'langs'=>'workshop@workshop',	        // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop")', // Define condition to show or hide menu entry. Use 'isModEnabled("workshop")' if entry must be visible if module is enabled.
+			'perms'=>'$user->hasRight("workshop", "workshopplanning", "read")',
+			'target'=>'',
+			'user'=>2,				                // 0=Menu for internal users, 1=external users, 2=both
+			'object'=>'OperationOrder'
+		);
+		
+		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=workshop,fk_leftmenu=workshop_workshop',      // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
+			'type'=>'left',                          // This is a Left menu entry
+			'titre'=>'MecanicsPlanning',
+			'prefix' => img_picto('', 'fa-ruler-horizontal', 'class="pictofixedwidth valignmiddle paddingright"'),
+			'mainmenu'=>'workshop',
+			'leftmenu'=>'workshop_mecanicsplanning',
+			'url'=>'/workshop/workshop_mecanics_planning.php',
+			'langs'=>'workshop@workshop',	        // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop")', // Define condition to show or hide menu entry. Use 'isModEnabled("workshop")' if entry must be visible if module is enabled.
+			'perms'=>'$user->hasRight("workshop", "workshopmecanicsplanning", "read")',
+			'target'=>'',
+			'user'=>2,				                // 0=Menu for internal users, 1=external users, 2=both
+			'object'=>'OperationOrder'
+		);
+		
+		/*$this->menu[$r++]=array(
 			'fk_menu'=>'fk_mainmenu=workshop,fk_leftmenu=myobject',	    // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
 			'type'=>'left',			                // This is a Left menu entry
 			'titre'=>'New_MyObject',
