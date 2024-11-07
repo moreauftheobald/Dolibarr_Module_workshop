@@ -45,16 +45,12 @@ Deletevehicules=Supprimer les véhicules
 #
 # Admin page
 #
-WorkshopSetup = Paramétrage Workshop
+WorkshopSetup = Paramétrage Atelier
 Settings = Paramétrage
-WorkshopSetupPage = PAge de Paramétrage de Workshop
+WorkshopSetupPage = Page de Paramétrage du module atelier
 NewSection=New section
-WORKSHOP_MYPARAM1 = My param 1
-WORKSHOP_MYPARAM1Tooltip = My param 1 tooltip
-WORKSHOP_MYPARAM2=My param 2
-WORKSHOP_MYPARAM2Tooltip=My param 2 tooltip
-
-
+WORKSHOP_USE_OR=Utiliser les Ordres de réparation
+WORKSHOP_USE_ORTooltip=Définis si les ordres de réparations sont utilisés, si non, ce sont les bon de commandes qui ferons foi.
 #
 # About page
 #

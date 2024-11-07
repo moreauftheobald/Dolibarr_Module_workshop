@@ -100,7 +100,10 @@ if (!$user->admin) {
 // Enter here all parameters in your setup page
 
 // Setup conf for selection of an URL
-$item = $formSetup->newItem('WORKSHOP_MYPARAM1');
+
+$formSetup->newItem('WORKSHOP_USE_OR')->setAsYesNo();
+
+/*$item = $formSetup->newItem('WORKSHOP_MYPARAM1');
 $item->fieldOverride = (empty($_SERVER['HTTPS']) ? 'http://' : 'https://') . $_SERVER['HTTP_HOST'];
 $item->cssClass = 'minwidth500';
 
@@ -165,7 +168,7 @@ $item->helpText = $langs->transnoentities('AnHelpMessage');
 //$item->fieldInputOverride = false; // set this var to override field input
 //$item->fieldOutputOverride = false; // set this var to override field output
 
-
+*/
 $setupnotempty += count($formSetup->items);
 
 
@@ -332,7 +335,7 @@ if (!empty($formSetup->items)) {
 	print '<br>'.$langs->trans("NothingToSetup");
 }
 
-
+print getDolGlobalInt("WORKSHOP_USE_OR");
 foreach ($myTmpObjects as $myTmpObjectKey => $myTmpObjectArray) {
 	if (!empty($myTmpObjectArray['includerefgeneration'])) {
 		/*

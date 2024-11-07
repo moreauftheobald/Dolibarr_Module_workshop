@@ -289,7 +289,7 @@ class modWorkshop extends DolibarrModules
 		$r = 0;
 		// Add here entries to declare new permissions
 		/* BEGIN MODULEBUILDER PERMISSIONS */
-		
+
 		$o = 1;
 		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
 		$this->rights[$r][1] = 'Readoperationorders'; // Permission label
@@ -326,7 +326,7 @@ class modWorkshop extends DolibarrModules
 		$this->rights[$r][4] = 'workshopmecanicsplanning';
 		$this->rights[$r][5] = 'write'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'delete'))
 		$r++;
-		
+
 		$o=2;
 		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
 		$this->rights[$r][1] = 'Readvehicules'; // Permission label
@@ -348,7 +348,7 @@ class modWorkshop extends DolibarrModules
 		$this->rights[$r][4] = 'vehicules';
 		$this->rights[$r][5] = 'delete'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'delete'))
 		$r++;
-		
+
 		/* END MODULEBUILDER PERMISSIONS */
 
 
@@ -367,12 +367,12 @@ class modWorkshop extends DolibarrModules
 			'url'=>'/workshop/workshopindex.php',
 			'langs'=>'workshop@workshop', // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
 			'position'=>1000 + $r,
-			'enabled'=>'isModEnabled("workshop")', // Define condition to show or hide menu entry. Use 'isModEnabled("workshop")' if entry must be visible if module is enabled.
+			'enabled'=>'isModEnabled("workshop") && getDolGlobalInt("WORKSHOP_USE_OR")==1', // Define condition to show or hide menu entry. Use 'isModEnabled("workshop")' if entry must be visible if module is enabled.
 			'perms'=>'1', // Use 'perms'=>'$user->hasRight("workshop", "myobject", "read")' if you want your menu with a permission rules
 			'target'=>'',
 			'user'=>2, // 0=Menu for internal users, 1=external users, 2=both
 		);
-		
+
 
 		$this->menu[$r++] = array(
 			'fk_menu'=>'', // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
@@ -392,7 +392,7 @@ class modWorkshop extends DolibarrModules
 		/* END MODULEBUILDER TOPMENU */
 
 		/* BEGIN MODULEBUILDER LEFTMENU MYOBJECT */
-		
+
 		$this->menu[$r++]=array(
 			'fk_menu'=>'fk_mainmenu=workshop',      // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
 			'type'=>'left',                          // This is a Left menu entry
@@ -409,7 +409,7 @@ class modWorkshop extends DolibarrModules
 			'user'=>2,				                // 0=Menu for internal users, 1=external users, 2=both
 			'object'=>'OperationOrder'
 		);
-		
+
 		$this->menu[$r++]=array(
 			'fk_menu'=>'fk_mainmenu=workshop',      // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
 			'type'=>'left',                          // This is a Left menu entry
@@ -426,7 +426,7 @@ class modWorkshop extends DolibarrModules
 			'user'=>2,				                // 0=Menu for internal users, 1=external users, 2=both
 			'object'=>'OperationOrder'
 		);
-		
+
 		$this->menu[$r++]=array(
 			'fk_menu'=>'fk_mainmenu=workshop',      // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
 			'type'=>'left',                          // This is a Left menu entry
@@ -443,7 +443,7 @@ class modWorkshop extends DolibarrModules
 			'user'=>2,				                // 0=Menu for internal users, 1=external users, 2=both
 			'object'=>'OperationOrder'
 		);
-		
+
 		$this->menu[$r++]=array(
 			'fk_menu'=>'fk_mainmenu=workshop,fk_leftmenu=workshop_workshop',      // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
 			'type'=>'left',                          // This is a Left menu entry
@@ -460,7 +460,7 @@ class modWorkshop extends DolibarrModules
 			'user'=>2,				                // 0=Menu for internal users, 1=external users, 2=both
 			'object'=>'OperationOrder'
 		);
-		
+
 		$this->menu[$r++]=array(
 			'fk_menu'=>'fk_mainmenu=workshop,fk_leftmenu=workshop_workshop',      // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
 			'type'=>'left',                          // This is a Left menu entry
@@ -477,7 +477,7 @@ class modWorkshop extends DolibarrModules
 			'user'=>2,				                // 0=Menu for internal users, 1=external users, 2=both
 			'object'=>'OperationOrder'
 		);
-		
+
 		/*$this->menu[$r++]=array(
 			'fk_menu'=>'fk_mainmenu=workshop,fk_leftmenu=myobject',	    // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
 			'type'=>'left',			                // This is a Left menu entry
