@@ -169,7 +169,7 @@ if ($object->id) {
 
 	print dol_get_fiche_head($head, 'contact', $langs->trans("Vehicule"), -1, $object->picto);
 
-	$linkback = '<a href="'.dol_buildpath('/workshop/vehicule_list.php', 1).'?restore_lastsearch_values=1'.(!empty($socid) ? '&socid='.$socid : '').'">'.$langs->trans("BackToList").'</a>';
+	$linkback = '<a href="'.dol_buildpath('/workshop/vehicule/vehicule_list.php', 1).'?restore_lastsearch_values=1'.(!empty($socid) ? '&socid='.$socid : '').'">'.$langs->trans("BackToList").'</a>';
 
 	$morehtmlref = '<div class="refidno">';
 	/*

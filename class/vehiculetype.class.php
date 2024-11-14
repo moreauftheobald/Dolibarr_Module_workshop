@@ -78,10 +78,6 @@ class VehiculeType extends CommonObject
 	// END MODULEBUILDER PROPERTIES
 
 
-
-
-
-
 	/**
 	 * Constructor
 	 *
@@ -426,5 +422,25 @@ class VehiculeType extends CommonObject
 		dol_syslog(__METHOD__." end", LOG_INFO);
 
 		return $error;
+	}
+
+		/**
+	 *  Return a link to the object card (with optionally the picto)
+	 *
+	 *  @param  int     $withpicto                  Include picto in link (0=No picto, 1=Include picto into link, 2=Only picto)
+	 *  @param  string  $option                     On what the link point to ('nolink', ...)
+	 *  @param  int     $notooltip                  1=Disable tooltip
+	 *  @param  string  $morecss                    Add more css on link
+	 *  @param  int     $save_lastsearch_value      -1=Auto, 0=No save of lastsearch_values when clicking, 1=Save lastsearch_values whenclicking
+	 *  @return	string                              String with URL
+	 */
+	public function getNomUrl($withpicto = 0, $option = '', $notooltip = 0, $morecss = '', $save_lastsearch_value = -1)
+	{
+		global $conf, $langs, $hookmanager;
+
+		$result = $this->code . ' '. $this->label;
+
+
+		return $result;
 	}
 }
