@@ -47,7 +47,7 @@ class VehiculeDimPneu extends CommonObject
 	/**
 	 * @var string 	Name of table without prefix where object is stored. This is also the key used for extrafields management (so extrafields know the link to the parent table).
 	 */
-	public $table_element = 'workshop_vehiculedimpneu';
+	public $table_element = 'workshop_vehicule_c_vehicule_dimpneu';
 
 	/**
 	 * @var string 	If permission must be checkec with hasRight('workshop', 'read') and not hasright('mymodyle', 'vehiculedimpneu', 'read'), you can uncomment this line

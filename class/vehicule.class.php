@@ -125,7 +125,7 @@ class Vehicule extends CommonObject
 		"fk_contract_type" => array("type"=>"integer:VehiculeContractType:workshop/class/vehiculecontracttype.class.php", "label"=>"Fkcontracttype", "picto"=>"company", "enabled"=>"1", 'position'=>80, 'notnull'=>0, "visible"=>"-1", "css"=>"maxwidth500 widthcentpercentminusxx",),
 		"date_end_contract" => array("type"=>"datetime", "label"=>"Dateendcontract", "picto"=>"company", "enabled"=>"1", 'position'=>85, 'notnull'=>0, "visible"=>"-1",),
 		"carrosserie" => array("type"=>"longtext", "label"=>"Carrosserie", "picto"=>"company", "enabled"=>"1", 'position'=>90, 'notnull'=>0, "visible"=>"1",),
-		"dim_pneu" => array("type"=>"integer:VehiculeDimPneu:workshop/class/vehiculedimpneu.class.php", "label"=>"Dimpneu", "picto"=>"company", "enabled"=>"1", 'position'=>95, 'notnull'=>0, "visible"=>"1",),
+		"dim_pneu" => array("type"=>"chkbxlst:VehiculeDimPneu:workshop/class/vehiculedimpneu.class.php", "label"=>"Dimpneu", "picto"=>"company", "enabled"=>"1", 'position'=>95, 'notnull'=>0, "visible"=>"1",),
 		"nb_pneu" => array("type"=>"integer", "label"=>"Nbpneu", "picto"=>"company", "enabled"=>"1", 'position'=>100, 'notnull'=>0, "visible"=>"1",),
 		"import_key" => array("type"=>"varchar(255)", "label"=>"ImportId", "picto"=>"company", "enabled"=>"1", 'position'=>900, 'notnull'=>0, "visible"=>"-2",),
 	);
