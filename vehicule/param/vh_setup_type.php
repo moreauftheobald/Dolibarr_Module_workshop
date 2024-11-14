@@ -226,7 +226,7 @@ if ($resql) {
  */
 
 $form = new Form($db);
-$title = $langs->trans('DolifleetSetupType');
+$title = $langs->trans('WorkshopSetupType');
 $help_url = '';
 llxHeader('', $title, $help_url);
 
