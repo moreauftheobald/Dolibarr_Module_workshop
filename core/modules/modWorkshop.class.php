@@ -407,6 +407,7 @@ class modWorkshop extends DolibarrModules
 			'user'=>2,
 			'object'=>'Vehicule'
         );
+
 		$this->menu[$r++]=array(
 			'fk_menu'=>'fk_mainmenu=vehicules',
 			'type'=>'left',
@@ -430,6 +431,70 @@ class modWorkshop extends DolibarrModules
 			'mainmenu'=>'workshop',
 			'leftmenu'=>'workshop_vehicule_param',
 			'url'=>'/workshop/vehicule/param/vh_setup_marque.php',
+			'langs'=>'workshop@workshop',
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop")',
+			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
+			'target'=>'',
+			'user'=>2,
+			'object'=>'Vehicule'
+		);
+
+		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=vehicules,fk_leftmenu=workshop_vehicule_param',
+			'type'=>'left',
+			'titre'=>'Param_Vehicule_mark',
+			'mainmenu'=>'workshop',
+			'leftmenu'=>'workshop_vehicule_param_mark',
+			'url'=>'/workshop/vehicule/param/vh_setup_marque.php',
+			'langs'=>'workshop@workshop',
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop")',
+			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
+			'target'=>'',
+			'user'=>2,
+			'object'=>'Vehicule'
+		);
+
+		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=vehicules,fk_leftmenu=workshop_vehicule_param',
+			'type'=>'left',
+			'titre'=>'Param_Vehicule_type',
+			'mainmenu'=>'workshop',
+			'leftmenu'=>'workshop_vehicule_param_type',
+			'url'=>'/workshop/vehicule/param/vh_setup_type.php',
+			'langs'=>'workshop@workshop',
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop")',
+			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
+			'target'=>'',
+			'user'=>2,
+			'object'=>'Vehicule'
+		);
+
+		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=vehicules,fk_leftmenu=workshop_vehicule_param',
+			'type'=>'left',
+			'titre'=>'Param_Vehicule_typect',
+			'mainmenu'=>'workshop',
+			'leftmenu'=>'workshop_vehicule_param_typect',
+			'url'=>'/workshop/vehicule/param/vh_setup_typect.php',
+			'langs'=>'workshop@workshop',
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop")',
+			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
+			'target'=>'',
+			'user'=>2,
+			'object'=>'Vehicule'
+		);
+
+		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=vehicules,fk_leftmenu=workshop_vehicule_param',
+			'type'=>'left',
+			'titre'=>'Param_Vehicule_pneu',
+			'mainmenu'=>'workshop',
+			'leftmenu'=>'workshop_vehicule_param_pneu',
+			'url'=>'/workshop/vehicule/param/vh_setup_pneu.php',
 			'langs'=>'workshop@workshop',
 			'position'=>1000+$r,
 			'enabled'=>'isModEnabled("workshop")',
