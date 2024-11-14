@@ -61,9 +61,12 @@ if (!$res) {
 }
 
 dol_include_once('/workshop/lib/workshop_vehicule.lib.php');
+dol_include_once('/workshop/class/vehiculemark.class.php');
 
 // Load translation files required by the page
 $langs->load("workshop@workshop");
+
+$object = new VehiculeMark($db);
 
 // Get parameters
 $action = GETPOST('action', 'aZ09');
@@ -115,7 +118,7 @@ if (empty($reshook)) {
 					$errors[] = $object->error;
 				} else {
 					if ($action == 'confirmnew') {
-						$object->entity = $conf->entity;
+						$object->entity = 0;
 						$object->code = $code;
 						$object->label = $label;
 						$object->active = $active;
@@ -177,8 +180,8 @@ $limit = 25;
 $offset = $limit * $page;
 
 $sql  = "SELECT p.rowid as rowid, p.code as code, p.label as label, p.active as active ";
-$sql .= "FROM ".MAIN_DB_PREFIX."c_workshop_vehicule_mark as p ";
-$sql .= "WHERE p.entity IN (".getEntity('product').")";
+$sql .= "FROM ".MAIN_DB_PREFIX. $object->table_element . " as p ";
+$sql .= "WHERE 1=1";
 
 $nbtotalofrecords = 0;
 $resql = $db->query($sql);
