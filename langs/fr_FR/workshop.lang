@@ -81,3 +81,12 @@ WorkshopPlanning=Planning Atelier
 MecanicsPlanning=Planning Pointages
 New_Vehicule=Nouveau Véhicule
 List_Vehicule=Liste des Véhicules
+Param_Vehicule=Parametres
+
+#
+# Vehicule Param pages
+#
+VhSetupMarque=Parametrages des marques
+VhSetupType= Parametrages des types de véhicules
+VhSetupTypeCt=Parametrage des types de contrats
+VhSetupPneu=Parametrage des types de pneumatiques

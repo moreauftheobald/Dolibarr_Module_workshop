@@ -53,14 +53,17 @@ if (!$res && file_exists("../../main.inc.php")) {
 if (!$res && file_exists("../../../main.inc.php")) {
 	$res = @include "../../../main.inc.php";
 }
+if (!$res && file_exists("../../../../main.inc.php")) {
+	$res = @include "../../../../main.inc.php";
+}
 if (!$res) {
 	die("Include of main fails");
 }
 
-dol_include_once('/dolifleet/lib/dolifleet.lib.php');
+dol_include_once('/workshop/lib/workshop_vehicule.lib.php');
 
 // Load translation files required by the page
-$langs->load("dolifleet@dolifleet");
+$langs->load("workshop@workshop");
 
 // Get parameters
 $action = GETPOST('action', 'aZ09');
@@ -72,13 +75,13 @@ $label = GETPOST('label', 'alpha');
 $active = GETPOST('active', 'int');
 $page = GETPOST('page', 'int');
 
-if (!$user->hasRight('dolifleet', 'write')) {
+if (!$user->hasRight("workshop", "vehicule", "write")) {
 	accessforbidden();
 }
 
-if (empty($conf->dolifleet->enabled)) accessforbidden();
+if (!isModEnabled("workshop")) accessforbidden();
 
-$hookmanager->initHooks(array('dolifleetparam', 'globalcard')); // Note that conf->hooks_modules contains array
+$hookmanager->initHooks(array('vhsetupmarque', 'globalcard')); // Note that conf->hooks_modules contains array
 
 
 $parameters = array();

@@ -422,6 +422,22 @@ class modWorkshop extends DolibarrModules
 			'user'=>2,
 			'object'=>'Vehicule'
 		);
+		
+		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=vehicules',
+			'type'=>'left',
+			'titre'=>'Param_Vehicule',
+			'mainmenu'=>'workshop',
+			'leftmenu'=>'workshop_vehicule_param',
+			'url'=>'/workshop/vehicule/param/vh_setup_marque.php',
+			'langs'=>'workshop@workshop',
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop")',
+			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
+			'target'=>'',
+			'user'=>2,
+			'object'=>'Vehicule'
+		);
 
 		$this->menu[$r++]=array(
 			'fk_menu'=>'fk_mainmenu=workshop',      // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
