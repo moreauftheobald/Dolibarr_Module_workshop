@@ -112,11 +112,14 @@ if (empty($reshook)) {
 			}
 			if (empty($error)) {
 				$object = new VehiculeMark($db);
-				$resfetch = $object->fetch($rowid);
-				if($resfetch<0){
-					$error++;
-					$errors[] = $object->error;
-				} else {
+				if (!empty($rowid)) {
+					$resfetch = $object->fetch($rowid);
+					if ($resfetch < 0) {
+						$error++;
+						$errors[] = $object->error;
+					}
+				}
+				if (empty($error)) {
 					if ($action == 'confirmnew') {
 						$object->entity = 0;
 						$object->code = $code;
@@ -135,8 +138,11 @@ if (empty($reshook)) {
 				}
 
 				if ($res<0) {
+//					var_dump($res);
+//					exit;
 					$error++;
 					$errors[] = $object->error;
+					$errors = array_merge($errors,$object->errors);
 				}
 			}
 			if ($error > 0) {

@@ -45,7 +45,7 @@ class VehiculeMark extends CommonObject
 	/**
 	 * @var string 	Name of table without prefix where object is stored. This is also the key used for extrafields management (so extrafields know the link to the parent table).
 	 */
-	public $table_element = 'workshop_vehiculemark';
+	public $table_element = 'workshop_vehicule_c_vehicule_mark';
 
 
 	/**
@@ -421,4 +421,3 @@ class VehiculeMark extends CommonObject
 		return $error;
 	}
 }
-
