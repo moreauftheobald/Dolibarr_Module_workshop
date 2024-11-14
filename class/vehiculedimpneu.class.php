@@ -49,10 +49,6 @@ class VehiculeDimPneu extends CommonObject
 	 */
 	public $table_element = 'workshop_vehicule_c_vehicule_dimpneu';
 
-	/**
-	 * @var string 	If permission must be checkec with hasRight('workshop', 'read') and not hasright('mymodyle', 'vehiculedimpneu', 'read'), you can uncomment this line
-	 */
-	//public $element_for_permission = 'workshop';
 
 	/**
 	 * @var string 	String with name of icon for vehiculedimpneu. Must be a 'fa-xxx' fontawesome code (or 'fa-xxx_fa_color_size') or 'vehiculedimpneu@workshop' if picto is file 'img/object_vehiculedimpneu.png'.
@@ -60,9 +56,6 @@ class VehiculeDimPneu extends CommonObject
 	public $picto = 'fa-file';
 
 
-	const STATUS_DRAFT = 0;
-	const STATUS_VALIDATED = 1;
-	const STATUS_CANCELED = 9;
 
 
 	// BEGIN MODULEBUILDER PROPERTIES
