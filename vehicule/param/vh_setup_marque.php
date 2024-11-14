@@ -18,7 +18,7 @@
 
 /**
  *    	\file       vh_setup_marque.php
- *      \ingroup    dolifleet
+ *      \ingroup    workshop
  *      \brief      Page to create/edit/view vehicule marque
  */
 
@@ -177,7 +177,7 @@ $limit = 25;
 $offset = $limit * $page;
 
 $sql  = "SELECT p.rowid as rowid, p.code as code, p.label as label, p.active as active ";
-$sql .= "FROM ".MAIN_DB_PREFIX."c_dolifleet_vehicule_mark as p ";
+$sql .= "FROM ".MAIN_DB_PREFIX."c_workshop_vehicule_mark as p ";
 $sql .= "WHERE p.entity IN (".getEntity('product').")";
 
 $nbtotalofrecords = 0;
@@ -221,12 +221,12 @@ if ($resql) {
  */
 
 $form = new Form($db);
-$title = $langs->trans('DolifleetSetupMarque');
+$title = $langs->trans('WorkshopSetupMarque');
 $help_url = '';
 llxHeader('', $title, $help_url);
 
 $head = VhSetupPrepareHead();
-print dol_get_fiche_head($head, 'marque', $langs->trans("DolifleetSetupMarque"), -1, "fontawesome_fa-tools");
+print dol_get_fiche_head($head, 'marque', $langs->Trans("WorkshopSetupMarque"), -1, "fontawesome_fa-tools");
 // Part to show record
 
 $formconfirm = '';

@@ -18,7 +18,7 @@
 
 /**
  *    	\file       vh_setup_pneu.php
- *      \ingroup    dolifleet
+ *      \ingroup    workshop
  *      \brief      Page to create/edit/view vehicule tire dimensions
  */
 
@@ -109,20 +109,20 @@ if (empty($reshook)) {
 			}
 			if (empty($error)) {
 				if ($action == 'confirmnew') {
-					$sql = "INSERT INTO " . MAIN_DB_PREFIX . "c_dolifleet_vehicule_dimpneu (entity,code, label, active, date_creation) VALUES (";
+					$sql = "INSERT INTO " . MAIN_DB_PREFIX . "c_workshop_vehicule_dimpneu (entity,code, label, active, date_creation) VALUES (";
 					$sql .= "'" . $conf->entity . "',";
 					$sql .= "'" . $code . "',";
 					$sql .= "'" . $label . "',";
 					$sql .= "'" . $active . "',";
 					$sql .= "'" . $db->idate(dol_now()) . "')";
 				} elseif ($action == 'confirmedit') {
-					$sql = "UPDATE " . MAIN_DB_PREFIX . "c_dolifleet_vehicule_dimpneu SET ";
+					$sql = "UPDATE " . MAIN_DB_PREFIX . "c_workshop_vehicule_dimpneu SET ";
 					$sql .= "code = '" . $code . "', ";
 					$sql .= "label = '" . $label . "', ";
 					$sql .= "active = '" . $active . "' ";
 					$sql .= "WHERE rowid = " . $rowid;
 				} elseif ($action == 'confirmdelete') {
-					$sql = "DELETE FROM " . MAIN_DB_PREFIX . "c_dolifleet_vehicule_dimpneu WHERE rowid = " . $rowid;
+					$sql = "DELETE FROM " . MAIN_DB_PREFIX . "c_workshop_vehicule_dimpneu WHERE rowid = " . $rowid;
 				}
 				$res = $db->query($sql);
 				if (!$res) {
@@ -175,7 +175,7 @@ $limit = 25;
 $offset = $limit * $page;
 
 $sql  = "SELECT p.rowid as rowid, p.code as code, p.label as label, p.active as active ";
-$sql .= "FROM ".MAIN_DB_PREFIX."c_dolifleet_vehicule_dimpneu as p ";
+$sql .= "FROM ".MAIN_DB_PREFIX."c_workshop_vehicule_dimpneu as p ";
 $sql .= "WHERE p.entity IN (".getEntity('product').")";
 
 $nbtotalofrecords = 0;
@@ -224,7 +224,7 @@ $help_url = '';
 llxHeader('', $title, $help_url);
 
 $head = VhSetupPrepareHead();
-print dol_get_fiche_head($head, 'pneu', $langs->trans("DolifleetSetupPneu"), -1, "fontawesome_fa-tools");
+print dol_get_fiche_head($head, 'pneu', $langs->Trans("WorkshopSetupPneu"), -1, "fontawesome_fa-tools");
 // Part to show record
 
 $formconfirm = '';
