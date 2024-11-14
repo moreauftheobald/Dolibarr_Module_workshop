@@ -47,7 +47,7 @@ class modWorkshop extends DolibarrModules
 
 		// Id for module (must be unique).
 		// Use here a free id (See in Home -> System information -> Dolibarr for list of used modules id).
-		$this->numero = 500000; // TODO Go on page https://wiki.dolibarr.org/index.php/List_of_modules_id to reserve an id number for your module
+		$this->numero = 437872; // TODO Go on page https://wiki.dolibarr.org/index.php/List_of_modules_id to reserve an id number for your module
 
 		// Key text used to identify module (for permissions, menus, etc...)
 		$this->rights_class = 'workshop';
@@ -104,7 +104,7 @@ class modWorkshop extends DolibarrModules
 			// Set this to 1 if module has its own barcode directory (core/modules/barcode)
 			'barcode' => 0,
 			// Set this to 1 if module has its own models directory (core/modules/xxx)
-			'models' => 0,
+			'models' => 1,
 			// Set this to 1 if module has its own printing directory (core/modules/printing)
 			'printing' => 0,
 			// Set this to 1 if module has its own theme directory (theme)
@@ -266,8 +266,8 @@ class modWorkshop extends DolibarrModules
 			//  0 => array(
 			//      'label' => 'MyJob label',
 			//      'jobtype' => 'method',
-			//      'class' => '/workshop/class/myobject.class.php',
-			//      'objectname' => 'MyObject',
+			//      'class' => '/workshop/class/vehicule.class.php',
+			//      'objectname' => 'Vehicule',
 			//      'method' => 'doScheduledJob',
 			//      'parameters' => '',
 			//      'comment' => 'Comment',
@@ -289,64 +289,60 @@ class modWorkshop extends DolibarrModules
 		$r = 0;
 		// Add here entries to declare new permissions
 		/* BEGIN MODULEBUILDER PERMISSIONS */
-
-		$o = 1;
-		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
-		$this->rights[$r][1] = 'Readoperationorders'; // Permission label
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + 0 + 1);
+		$this->rights[$r][1] = 'Readoperationorders';
 		$this->rights[$r][4] = 'operationorders';
-		$this->rights[$r][5] = 'read'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'read'))
+		$this->rights[$r][5] = 'read';
 		$r++;
-		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
-		$this->rights[$r][1] = 'Createoperationorders'; // Permission label
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + 1 + 1);
+		$this->rights[$r][1] = 'Createoperationorders';
 		$this->rights[$r][4] = 'operationorders';
-		$this->rights[$r][5] = 'write'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'write'))
+		$this->rights[$r][5] = 'write';
 		$r++;
-		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
-		$this->rights[$r][1] = 'Deleteoperationorders'; // Permission label
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + 2 + 1);
+		$this->rights[$r][1] = 'Deleteoperationorders';
 		$this->rights[$r][4] = 'operationorders';
-		$this->rights[$r][5] = 'delete'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'delete'))
+		$this->rights[$r][5] = 'delete';
 		$r++;
-		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
-		$this->rights[$r][1] = 'ReadWorkshopPlanning'; // Permission label
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (1 * 10) + 0 + 1);
+		$this->rights[$r][1] = 'ReadWorkshopPlanning';
 		$this->rights[$r][4] = 'workshopplanning';
-		$this->rights[$r][5] = 'read'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'delete'))
+		$this->rights[$r][5] = 'read';
 		$r++;
-		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
-		$this->rights[$r][1] = 'WriteWorkshopPlanning'; // Permission label
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (1 * 10) + 1 + 1);
+		$this->rights[$r][1] = 'WriteWorkshopPlanning';
 		$this->rights[$r][4] = 'workshopplanning';
-		$this->rights[$r][5] = 'write'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'delete'))
+		$this->rights[$r][5] = 'write';
 		$r++;
-		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
-		$this->rights[$r][1] = 'ReadWorkshopMecanicsPlanning'; // Permission label
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (2 * 10) + 0 + 1);
+		$this->rights[$r][1] = 'ReadWorkshopMecanicsPlanning';
 		$this->rights[$r][4] = 'workshopmecanicsplanning';
-		$this->rights[$r][5] = 'read'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'delete'))
+		$this->rights[$r][5] = 'read';
 		$r++;
-		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
-		$this->rights[$r][1] = 'WriteWorkshopMecanicsPlanning'; // Permission label
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (2 * 10) + 1 + 1);
+		$this->rights[$r][1] = 'WriteWorkshopMecanicsPlanning';
 		$this->rights[$r][4] = 'workshopmecanicsplanning';
-		$this->rights[$r][5] = 'write'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'delete'))
+		$this->rights[$r][5] = 'write';
 		$r++;
-
-		$o=2;
-		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
-		$this->rights[$r][1] = 'Readvehicules'; // Permission label
-		$this->rights[$r][4] = 'vehicules';
-		$this->rights[$r][5] = 'read'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'read'))
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (4 * 10) + 0 + 1);
+		$this->rights[$r][1] = 'Readvehiculesext';
+		$this->rights[$r][4] = 'vehicule';
+		$this->rights[$r][5] = 'read';
 		$r++;
-	    $this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
-		$this->rights[$r][1] = 'Readvehiculesext'; // Permission label
-		$this->rights[$r][4] = 'vehicules';
-		$this->rights[$r][5] = 'readext'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'read'))
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (3 * 10) + 0 + 1);
+		$this->rights[$r][1] = 'Readvehiculesext';
+		$this->rights[$r][4] = 'vehicule';
+		$this->rights[$r][5] = 'readext';
 		$r++;
-		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
-		$this->rights[$r][1] = 'Writetevehicules'; // Permission label
-		$this->rights[$r][4] = 'vehicules';
-		$this->rights[$r][5] = 'write'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'write'))
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (4 * 10) + 1 + 1);
+		$this->rights[$r][1] = 'Writetevehicules';
+		$this->rights[$r][4] = 'vehicule';
+		$this->rights[$r][5] = 'write';
 		$r++;
-		$this->rights[$r][0] = $this->numero . sprintf("%02d", ($o * 10) + $r); // Permission id (must not be already used)
-		$this->rights[$r][1] = 'Deletevehicules'; // Permission label
-		$this->rights[$r][4] = 'vehicules';
-		$this->rights[$r][5] = 'delete'; // In php code, permission will be checked by test if ($user->hasRight('workshop', 'myobject', 'delete'))
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (4 * 10) + 2 + 1);
+		$this->rights[$r][1] = 'Deletevehicules';
+		$this->rights[$r][4] = 'vehicule';
+		$this->rights[$r][5] = 'delete';
 		$r++;
 
 		/* END MODULEBUILDER PERMISSIONS */
@@ -368,7 +364,7 @@ class modWorkshop extends DolibarrModules
 			'langs'=>'workshop@workshop', // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
 			'position'=>1000 + $r,
 			'enabled'=>'isModEnabled("workshop") && getDolGlobalInt("WORKSHOP_USE_OR")==1', // Define condition to show or hide menu entry. Use 'isModEnabled("workshop")' if entry must be visible if module is enabled.
-			'perms'=>'1', // Use 'perms'=>'$user->hasRight("workshop", "myobject", "read")' if you want your menu with a permission rules
+			'perms'=>'1', // Use 'perms'=>'$user->hasRight("workshop", "vehicule", "read")' if you want your menu with a permission rules
 			'target'=>'',
 			'user'=>2, // 0=Menu for internal users, 1=external users, 2=both
 		);
@@ -385,13 +381,62 @@ class modWorkshop extends DolibarrModules
 			'langs'=>'workshop@workshop', // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
 			'position'=>1000 + $r,
 			'enabled'=>'isModEnabled("workshop")', // Define condition to show or hide menu entry. Use 'isModEnabled("workshop")' if entry must be visible if module is enabled.
-			'perms'=>'1', // Use 'perms'=>'$user->hasRight("workshop", "myobject", "read")' if you want your menu with a permission rules
+			'perms'=>'1', // Use 'perms'=>'$user->hasRight("workshop", "vehicule", "read")' if you want your menu with a permission rules
 			'target'=>'',
 			'user'=>2, // 0=Menu for internal users, 1=external users, 2=both
 		);
 		/* END MODULEBUILDER TOPMENU */
 
-		/* BEGIN MODULEBUILDER LEFTMENU MYOBJECT */
+		/* BEGIN MODULEBUILDER LEFTMENU VEHICULE */
+
+		/* END MODULEBUILDER LEFTMENU VEHICULE */
+
+		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=vehicules',
+			'type'=>'left',
+			'titre'=>'Vehicule',
+			'prefix' => img_picto('', $this->picto, 'class="paddingright pictofixedwidth valignmiddle"'),
+			'mainmenu'=>'workshop',
+			'leftmenu'=>'vehicule',
+			'url'=>'/workshop/vehicule/vehicule_list.php',
+			'langs'=>'workshop@workshop',
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop")',
+			'perms'=>'$user->hasRight("workshop", "vehicule", "read")',
+			'target'=>'',
+			'user'=>2,
+			'object'=>'Vehicule'
+		);
+		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=vehicules,fk_leftmenu=vehicule',
+			'type'=>'left',
+			'titre'=>'List Vehicule',
+			'mainmenu'=>'workshop',
+			'leftmenu'=>'workshop_vehicule_list',
+			'url'=>'/workshop/vehicule/vehicule_list.php',
+			'langs'=>'workshop@workshop',
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop")',
+			'perms'=>'$user->hasRight("workshop", "vehicule", "read")',
+			'target'=>'',
+			'user'=>2,
+			'object'=>'Vehicule'
+        );
+		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=vehicules,fk_leftmenu=vehicule',
+			'type'=>'left',
+			'titre'=>'New Vehicule',
+			'mainmenu'=>'workshop',
+			'leftmenu'=>'workshop_vehicule_new',
+			'url'=>'/workshop/vehicule/vehicule_card.php?action=create',
+			'langs'=>'workshop@workshop',
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop")',
+			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
+			'target'=>'',
+			'user'=>2,
+			'object'=>'Vehicule'
+		);
 
 		$this->menu[$r++]=array(
 			'fk_menu'=>'fk_mainmenu=workshop',      // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
@@ -478,39 +523,6 @@ class modWorkshop extends DolibarrModules
 			'object'=>'OperationOrder'
 		);
 
-		/*$this->menu[$r++]=array(
-			'fk_menu'=>'fk_mainmenu=workshop,fk_leftmenu=myobject',	    // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
-			'type'=>'left',			                // This is a Left menu entry
-			'titre'=>'New_MyObject',
-			'mainmenu'=>'workshop',
-			'leftmenu'=>'workshop_myobject_new',
-			'url'=>'/workshop/myobject_card.php?action=create',
-			'langs'=>'workshop@workshop',	        // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
-			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")', // Define condition to show or hide menu entry. Use 'isModEnabled("workshop")' if entry must be visible if module is enabled. Use '$leftmenu==\'system\'' to show if leftmenu system is selected.
-			'perms'=>'$user->hasRight("workshop", "myobject", "write")'
-			'target'=>'',
-			'user'=>2,				                // 0=Menu for internal users, 1=external users, 2=both
-			'object'=>'MyObject'
-		);
-		$this->menu[$r++]=array(
-			'fk_menu'=>'fk_mainmenu=workshop,fk_leftmenu=myobject',	    // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
-			'type'=>'left',			                // This is a Left menu entry
-			'titre'=>'List_MyObject',
-			'mainmenu'=>'workshop',
-			'leftmenu'=>'workshop_myobject_list',
-			'url'=>'/workshop/myobject_list.php',
-			'langs'=>'workshop@workshop',	        // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
-			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")', // Define condition to show or hide menu entry. Use 'isModEnabled("workshop")' if entry must be visible if module is enabled.
-			'perms'=>'$user->hasRight("workshop", "myobject", "read")'
-			'target'=>'',
-			'user'=>2,				                // 0=Menu for internal users, 1=external users, 2=both
-			'object'=>'MyObject'
-		);
-		*/
-		/* END MODULEBUILDER LEFTMENU MYOBJECT */
-
 
 		// Exports profiles provided by this module
 		$r = 1;
@@ -518,28 +530,28 @@ class modWorkshop extends DolibarrModules
 		/*
 		$langs->load("workshop@workshop");
 		$this->export_code[$r] = $this->rights_class.'_'.$r;
-		$this->export_label[$r] = 'MyObjectLines';	// Translation key (used only if key ExportDataset_xxx_z not found)
+		$this->export_label[$r] = 'VehiculeLines';	// Translation key (used only if key ExportDataset_xxx_z not found)
 		$this->export_icon[$r] = $this->picto;
 		// Define $this->export_fields_array, $this->export_TypeFields_array and $this->export_entities_array
-		$keyforclass = 'MyObject'; $keyforclassfile='/workshop/class/myobject.class.php'; $keyforelement='myobject@workshop';
+		$keyforclass = 'Vehicule'; $keyforclassfile='/workshop/class/vehicule.class.php'; $keyforelement='vehicule@workshop';
 		include DOL_DOCUMENT_ROOT.'/core/commonfieldsinexport.inc.php';
 		//$this->export_fields_array[$r]['t.fieldtoadd']='FieldToAdd'; $this->export_TypeFields_array[$r]['t.fieldtoadd']='Text';
 		//unset($this->export_fields_array[$r]['t.fieldtoremove']);
-		//$keyforclass = 'MyObjectLine'; $keyforclassfile='/workshop/class/myobject.class.php'; $keyforelement='myobjectline@workshop'; $keyforalias='tl';
+		//$keyforclass = 'VehiculeLine'; $keyforclassfile='/workshop/class/vehicule.class.php'; $keyforelement='vehiculeline@workshop'; $keyforalias='tl';
 		//include DOL_DOCUMENT_ROOT.'/core/commonfieldsinexport.inc.php';
-		$keyforselect='myobject'; $keyforaliasextra='extra'; $keyforelement='myobject@workshop';
+		$keyforselect='vehicule'; $keyforaliasextra='extra'; $keyforelement='vehicule@workshop';
 		include DOL_DOCUMENT_ROOT.'/core/extrafieldsinexport.inc.php';
-		//$keyforselect='myobjectline'; $keyforaliasextra='extraline'; $keyforelement='myobjectline@workshop';
+		//$keyforselect='vehiculeline'; $keyforaliasextra='extraline'; $keyforelement='vehiculeline@workshop';
 		//include DOL_DOCUMENT_ROOT.'/core/extrafieldsinexport.inc.php';
-		//$this->export_dependencies_array[$r] = array('myobjectline'=>array('tl.rowid','tl.ref')); // To force to activate one or several fields if we select some fields that need same (like to select a unique key if we ask a field of a child to avoid the DISTINCT to discard them, or for computed field than need several other fields)
+		//$this->export_dependencies_array[$r] = array('vehiculeline'=>array('tl.rowid','tl.ref')); // To force to activate one or several fields if we select some fields that need same (like to select a unique key if we ask a field of a child to avoid the DISTINCT to discard them, or for computed field than need several other fields)
 		//$this->export_special_array[$r] = array('t.field'=>'...');
 		//$this->export_examplevalues_array[$r] = array('t.field'=>'Example');
 		//$this->export_help_array[$r] = array('t.field'=>'FieldDescHelp');
 		$this->export_sql_start[$r]='SELECT DISTINCT ';
-		$this->export_sql_end[$r]  =' FROM '.MAIN_DB_PREFIX.'workshop_myobject as t';
-		//$this->export_sql_end[$r]  .=' LEFT JOIN '.MAIN_DB_PREFIX.'workshop_myobject_line as tl ON tl.fk_myobject = t.rowid';
+		$this->export_sql_end[$r]  =' FROM '.MAIN_DB_PREFIX.'workshop_vehicule as t';
+		//$this->export_sql_end[$r]  .=' LEFT JOIN '.MAIN_DB_PREFIX.'workshop_vehicule_line as tl ON tl.fk_vehicule = t.rowid';
 		$this->export_sql_end[$r] .=' WHERE 1 = 1';
-		$this->export_sql_end[$r] .=' AND t.entity IN ('.getEntity('myobject').')';
+		$this->export_sql_end[$r] .=' AND t.entity IN ('.getEntity('vehicule').')';
 		$r++; */
 		/* END MODULEBUILDER EXPORT MYOBJECT */
 
@@ -549,27 +561,27 @@ class modWorkshop extends DolibarrModules
 		/*
 		$langs->load("workshop@workshop");
 		$this->import_code[$r] = $this->rights_class.'_'.$r;
-		$this->import_label[$r] = 'MyObjectLines';	// Translation key (used only if key ExportDataset_xxx_z not found)
+		$this->import_label[$r] = 'VehiculeLines';	// Translation key (used only if key ExportDataset_xxx_z not found)
 		$this->import_icon[$r] = $this->picto;
-		$this->import_tables_array[$r] = array('t' => MAIN_DB_PREFIX.'workshop_myobject', 'extra' => MAIN_DB_PREFIX.'workshop_myobject_extrafields');
+		$this->import_tables_array[$r] = array('t' => MAIN_DB_PREFIX.'workshop_vehicule', 'extra' => MAIN_DB_PREFIX.'workshop_vehicule_extrafields');
 		$this->import_tables_creator_array[$r] = array('t' => 'fk_user_author'); // Fields to store import user id
 		$import_sample = array();
-		$keyforclass = 'MyObject'; $keyforclassfile='/workshop/class/myobject.class.php'; $keyforelement='myobject@workshop';
+		$keyforclass = 'Vehicule'; $keyforclassfile='/workshop/class/vehicule.class.php'; $keyforelement='vehicule@workshop';
 		include DOL_DOCUMENT_ROOT.'/core/commonfieldsinimport.inc.php';
 		$import_extrafield_sample = array();
-		$keyforselect='myobject'; $keyforaliasextra='extra'; $keyforelement='myobject@workshop';
+		$keyforselect='vehicule'; $keyforaliasextra='extra'; $keyforelement='vehicule@workshop';
 		include DOL_DOCUMENT_ROOT.'/core/extrafieldsinimport.inc.php';
-		$this->import_fieldshidden_array[$r] = array('extra.fk_object' => 'lastrowid-'.MAIN_DB_PREFIX.'workshop_myobject');
+		$this->import_fieldshidden_array[$r] = array('extra.fk_object' => 'lastrowid-'.MAIN_DB_PREFIX.'workshop_vehicule');
 		$this->import_regex_array[$r] = array();
 		$this->import_examplevalues_array[$r] = array_merge($import_sample, $import_extrafield_sample);
 		$this->import_updatekeys_array[$r] = array('t.ref' => 'Ref');
 		$this->import_convertvalue_array[$r] = array(
 			't.ref' => array(
 				'rule'=>'getrefifauto',
-				'class'=>(!getDolGlobalString('WORKSHOP_MYOBJECT_ADDON') ? 'mod_myobject_standard' : getDolGlobalString('WORKSHOP_MYOBJECT_ADDON')),
-				'path'=>"/core/modules/workshop/".(!getDolGlobalString('WORKSHOP_MYOBJECT_ADDON') ? 'mod_myobject_standard' : getDolGlobalString('WORKSHOP_MYOBJECT_ADDON')).'.php',
-				'classobject'=>'MyObject',
-				'pathobject'=>'/workshop/class/myobject.class.php',
+				'class'=>(!getDolGlobalString('WORKSHOP_MYOBJECT_ADDON') ? 'mod_vehicule_standard' : getDolGlobalString('WORKSHOP_MYOBJECT_ADDON')),
+				'path'=>"/core/modules/workshop/".(!getDolGlobalString('WORKSHOP_MYOBJECT_ADDON') ? 'mod_vehicule_standard' : getDolGlobalString('WORKSHOP_MYOBJECT_ADDON')).'.php',
+				'classobject'=>'Vehicule',
+				'pathobject'=>'/workshop/class/vehicule.class.php',
 			),
 			't.fk_soc' => array('rule' => 'fetchidfromref', 'file' => '/societe/class/societe.class.php', 'class' => 'Societe', 'method' => 'fetch', 'element' => 'ThirdParty'),
 			't.fk_user_valid' => array('rule' => 'fetchidfromref', 'file' => '/user/class/user.class.php', 'class' => 'User', 'method' => 'fetch', 'element' => 'user'),
@@ -616,16 +628,16 @@ class modWorkshop extends DolibarrModules
 		// Document templates
 		$moduledir = dol_sanitizeFileName('workshop');
 		$myTmpObjects = array();
-		$myTmpObjects['MyObject'] = array('includerefgeneration'=>0, 'includedocgeneration'=>0);
+		$myTmpObjects['Vehicule'] = array('includerefgeneration'=>0, 'includedocgeneration'=>0);
 
 		foreach ($myTmpObjects as $myTmpObjectKey => $myTmpObjectArray) {
-			if ($myTmpObjectKey == 'MyObject') {
+			if ($myTmpObjectKey == 'Vehicule') {
 				continue;
 			}
 			if ($myTmpObjectArray['includerefgeneration']) {
-				$src = DOL_DOCUMENT_ROOT.'/install/doctemplates/'.$moduledir.'/template_myobjects.odt';
+				$src = DOL_DOCUMENT_ROOT.'/install/doctemplates/'.$moduledir.'/template_vehicules.odt';
 				$dirodt = DOL_DATA_ROOT.'/doctemplates/'.$moduledir;
-				$dest = $dirodt.'/template_myobjects.odt';
+				$dest = $dirodt.'/template_vehicules.odt';
 
 				if (file_exists($src) && !file_exists($dest)) {
 					require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
