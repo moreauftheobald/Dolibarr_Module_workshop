@@ -335,7 +335,6 @@ if (!empty($formSetup->items)) {
 	print '<br>'.$langs->trans("NothingToSetup");
 }
 
-print getDolGlobalInt("WORKSHOP_USE_OR");
 foreach ($myTmpObjects as $myTmpObjectKey => $myTmpObjectArray) {
 	if (!empty($myTmpObjectArray['includerefgeneration'])) {
 		/*
