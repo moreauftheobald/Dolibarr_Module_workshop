@@ -256,8 +256,8 @@ if (empty($reshook)) {
 
 // Print form confirm
 print $formconfirm;
-$actionpathnew = dol_buildpath('/dolifleet/param/vh_setup_typect.php', 2). '?action=new';
-$newcardbutton = dolGetButtonTitle($langs->trans('New'), '', 'fa fa-plus-circle', $actionpathnew, '', $user->hasRight('dolifleet', 'write'));
+$actionpathnew = dol_buildpath('/workshop/vehicule/param/vh_setup_typect.php', 2). '?action=new';
+$newcardbutton = dolGetButtonTitle($langs->trans('New'), '', 'fa fa-plus-circle', $actionpathnew, '', $user->hasRight("workshop", "vehicule", "write"));
 print_barre_liste($title, $page, $_SERVER["PHP_SELF"], '', '', '', '', $num, $nbtotalofrecords, 'service', 0, $newcardbutton, '', $limit, 0, 0, 1);
 
 print '<div class="fichecenter">';
@@ -280,7 +280,7 @@ foreach ($typectarray as $key=>$data) {
 	}
 	print '<td><span>' . img_picto($langs->trans('off'), $out) . '</span></td>';
 
-	$actionpath = dol_buildpath('/dolifleet/param/vh_setup_typect.php', 2) . '?rowid=' . $data->id . '&action=';
+	$actionpath = dol_buildpath('/workshop/vehicule/param/vh_setup_typect.php', 2) . '?rowid=' . $data->id . '&action=';
 	$action  = '<a href="' . $actionpath . 'edit"><span class="fas fa-pen" title="' . $langs->trans('Edit') . '"></span></a>';
 	if ($user->admin) {
 		$action .= '&nbsp &nbsp';
@@ -309,4 +309,3 @@ if (empty($reshook)) {
 // End of page
 llxFooter();
 $db->close();
-
