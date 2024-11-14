@@ -108,30 +108,32 @@ if (empty($reshook)) {
 				}
 			}
 			if (empty($error)) {
-				if ($action == 'confirmnew') {
-					$sql = "INSERT INTO " . MAIN_DB_PREFIX . "c_dolifleet_vehicule_mark (entity,code, label, active, date_creation) VALUES (";
-					$sql .= "'" . $conf->entity . "',";
-					$sql .= "'" . $code . "',";
-					$sql .= "'" . $label . "',";
-					$sql .= "'" . $active . "',";
-					$sql .= "'" . $db->idate(dol_now()) . "')";
-				} elseif ($action == 'confirmedit') {
-					$sql = "UPDATE " . MAIN_DB_PREFIX . "c_dolifleet_vehicule_mark SET ";
-					$sql .= "code = '" . $code . "', ";
-					$sql .= "label = '" . $label . "', ";
-					$sql .= "active = '" . $active . "' ";
-					$sql .= "WHERE rowid = " . $rowid;
-				} elseif ($action == 'confirmdelete') {
-					$sql = "DELETE FROM " . MAIN_DB_PREFIX . "c_dolifleet_vehicule_mark WHERE rowid = " . $rowid;
-				}
-				$res = $db->query($sql);
-				if (!$res) {
+				$object = new VehiculeMark($db);
+				$resfetch = $object->fetch($rowid);
+				if($resfetch<0){
 					$error++;
-					if ($db->lasterrno() == 'DB_ERROR_RECORD_ALREADY_EXISTS') {
-						$errors[] = "ErrorRefAlreadyExists";
-					} else {
-						$errors[] = $db->lasterror();
+					$errors[] = $object->error;
+				} else {
+					if ($action == 'confirmnew') {
+						$object->entity = $conf->entity;
+						$object->code = $code;
+						$object->label = $label;
+						$object->active = $active;
+						$object->date_creation = dol_now();
+						$res=$object->create($user);
+					} elseif ($action == 'confirmedit') {
+						$object->code = $code;
+						$object->label = $label;
+						$object->active = $active;
+						$res = $object->update($user);
+					} elseif ($action == 'confirmdelete') {
+						$res = $object->delete($user);
 					}
+				}
+
+				if ($res<0) {
+					$error++;
+					$errors[] = $object->error;
 				}
 			}
 			if ($error > 0) {
