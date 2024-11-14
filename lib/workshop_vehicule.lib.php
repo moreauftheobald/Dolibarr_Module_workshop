@@ -138,7 +138,7 @@ function VhSetupPrepareHead(): array
 	$head[$h][2] = 'typect';
 	$h++;
 
-	$head[$h][0] = dol_buildpath("/dolifleet/param/vh_setup_pneu.php", 1);
+	$head[$h][0] = dol_buildpath("/workshop/vehicule/param/vh_setup_pneu.php", 1);
 	$head[$h][1] = $langs->trans("VhSetupPneu");
 	$head[$h][2] = 'pneu';
 	$h++;

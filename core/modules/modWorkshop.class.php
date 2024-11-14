@@ -325,7 +325,7 @@ class modWorkshop extends DolibarrModules
 		$this->rights[$r][5] = 'write';
 		$r++;
 		$this->rights[$r][0] = $this->numero . sprintf('%02d', (4 * 10) + 0 + 1);
-		$this->rights[$r][1] = 'Readvehiculesext';
+		$this->rights[$r][1] = 'Readvehicules';
 		$this->rights[$r][4] = 'vehicule';
 		$this->rights[$r][5] = 'read';
 		$r++;
@@ -391,7 +391,7 @@ class modWorkshop extends DolibarrModules
 
 		/* END MODULEBUILDER LEFTMENU VEHICULE */
 
-		
+
 		$this->menu[$r++]=array(
 			'fk_menu'=>'fk_mainmenu=vehicules',
 			'type'=>'left',
@@ -422,7 +422,7 @@ class modWorkshop extends DolibarrModules
 			'user'=>2,
 			'object'=>'Vehicule'
 		);
-		
+
 		$this->menu[$r++]=array(
 			'fk_menu'=>'fk_mainmenu=vehicules',
 			'type'=>'left',
