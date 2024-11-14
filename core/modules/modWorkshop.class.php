@@ -391,26 +391,11 @@ class modWorkshop extends DolibarrModules
 
 		/* END MODULEBUILDER LEFTMENU VEHICULE */
 
+		
 		$this->menu[$r++]=array(
 			'fk_menu'=>'fk_mainmenu=vehicules',
 			'type'=>'left',
-			'titre'=>'Vehicule',
-			'prefix' => img_picto('', $this->picto, 'class="paddingright pictofixedwidth valignmiddle"'),
-			'mainmenu'=>'workshop',
-			'leftmenu'=>'vehicule',
-			'url'=>'/workshop/vehicule/vehicule_list.php',
-			'langs'=>'workshop@workshop',
-			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")',
-			'perms'=>'$user->hasRight("workshop", "vehicule", "read")',
-			'target'=>'',
-			'user'=>2,
-			'object'=>'Vehicule'
-		);
-		$this->menu[$r++]=array(
-			'fk_menu'=>'fk_mainmenu=vehicules,fk_leftmenu=vehicule',
-			'type'=>'left',
-			'titre'=>'List Vehicule',
+			'titre'=>'List_Vehicule',
 			'mainmenu'=>'workshop',
 			'leftmenu'=>'workshop_vehicule_list',
 			'url'=>'/workshop/vehicule/vehicule_list.php',
@@ -423,9 +408,9 @@ class modWorkshop extends DolibarrModules
 			'object'=>'Vehicule'
         );
 		$this->menu[$r++]=array(
-			'fk_menu'=>'fk_mainmenu=vehicules,fk_leftmenu=vehicule',
+			'fk_menu'=>'fk_mainmenu=vehicules',
 			'type'=>'left',
-			'titre'=>'New Vehicule',
+			'titre'=>'New_Vehicule',
 			'mainmenu'=>'workshop',
 			'leftmenu'=>'workshop_vehicule_new',
 			'url'=>'/workshop/vehicule/vehicule_card.php?action=create',
