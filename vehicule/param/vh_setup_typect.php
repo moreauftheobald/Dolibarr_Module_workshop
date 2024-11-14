@@ -61,9 +61,11 @@ if (!$res) {
 }
 
 dol_include_once('/workshop/lib/workshop_vehicule.lib.php');
-
+dol_include_once('/workshop/class/vehiculecontracttype.class.php');
 // Load translation files required by the page
 $langs->load("workshop@workshop");
+
+$object = new VehiculeContractType($db);
 
 // Get parameters
 $action = GETPOST('action', 'aZ09');
@@ -108,30 +110,35 @@ if (empty($reshook)) {
 				}
 			}
 			if (empty($error)) {
-				if ($action == 'confirmnew') {
-					$sql = "INSERT INTO " . MAIN_DB_PREFIX . "c_workshop_contract_type (entity,code, label, active, date_creation) VALUES (";
-					$sql .= "'" . $conf->entity . "',";
-					$sql .= "'" . $code . "',";
-					$sql .= "'" . $label . "',";
-					$sql .= "'" . $active . "',";
-					$sql .= "'" . $db->idate(dol_now()) . "')";
-				} elseif ($action == 'confirmedit') {
-					$sql = "UPDATE " . MAIN_DB_PREFIX . "c_workshop_contract_type SET ";
-					$sql .= "code = '" . $code . "', ";
-					$sql .= "label = '" . $label . "', ";
-					$sql .= "active = '" . $active . "' ";
-					$sql .= "WHERE rowid = " . $rowid;
-				} elseif ($action == 'confirmdelete') {
-					$sql = "DELETE FROM " . MAIN_DB_PREFIX . "c_workshop_contract_type WHERE rowid = " . $rowid;
-				}
-				$res = $db->query($sql);
-				if (!$res) {
-					$error++;
-					if ($db->lasterrno() == 'DB_ERROR_RECORD_ALREADY_EXISTS') {
-						$errors[] = "ErrorRefAlreadyExists";
-					} else {
-						$errors[] = $db->lasterror();
+				if (!empty($rowid)) {
+					$resfetch = $object->fetch($rowid);
+					if ($resfetch < 0) {
+						$error++;
+						$errors[] = $object->error;
 					}
+				}
+				if (empty($error)) {
+					if ($action == 'confirmnew') {
+						$object->entity = 0;
+						$object->code = $code;
+						$object->label = $label;
+						$object->active = $active;
+						$object->date_creation = dol_now();
+						$res=$object->create($user);
+					} elseif ($action == 'confirmedit') {
+						$object->code = $code;
+						$object->label = $label;
+						$object->active = $active;
+						$res = $object->update($user);
+					} elseif ($action == 'confirmdelete') {
+						$res = $object->delete($user);
+					}
+				}
+
+				if ($res<0) {
+					$error++;
+					$errors[] = $object->error;
+					$errors = array_merge($errors,$object->errors);
 				}
 			}
 			if ($error > 0) {
@@ -175,8 +182,8 @@ $limit = 25;
 $offset = $limit * $page;
 
 $sql  = "SELECT p.rowid as rowid, p.code as code, p.label as label, p.active as active ";
-$sql .= "FROM ".MAIN_DB_PREFIX."c_workshop_contract_type as p ";
-$sql .= "WHERE p.entity IN (".getEntity('product').")";
+$sql .= "FROM ".MAIN_DB_PREFIX. $object->table_element . " as p ";
+$sql .= "WHERE 1=1";
 
 $nbtotalofrecords = 0;
 $resql = $db->query($sql);
@@ -219,7 +226,7 @@ if ($resql) {
  */
 
 $form = new Form($db);
-$title = $langs->trans('DolifleetSetupTypeCt');
+$title = $langs->trans('WorkshopSetupTypeCt');
 $help_url = '';
 llxHeader('', $title, $help_url);
 

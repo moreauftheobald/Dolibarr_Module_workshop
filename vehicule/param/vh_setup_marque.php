@@ -111,7 +111,6 @@ if (empty($reshook)) {
 				}
 			}
 			if (empty($error)) {
-				$object = new VehiculeMark($db);
 				if (!empty($rowid)) {
 					$resfetch = $object->fetch($rowid);
 					if ($resfetch < 0) {
@@ -138,8 +137,6 @@ if (empty($reshook)) {
 				}
 
 				if ($res<0) {
-//					var_dump($res);
-//					exit;
 					$error++;
 					$errors[] = $object->error;
 					$errors = array_merge($errors,$object->errors);
