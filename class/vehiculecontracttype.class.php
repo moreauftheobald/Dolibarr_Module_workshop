@@ -145,9 +145,6 @@ class VehiculeContractType extends CommonObject
 
 		// Load source object
 		$result = $object->fetchCommon($fromid);
-		if ($result > 0 && !empty($object->table_element_line)) {
-			$object->fetchLines();
-		}
 
 
 		// Reset some properties
@@ -156,9 +153,6 @@ class VehiculeContractType extends CommonObject
 		unset($object->import_key);
 
 		// Clear fields
-		if (property_exists($object, 'code')) {
-			$object->ref = empty($this->fields['ref']['default']) ? "Copy_Of_".$object->ref : $this->fields['ref']['default'];
-		}
 		if (property_exists($object, 'label')) {
 			$object->label = empty($this->fields['label']['default']) ? $langs->trans("CopyOf")." ".$object->label : $this->fields['label']['default'];
 		}
@@ -320,11 +314,9 @@ class VehiculeContractType extends CommonObject
 			return ['optimize' => $langs->trans("ShowVehiculeContractType")];
 		}
 		$datas['picto'] = img_picto('', $this->picto).' <u>'.$langs->trans("VehiculeContractType").'</u>';
-		if (isset($this->status)) {
-			$datas['picto'] .= ' '.$this->getLibStatut(5);
-		}
+
 		if (property_exists($this, 'ref')) {
-			$datas['ref'] = '<br><b>'.$langs->trans('code').':</b> '.$this->code;
+			$datas['ref'] = '<br><b>'.$langs->trans('Code').':</b> '.$this->code;
 		}
 		if (property_exists($this, 'label')) {
 			$datas['ref'] = '<br>'.$langs->trans('Label').':</b> '.$this->label;
