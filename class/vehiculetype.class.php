@@ -19,9 +19,9 @@
  */
 
 /**
- * \file        class/vehicule.class.php
+ * \file        class/vehiculetype.class.php
  * \ingroup     workshop
- * \brief       This file is a CRUD class file for Vehicule (Create/Read/Update/Delete)
+ * \brief       This file is a CRUD class file for VehiculeType (Create/Read/Update/Delete)
  */
 
 // Put here all includes required by your class file
@@ -30,9 +30,9 @@ require_once DOL_DOCUMENT_ROOT.'/core/class/commonobject.class.php';
 //require_once DOL_DOCUMENT_ROOT . '/product/class/product.class.php';
 
 /**
- * Class for Vehicule
+ * Class for VehiculeType
  */
-class Vehicule extends CommonObject
+class VehiculeType extends CommonObject
 {
 	/**
 	 * @var string 	ID of module.
@@ -42,20 +42,20 @@ class Vehicule extends CommonObject
 	/**
 	 * @var string 	ID to identify managed object.
 	 */
-	public $element = 'vehicule';
+	public $element = 'vehiculetype';
 
 	/**
 	 * @var string 	Name of table without prefix where object is stored. This is also the key used for extrafields management (so extrafields know the link to the parent table).
 	 */
-	public $table_element = 'workshop_vehicule';
+	public $table_element = 'workshop_vehiculetype';
 
 	/**
-	 * @var string 	If permission must be checkec with hasRight('workshop', 'read') and not hasright('mymodyle', 'vehicule', 'read'), you can uncomment this line
+	 * @var string 	If permission must be checkec with hasRight('workshop', 'read') and not hasright('mymodyle', 'vehiculetype', 'read'), you can uncomment this line
 	 */
 	//public $element_for_permission = 'workshop';
 
 	/**
-	 * @var string 	String with name of icon for vehicule. Must be a 'fa-xxx' fontawesome code (or 'fa-xxx_fa_color_size') or 'vehicule@workshop' if picto is file 'img/object_vehicule.png'.
+	 * @var string 	String with name of icon for vehiculetype. Must be a 'fa-xxx' fontawesome code (or 'fa-xxx_fa_color_size') or 'vehiculetype@workshop' if picto is file 'img/object_vehiculetype.png'.
 	 */
 	public $picto = 'fa-file';
 
@@ -109,45 +109,19 @@ class Vehicule extends CommonObject
 	 * @var array  Array with all fields and their property. Do not use it as a static var. It may be modified by constructor.
 	 */
 	public $fields=array(
-		"rowid" => array("type"=>"integer", "label"=>"TechnicalID", "picto"=>"fa-truck", "enabled"=>"1", 'position'=>10, 'notnull'=>1, "visible"=>"0",),
-		"date_creation" => array("type"=>"datetime", "label"=>"Datecreation", "picto"=>"fa-truck", "enabled"=>"1", 'position'=>15, 'notnull'=>0, "visible"=>"-1",),
-		"tms" => array("type"=>"timestamp", "label"=>"DateModification", "picto"=>"fa-truck", "enabled"=>"1", 'position'=>20, 'notnull'=>1, "visible"=>"-1",),
-		"vin" => array("type"=>"varchar(50)", "label"=>"Vin", "picto"=>"fa-truck", "enabled"=>"1", 'position'=>25, 'notnull'=>0, "visible"=>"1",),
-		"status" => array("type"=>"integer", "label"=>"Status", "picto"=>"fa-truck", "enabled"=>"1", 'position'=>500, 'notnull'=>1, "visible"=>"1",),
-		"fk_vehicule_type" => array("type"=>"integer:VehiculeType:workshop/class/vehiculetype.class.php", "label"=>"Fkvehiculetype", "picto"=>"fa-truck", "enabled"=>"1", 'position'=>40, 'notnull'=>0, "visible"=>"1", "css"=>"maxwidth500 widthcentpercentminusxx",),
-		"fk_vehicule_mark" => array("type"=>"integer:VehiculeMark:workshop/class/vehiculemark.class.php", "label"=>"Fkvehiculemark", "picto"=>"fa-truck", "enabled"=>"1", 'position'=>45, 'notnull'=>0, "visible"=>"1", "css"=>"maxwidth500 widthcentpercentminusxx",),
-		"modele" => array("type"=>"varchar(255)", "label"=>"Modele", "picto"=>"fa-truck", "enabled"=>"1", 'position'=>50, 'notnull'=>0, "visible"=>"1",),
-		"immatriculation" => array("type"=>"varchar(255)", "label"=>"Immatriculation", "picto"=>"fa-truck", "enabled"=>"1", 'position'=>55, 'notnull'=>0, "visible"=>"1",),
-		"date_immat" => array("type"=>"datetime", "label"=>"Dateimmat", "picto"=>"fa-truck", "enabled"=>"1", 'position'=>60, 'notnull'=>0, "visible"=>"-1",),
-		"fk_soc" => array("type"=>"integer:Societe:societe/class/societe.class.php", "label"=>"ThirdParty", "picto"=>"company", "enabled"=>"1", 'position'=>65, 'notnull'=>0, "visible"=>"1", "css"=>"maxwidth500 widthcentpercentminusxx", "csslist"=>"tdoverflowmax150",),
-		"km" => array("type"=>"double", "label"=>"Km", "picto"=>"company", "enabled"=>"1", 'position'=>70, 'notnull'=>0, "visible"=>"1",),
-		"km_date" => array("type"=>"datetime", "label"=>"Kmdate", "picto"=>"company", "enabled"=>"1", 'position'=>75, 'notnull'=>0, "visible"=>"-1",),
-		"fk_contract_type" => array("type"=>"integer:VehiculeContractType:workshop/class/vehiculecontracttype.class.php", "label"=>"Fkcontracttype", "picto"=>"company", "enabled"=>"1", 'position'=>80, 'notnull'=>0, "visible"=>"-1", "css"=>"maxwidth500 widthcentpercentminusxx",),
-		"date_end_contract" => array("type"=>"datetime", "label"=>"Dateendcontract", "picto"=>"company", "enabled"=>"1", 'position'=>85, 'notnull'=>0, "visible"=>"-1",),
-		"carrosserie" => array("type"=>"longtext", "label"=>"Carrosserie", "picto"=>"company", "enabled"=>"1", 'position'=>90, 'notnull'=>0, "visible"=>"1",),
-		"dim_pneu" => array("type"=>"integer:VehiculeDimPneu:workshop/class/vehiculedimpneu.class.php", "label"=>"Dimpneu", "picto"=>"company", "enabled"=>"1", 'position'=>95, 'notnull'=>0, "visible"=>"1",),
-		"nb_pneu" => array("type"=>"integer", "label"=>"Nbpneu", "picto"=>"company", "enabled"=>"1", 'position'=>100, 'notnull'=>0, "visible"=>"1",),
-		"import_key" => array("type"=>"varchar(255)", "label"=>"ImportId", "picto"=>"company", "enabled"=>"1", 'position'=>900, 'notnull'=>0, "visible"=>"-2",),
+		"rowid" => array("type"=>"integer", "label"=>"TechnicalID", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>10, 'notnull'=>1, "visible"=>"-1",),
+		"date_creation" => array("type"=>"datetime", "label"=>"Datecreation", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>15, 'notnull'=>0, "visible"=>"-1",),
+		"tms" => array("type"=>"timestamp", "label"=>"DateModification", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>20, 'notnull'=>1, "visible"=>"-1",),
+		"code" => array("type"=>"varchar(20)", "label"=>"Code", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>25, 'notnull'=>0, "visible"=>"-1", "showoncombobox"=>"1",),
+		"active" => array("type"=>"integer", "label"=>"Active", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>35, 'notnull'=>1, "visible"=>"-1",),
+		"label" => array("type"=>"varchar(255)", "label"=>"Label", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>40, 'notnull'=>0, "visible"=>"-1", "alwayseditable"=>"1", "css"=>"minwidth300", "cssview"=>"wordbreak", "csslist"=>"tdoverflowmax150",),
 	);
 	public $rowid;
 	public $date_creation;
 	public $tms;
-	public $vin;
-	public $status;
-	public $fk_vehicule_type;
-	public $fk_vehicule_mark;
-	public $modele;
-	public $immatriculation;
-	public $date_immat;
-	public $fk_soc;
-	public $km;
-	public $km_date;
-	public $fk_contract_type;
-	public $date_end_contract;
-	public $carrosserie;
-	public $dim_pneu;
-	public $nb_pneu;
-	public $import_key;
+	public $code;
+	public $active;
+	public $label;
 	// END MODULEBUILDER PROPERTIES
 
 
@@ -157,32 +131,32 @@ class Vehicule extends CommonObject
 	// /**
 	//  * @var string    Name of subtable line
 	//  */
-	// public $table_element_line = 'workshop_vehiculeline';
+	// public $table_element_line = 'workshop_vehiculetypeline';
 
 	// /**
 	//  * @var string    Field with ID of parent key if this object has a parent
 	//  */
-	// public $fk_element = 'fk_vehicule';
+	// public $fk_element = 'fk_vehiculetype';
 
 	// /**
 	//  * @var string    Name of subtable class that manage subtable lines
 	//  */
-	// public $class_element_line = 'Vehiculeline';
+	// public $class_element_line = 'VehiculeTypeline';
 
 	// /**
 	//  * @var array	List of child tables. To test if we can delete object.
 	//  */
-	// protected $childtables = array('mychildtable' => array('name'=>'Vehicule', 'fk_element'=>'fk_vehicule'));
+	// protected $childtables = array('mychildtable' => array('name'=>'VehiculeType', 'fk_element'=>'fk_vehiculetype'));
 
 	// /**
 	//  * @var array    List of child tables. To know object to delete on cascade.
 	//  *               If name matches '@ClassNAme:FilePathClass;ParentFkFieldName' it will
 	//  *               call method deleteByParentField(parentId, ParentFkFieldName) to fetch and delete child object
 	//  */
-	// protected $childtablesoncascade = array('workshop_vehiculedet');
+	// protected $childtablesoncascade = array('workshop_vehiculetypedet');
 
 	// /**
-	//  * @var VehiculeLine[]     Array of subtable lines
+	//  * @var VehiculeTypeLine[]     Array of subtable lines
 	//  */
 	// public $lines = array();
 
@@ -209,7 +183,7 @@ class Vehicule extends CommonObject
 		}
 
 		// Example to show how to set values of fields definition dynamically
-		/*if ($user->hasRight('workshop', 'vehicule', 'read')) {
+		/*if ($user->hasRight('workshop', 'vehiculetype', 'read')) {
 			$this->fields['myfield']['visible'] = 1;
 			$this->fields['myfield']['noteditable'] = 0;
 		}*/
@@ -523,8 +497,8 @@ class Vehicule extends CommonObject
 			return 0;
 		}
 
-		/* if (! ((!getDolGlobalInt('MAIN_USE_ADVANCED_PERMS') && $user->hasRight('workshop', 'vehicule', 'write'))
-		 || (getDolGlobalInt('MAIN_USE_ADVANCED_PERMS') && $user->hasRight('workshop', 'vehicule_advance', 'validate')))
+		/* if (! ((!getDolGlobalInt('MAIN_USE_ADVANCED_PERMS') && $user->hasRight('workshop', 'vehiculetype', 'write'))
+		 || (getDolGlobalInt('MAIN_USE_ADVANCED_PERMS') && $user->hasRight('workshop', 'vehiculetype_advance', 'validate')))
 		 {
 		 $this->error='NotEnoughPermissions';
 		 dol_syslog(get_class($this)."::valid ".$this->error, LOG_ERR);
@@ -583,15 +557,15 @@ class Vehicule extends CommonObject
 			// Rename directory if dir was a temporary ref
 			if (preg_match('/^[\(]?PROV/i', $this->ref)) {
 				// Now we rename also files into index
-				$sql = 'UPDATE '.MAIN_DB_PREFIX."ecm_files set filename = CONCAT('".$this->db->escape($this->newref)."', SUBSTR(filename, ".(strlen($this->ref) + 1).")), filepath = 'vehicule/".$this->db->escape($this->newref)."'";
-				$sql .= " WHERE filename LIKE '".$this->db->escape($this->ref)."%' AND filepath = 'vehicule/".$this->db->escape($this->ref)."' and entity = ".$conf->entity;
+				$sql = 'UPDATE '.MAIN_DB_PREFIX."ecm_files set filename = CONCAT('".$this->db->escape($this->newref)."', SUBSTR(filename, ".(strlen($this->ref) + 1).")), filepath = 'vehiculetype/".$this->db->escape($this->newref)."'";
+				$sql .= " WHERE filename LIKE '".$this->db->escape($this->ref)."%' AND filepath = 'vehiculetype/".$this->db->escape($this->ref)."' and entity = ".$conf->entity;
 				$resql = $this->db->query($sql);
 				if (!$resql) {
 					$error++;
 					$this->error = $this->db->lasterror();
 				}
-				$sql = 'UPDATE '.MAIN_DB_PREFIX."ecm_files set filepath = 'vehicule/".$this->db->escape($this->newref)."'";
-				$sql .= " WHERE filepath = 'vehicule/".$this->db->escape($this->ref)."' and entity = ".$conf->entity;
+				$sql = 'UPDATE '.MAIN_DB_PREFIX."ecm_files set filepath = 'vehiculetype/".$this->db->escape($this->newref)."'";
+				$sql .= " WHERE filepath = 'vehiculetype/".$this->db->escape($this->ref)."' and entity = ".$conf->entity;
 				$resql = $this->db->query($sql);
 				if (!$resql) {
 					$error++;
@@ -601,15 +575,15 @@ class Vehicule extends CommonObject
 				// We rename directory ($this->ref = old ref, $num = new ref) in order not to lose the attachments
 				$oldref = dol_sanitizeFileName($this->ref);
 				$newref = dol_sanitizeFileName($num);
-				$dirsource = $conf->workshop->dir_output.'/vehicule/'.$oldref;
-				$dirdest = $conf->workshop->dir_output.'/vehicule/'.$newref;
+				$dirsource = $conf->workshop->dir_output.'/vehiculetype/'.$oldref;
+				$dirdest = $conf->workshop->dir_output.'/vehiculetype/'.$newref;
 				if (!$error && file_exists($dirsource)) {
 					dol_syslog(get_class($this)."::validate() rename dir ".$dirsource." into ".$dirdest);
 
 					if (@rename($dirsource, $dirdest)) {
 						dol_syslog("Rename ok");
 						// Rename docs starting with $oldref with $newref
-						$listoffiles = dol_dir_list($conf->workshop->dir_output.'/vehicule/'.$newref, 'files', 1, '^'.preg_quote($oldref, '/'));
+						$listoffiles = dol_dir_list($conf->workshop->dir_output.'/vehiculetype/'.$newref, 'files', 1, '^'.preg_quote($oldref, '/'));
 						foreach ($listoffiles as $fileentry) {
 							$dirsource = $fileentry['name'];
 							$dirdest = preg_replace('/^'.preg_quote($oldref, '/').'/', $newref, $dirsource);
@@ -724,9 +698,9 @@ class Vehicule extends CommonObject
 		$datas = [];
 
 		if (getDolGlobalInt('MAIN_OPTIMIZEFORTEXTBROWSER')) {
-			return ['optimize' => $langs->trans("ShowVehicule")];
+			return ['optimize' => $langs->trans("ShowVehiculeType")];
 		}
-		$datas['picto'] = img_picto('', $this->picto).' <u>'.$langs->trans("Vehicule").'</u>';
+		$datas['picto'] = img_picto('', $this->picto).' <u>'.$langs->trans("VehiculeType").'</u>';
 		if (isset($this->status)) {
 			$datas['picto'] .= ' '.$this->getLibStatut(5);
 		}
@@ -774,7 +748,7 @@ class Vehicule extends CommonObject
 			$label = implode($this->getTooltipContentArray($params));
 		}
 
-		$url = dol_buildpath('/workshop/vehicule/vehicule_card.php', 1).'?id='.$this->id;
+		$url = dol_buildpath('/workshop/vehiculetype_card.php', 1).'?id='.$this->id;
 
 		if ($option !== 'nolink') {
 			// Add param to save lastsearch_values or not
@@ -790,7 +764,7 @@ class Vehicule extends CommonObject
 		$linkclose = '';
 		if (empty($notooltip)) {
 			if (getDolGlobalInt('MAIN_OPTIMIZEFORTEXTBROWSER')) {
-				$label = $langs->trans("ShowVehicule");
+				$label = $langs->trans("ShowVehiculeType");
 				$linkclose .= ' alt="'.dol_escape_htmltag($label, 1).'"';
 			}
 			$linkclose .= ($label ? ' title="'.dol_escape_htmltag($label, 1).'"' : ' title="tocomplete"');
@@ -1040,8 +1014,8 @@ class Vehicule extends CommonObject
 	{
 		$this->lines = array();
 
-		$objectline = new VehiculeLine($this->db);
-		$result = $objectline->fetchAll('ASC', 'position', 0, 0, '(fk_vehicule:=:'.((int) $this->id).')');
+		$objectline = new VehiculeTypeLine($this->db);
+		$result = $objectline->fetchAll('ASC', 'position', 0, 0, '(fk_vehiculetype:=:'.((int) $this->id).')');
 
 		if (is_numeric($result)) {
 			$this->setErrorsFromObject($objectline);
@@ -1063,7 +1037,7 @@ class Vehicule extends CommonObject
 		$langs->load("workshop@workshop");
 
 		if (!getDolGlobalString('WORKSHOP_MYOBJECT_ADDON')) {
-			$conf->global->WORKSHOP_MYOBJECT_ADDON = 'mod_vehicule_standard';
+			$conf->global->WORKSHOP_MYOBJECT_ADDON = 'mod_vehiculetype_standard';
 		}
 
 		if (getDolGlobalString('WORKSHOP_MYOBJECT_ADDON')) {
@@ -1128,7 +1102,7 @@ class Vehicule extends CommonObject
 		$langs->load("workshop@workshop");
 
 		if (!dol_strlen($modele)) {
-			$modele = 'standard_vehicule';
+			$modele = 'standard_vehiculetype';
 
 			if (!empty($this->model_pdf)) {
 				$modele = $this->model_pdf;
@@ -1200,24 +1174,24 @@ class Vehicule extends CommonObject
 require_once DOL_DOCUMENT_ROOT.'/core/class/commonobjectline.class.php';
 
 /**
- * Class VehiculeLine. You can also remove this and generate a CRUD class for lines objects.
+ * Class VehiculeTypeLine. You can also remove this and generate a CRUD class for lines objects.
  */
-class VehiculeLine extends CommonObjectLine
+class VehiculeTypeLine extends CommonObjectLine
 {
-	// To complete with content of an object VehiculeLine
-	// We should have a field rowid, fk_vehicule and position
+	// To complete with content of an object VehiculeTypeLine
+	// We should have a field rowid, fk_vehiculetype and position
 
 	/**
 	 * To overload
 	 * @see CommonObjectLine
 	 */
-	public $parent_element = '';		// Example: '' or 'vehicule'
+	public $parent_element = '';		// Example: '' or 'vehiculetype'
 
 	/**
 	 * To overload
 	 * @see CommonObjectLine
 	 */
-	public $fk_parent_attribute = '';	// Example: '' or 'fk_vehicule'
+	public $fk_parent_attribute = '';	// Example: '' or 'fk_vehiculetype'
 
 	/**
 	 * Constructor
