@@ -87,9 +87,13 @@ Param_Vehicule=Parametres
 # Vehicule Param pages
 #
 VhSetupMarque=Parametrages des marques
-VhSetupType= Parametrages des types de véhicules
+VhSetupType=Parametrages des types de véhicules
 VhSetupTypeCt=Parametrage des types de contrats
 VhSetupPneu=Parametrage des types de pneumatiques
+Param_Vehicule_mark=Parametrages des marques
+Param_Vehicule_type=Parametrages des types de véhicules
+Param_Vehicule_typect=Parametrage des types de contrats
+Param_Vehicule_pneu=Parametrage des types de pneu
 WorkshopSetupMarque=Parametrage de marques
 code=Code
 marquelabel=Nom de la marque
@@ -131,3 +135,15 @@ DeletePneuQuestion=Etes vous sur de vouloir supprimer un type de pneu ?
 NewPneu=Créer un type de pneu
 EditPneu=Editer un type de pneu
 pneulabel=Nom du type de pneu
+
+#
+# Page véhicules
+#
+Fkvehiculetype=Type de véhicule
+Fkvehiculemark=Marque
+Kmdate=Date du dernier relevé kilometrique
+Fkcontracttype=Type de contrat
+Dateendcontract=Date de fin de contrat
+Dimpneu=Dimenssions Pneumatique
+Nbpneu=Nombre de pneumatique
+Dateimmat=Date de 1ere immatriculation

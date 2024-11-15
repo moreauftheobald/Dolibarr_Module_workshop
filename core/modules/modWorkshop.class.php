@@ -353,6 +353,11 @@ class modWorkshop extends DolibarrModules
 		$r = 0;
 		// Add here entries to declare new menus
 		/* BEGIN MODULEBUILDER TOPMENU */
+		/* END MODULEBUILDER TOPMENU */
+
+		/*
+		 * Atelier Menu section
+		 */
 		$this->menu[$r++] = array(
 			'fk_menu'=>'', // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
 			'type'=>'top', // This is a Top menu entry
@@ -369,148 +374,13 @@ class modWorkshop extends DolibarrModules
 			'user'=>2, // 0=Menu for internal users, 1=external users, 2=both
 		);
 
-
-		$this->menu[$r++] = array(
-			'fk_menu'=>'', // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
-			'type'=>'top', // This is a Top menu entry
-			'titre'=>'ModuleWorkshopVehicules',
-			'prefix' => img_picto('', 'fa-truck', 'class="pictofixedwidth valignmiddle"'),
-			'mainmenu'=>'vehicules',
-			'leftmenu'=>'',
-			'url'=>'/workshop/vehiculesindex.php',
-			'langs'=>'workshop@workshop', // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
-			'position'=>1000 + $r,
-			'enabled'=>'isModEnabled("workshop")', // Define condition to show or hide menu entry. Use 'isModEnabled("workshop")' if entry must be visible if module is enabled.
-			'perms'=>'1', // Use 'perms'=>'$user->hasRight("workshop", "vehicule", "read")' if you want your menu with a permission rules
-			'target'=>'',
-			'user'=>2, // 0=Menu for internal users, 1=external users, 2=both
-		);
-		/* END MODULEBUILDER TOPMENU */
-
-		/* BEGIN MODULEBUILDER LEFTMENU VEHICULE */
-
-		/* END MODULEBUILDER LEFTMENU VEHICULE */
-
-
-		$this->menu[$r++]=array(
-			'fk_menu'=>'fk_mainmenu=vehicules',
-			'type'=>'left',
-			'titre'=>'List_Vehicule',
-			'mainmenu'=>'workshop',
-			'leftmenu'=>'workshop_vehicule_list',
-			'url'=>'/workshop/vehicule/vehicule_list.php',
-			'langs'=>'workshop@workshop',
-			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")',
-			'perms'=>'$user->hasRight("workshop", "vehicule", "read")',
-			'target'=>'',
-			'user'=>2,
-			'object'=>'Vehicule'
-        );
-
-		$this->menu[$r++]=array(
-			'fk_menu'=>'fk_mainmenu=vehicules',
-			'type'=>'left',
-			'titre'=>'New_Vehicule',
-			'mainmenu'=>'workshop',
-			'leftmenu'=>'workshop_vehicule_new',
-			'url'=>'/workshop/vehicule/vehicule_card.php?action=create',
-			'langs'=>'workshop@workshop',
-			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")',
-			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
-			'target'=>'',
-			'user'=>2,
-			'object'=>'Vehicule'
-		);
-
-		$this->menu[$r++]=array(
-			'fk_menu'=>'fk_mainmenu=vehicules',
-			'type'=>'left',
-			'titre'=>'Param_Vehicule',
-			'mainmenu'=>'workshop',
-			'leftmenu'=>'workshop_vehicule_param',
-			'url'=>'/workshop/vehicule/param/vh_setup_marque.php',
-			'langs'=>'workshop@workshop',
-			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")',
-			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
-			'target'=>'',
-			'user'=>2,
-			'object'=>'Vehicule'
-		);
-
-		$this->menu[$r++]=array(
-			'fk_menu'=>'fk_mainmenu=vehicules,fk_leftmenu=workshop_vehicule_param',
-			'type'=>'left',
-			'titre'=>'Param_Vehicule_mark',
-			'mainmenu'=>'workshop',
-			'leftmenu'=>'workshop_vehicule_param_mark',
-			'url'=>'/workshop/vehicule/param/vh_setup_marque.php',
-			'langs'=>'workshop@workshop',
-			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")',
-			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
-			'target'=>'',
-			'user'=>2,
-			'object'=>'Vehicule'
-		);
-
-		$this->menu[$r++]=array(
-			'fk_menu'=>'fk_mainmenu=vehicules,fk_leftmenu=workshop_vehicule_param',
-			'type'=>'left',
-			'titre'=>'Param_Vehicule_type',
-			'mainmenu'=>'workshop',
-			'leftmenu'=>'workshop_vehicule_param_type',
-			'url'=>'/workshop/vehicule/param/vh_setup_type.php',
-			'langs'=>'workshop@workshop',
-			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")',
-			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
-			'target'=>'',
-			'user'=>2,
-			'object'=>'Vehicule'
-		);
-
-		$this->menu[$r++]=array(
-			'fk_menu'=>'fk_mainmenu=vehicules,fk_leftmenu=workshop_vehicule_param',
-			'type'=>'left',
-			'titre'=>'Param_Vehicule_typect',
-			'mainmenu'=>'workshop',
-			'leftmenu'=>'workshop_vehicule_param_typect',
-			'url'=>'/workshop/vehicule/param/vh_setup_typect.php',
-			'langs'=>'workshop@workshop',
-			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")',
-			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
-			'target'=>'',
-			'user'=>2,
-			'object'=>'Vehicule'
-		);
-
-		$this->menu[$r++]=array(
-			'fk_menu'=>'fk_mainmenu=vehicules,fk_leftmenu=workshop_vehicule_param',
-			'type'=>'left',
-			'titre'=>'Param_Vehicule_pneu',
-			'mainmenu'=>'workshop',
-			'leftmenu'=>'workshop_vehicule_param_pneu',
-			'url'=>'/workshop/vehicule/param/vh_setup_pneu.php',
-			'langs'=>'workshop@workshop',
-			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")',
-			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
-			'target'=>'',
-			'user'=>2,
-			'object'=>'Vehicule'
-		);
-
 		$this->menu[$r++]=array(
 			'fk_menu'=>'fk_mainmenu=workshop',      // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
 			'type'=>'left',                          // This is a Left menu entry
 			'titre'=>'NewOperationOrders',
 			'prefix' => img_picto('', 'fa-plus', 'class="pictofixedwidth valignmiddle paddingright"'),
 			'mainmenu'=>'workshop',
-			'leftmenu'=>'newoperationorders',
+			'leftmenu'=>'workshop_newoperationorders',
 			'url'=>'/workshop/or.php?action=create',
 			'langs'=>'workshop@workshop',	        // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
 			'position'=>1000+$r,
@@ -527,7 +397,7 @@ class modWorkshop extends DolibarrModules
 			'titre'=>'OperationOrders',
 			'prefix' => img_picto('', 'fa-file-invoice', 'class="pictofixedwidth valignmiddle paddingright"'),
 			'mainmenu'=>'workshop',
-			'leftmenu'=>'operationorders',
+			'leftmenu'=>'workshop_operationorders',
 			'url'=>'/workshop/or_list.php',
 			'langs'=>'workshop@workshop',	        // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
 			'position'=>1000+$r,
@@ -544,7 +414,7 @@ class modWorkshop extends DolibarrModules
 			'titre'=>'Workshop',
 			'prefix' => img_picto('', 'fa-warehouse', 'class="pictofixedwidth valignmiddle paddingright"'),
 			'mainmenu'=>'workshop',
-			'leftmenu'=>'workshop_workshop',
+			'leftmenu'=>'workshop_main',
 			'url'=>'/workshop/workshop.php',
 			'langs'=>'workshop@workshop',	        // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
 			'position'=>1000+$r,
@@ -556,12 +426,12 @@ class modWorkshop extends DolibarrModules
 		);
 
 		$this->menu[$r++]=array(
-			'fk_menu'=>'fk_mainmenu=workshop,fk_leftmenu=workshop_workshop',      // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
+			'fk_menu'=>'fk_mainmenu=workshop,fk_leftmenu=workshop_main',      // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
 			'type'=>'left',                          // This is a Left menu entry
 			'titre'=>'WorkshopPlanning',
 			'prefix' => img_picto('', 'fa-calendar-alt', 'class="pictofixedwidth valignmiddle paddingright"'),
 			'mainmenu'=>'workshop',
-			'leftmenu'=>'workshop_planning',
+			'leftmenu'=>'workshop_main_planning',
 			'url'=>'/workshop/workshop_planning.php',
 			'langs'=>'workshop@workshop',	        // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
 			'position'=>1000+$r,
@@ -573,12 +443,12 @@ class modWorkshop extends DolibarrModules
 		);
 
 		$this->menu[$r++]=array(
-			'fk_menu'=>'fk_mainmenu=workshop,fk_leftmenu=workshop_workshop',      // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
+			'fk_menu'=>'fk_mainmenu=workshop,fk_leftmenu=workshop_main',      // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
 			'type'=>'left',                          // This is a Left menu entry
 			'titre'=>'MecanicsPlanning',
 			'prefix' => img_picto('', 'fa-ruler-horizontal', 'class="pictofixedwidth valignmiddle paddingright"'),
 			'mainmenu'=>'workshop',
-			'leftmenu'=>'workshop_mecanicsplanning',
+			'leftmenu'=>'workshop_main_mecanicsplanning',
 			'url'=>'/workshop/workshop_mecanics_planning.php',
 			'langs'=>'workshop@workshop',	        // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
 			'position'=>1000+$r,
@@ -589,7 +459,143 @@ class modWorkshop extends DolibarrModules
 			'object'=>'OperationOrder'
 		);
 
+		/*
+		 * Vehicules Menu Section
+		 */
 
+		$this->menu[$r++] = array(
+			'fk_menu'=>'', // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
+			'type'=>'top', // This is a Top menu entry
+			'titre'=>'ModuleWorkshopVehicules',
+			'prefix' => img_picto('', 'fa-truck', 'class="pictofixedwidth valignmiddle"'),
+			'mainmenu'=>'vehicules',
+			'leftmenu'=>'',
+			'url'=>'/workshop/vehiculesindex.php',
+			'langs'=>'workshop@workshop', // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
+			'position'=>1000 + $r,
+			'enabled'=>'isModEnabled("workshop")', // Define condition to show or hide menu entry. Use 'isModEnabled("workshop")' if entry must be visible if module is enabled.
+			'perms'=>'1', // Use 'perms'=>'$user->hasRight("workshop", "vehicule", "read")' if you want your menu with a permission rules
+			'target'=>'',
+			'user'=>2, // 0=Menu for internal users, 1=external users, 2=both
+		);
+
+
+		/* BEGIN MODULEBUILDER LEFTMENU VEHICULE */
+
+		/* END MODULEBUILDER LEFTMENU VEHICULE */
+
+
+		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=vehicules',
+			'type'=>'left',
+			'titre'=>'List_Vehicule',
+			'mainmenu'=>'vehicules',
+			'leftmenu'=>'vehicule_list',
+			'url'=>'/workshop/vehicule/vehicule_list.php',
+			'langs'=>'workshop@workshop',
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop")',
+			'perms'=>'$user->hasRight("workshop", "vehicule", "read")',
+			'target'=>'',
+			'user'=>2,
+			'object'=>'Vehicule'
+		);
+
+		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=vehicules',
+			'type'=>'left',
+			'titre'=>'New_Vehicule',
+			'mainmenu'=>'vehicules',
+			'leftmenu'=>'vehicules_new',
+			'url'=>'/workshop/vehicule/vehicule_card.php?action=create',
+			'langs'=>'workshop@workshop',
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop")',
+			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
+			'target'=>'',
+			'user'=>2,
+			'object'=>'Vehicule'
+		);
+
+		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=vehicules',
+			'type'=>'left',
+			'titre'=>'Param_Vehicule',
+			'mainmenu'=>'vehicules',
+			'leftmenu'=>'vehicules_param',
+			'url'=>'/workshop/vehicule/param/vh_setup_marque.php',
+			'langs'=>'workshop@workshop',
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop")',
+			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
+			'target'=>'',
+			'user'=>2,
+			'object'=>'Vehicule'
+		);
+
+		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=vehicules,fk_leftmenu=vehicules_param',
+			'type'=>'left',
+			'titre'=>'Param_Vehicule_mark',
+			'mainmenu'=>'vehicules',
+			'leftmenu'=>'vehicules_param_mark',
+			'url'=>'/workshop/vehicule/param/vh_setup_marque.php',
+			'langs'=>'workshop@workshop',
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop")',
+			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
+			'target'=>'',
+			'user'=>2,
+			'object'=>'Vehicule'
+		);
+
+		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=vehicules,fk_leftmenu=vehicules_param',
+			'type'=>'left',
+			'titre'=>'Param_Vehicule_type',
+			'mainmenu'=>'vehicules',
+			'leftmenu'=>'vehicules_param_type',
+			'url'=>'/workshop/vehicule/param/vh_setup_type.php',
+			'langs'=>'workshop@workshop',
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop")',
+			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
+			'target'=>'',
+			'user'=>2,
+			'object'=>'Vehicule'
+		);
+
+		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=vehicules,fk_leftmenu=vehicules_param',
+			'type'=>'left',
+			'titre'=>'Param_Vehicule_typect',
+			'mainmenu'=>'vehicules',
+			'leftmenu'=>'vehicules_param_typect',
+			'url'=>'/workshop/vehicule/param/vh_setup_typect.php',
+			'langs'=>'workshop@workshop',
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop")',
+			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
+			'target'=>'',
+			'user'=>2,
+			'object'=>'Vehicule'
+		);
+
+		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=vehicules,fk_leftmenu=vehicules_param',
+			'type'=>'left',
+			'titre'=>'Param_Vehicule_pneu',
+			'mainmenu'=>'vehicules',
+			'leftmenu'=>'vehicules_param_pneu',
+			'url'=>'/workshop/vehicule/param/vh_setup_pneu.php',
+			'langs'=>'workshop@workshop',
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop")',
+			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
+			'target'=>'',
+			'user'=>2,
+			'object'=>'Vehicule'
+		);
 		// Exports profiles provided by this module
 		$r = 1;
 		/* BEGIN MODULEBUILDER EXPORT MYOBJECT */
