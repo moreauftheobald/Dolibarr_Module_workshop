@@ -136,20 +136,11 @@ include DOL_DOCUMENT_ROOT.'/core/actions_fetchobject.inc.php'; // Must be includ
 
 // There is several ways to check permission.
 // Set $enablepermissioncheck to 1 to enable a minimum low level of checks
-$enablepermissioncheck = 0;
-if ($enablepermissioncheck) {
-	$permissiontoread = $user->hasRight('workshop', 'vehicule', 'read');
-	$permissiontoadd = $user->hasRight('workshop', 'vehicule', 'write'); // Used by the include of actions_addupdatedelete.inc.php and actions_lineupdown.inc.php
-	$permissiontodelete = $user->hasRight('workshop', 'vehicule', 'delete') || ($permissiontoadd && isset($object->status) && $object->status == $object::STATUS_ACTIVATED);
-	$permissionnote = $user->hasRight('workshop', 'vehicule', 'write'); // Used by the include of actions_setnotes.inc.php
-	$permissiondellink = $user->hasRight('workshop', 'vehicule', 'write'); // Used by the include of actions_dellink.inc.php
-} else {
-	$permissiontoread = 1;
-	$permissiontoadd = 1; // Used by the include of actions_addupdatedelete.inc.php and actions_lineupdown.inc.php
-	$permissiontodelete = 1;
-	$permissionnote = 1;
-	$permissiondellink = 1;
-}
+$permissiontoread = $user->hasRight('workshop', 'vehicule', 'read');
+$permissiontoadd = $user->hasRight('workshop', 'vehicule', 'write'); // Used by the include of actions_addupdatedelete.inc.php and actions_lineupdown.inc.php
+$permissiontodelete = $user->hasRight('workshop', 'vehicule', 'delete') || ($permissiontoadd && isset($object->status) && $object->status == $object::STATUS_ACTIVATED);
+$permissionnote = $user->hasRight('workshop', 'vehicule', 'write'); // Used by the include of actions_setnotes.inc.php
+$permissiondellink = $user->hasRight('workshop', 'vehicule', 'write'); // Used by the include of actions_dellink.inc.php
 
 $upload_dir = $conf->workshop->multidir_output[isset($object->entity) ? $object->entity : 1].'/vehicule';
 
@@ -393,8 +384,7 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 	$morehtmlref = '<div class="refidno">';
 
 		// Ref customer
-		//$morehtmlref .= $form->editfieldkey("RefCustomer", 'ref_client', $object->ref_client, $object, $usercancreate, 'string', '', 0, 1);
-		//$morehtmlref .= $form->editfieldval("RefCustomer", 'ref_client', $object->ref_client, $object, $usercancreate, 'string'.(getDolGlobalInt('THIRDPARTY_REF_INPUT_SIZE') ? ':'.getDolGlobalInt('THIRDPARTY_REF_INPUT_SIZE') : ''), '', null, null, '', 1);
+		$morehtmlref .= $form->editfieldval("ImmatShort", 'immatriculation', $object->immatriculation, $object, $permissiontoadd);
 		// Thirdparty
 
 		if (!getDolGlobalInt('MAIN_DISABLE_OTHER_LINK') && isset($object->thirdparty) && $object->thirdparty->id > 0) {
@@ -410,7 +400,6 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 		}
 
 	$morehtmlref .= '</div>';
-
 
 	dol_banner_tab($object, 'vin', $linkback, 1, 'id', 'vin', $morehtmlref);
 
