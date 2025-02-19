@@ -130,6 +130,7 @@ if (empty($action) && empty($id) && empty($ref)) {
 	$action = 'view';
 }
 
+
 // Load object
 include DOL_DOCUMENT_ROOT.'/core/actions_fetchobject.inc.php'; // Must be include, not include_once.
 
@@ -165,7 +166,6 @@ if (!$permissiontoread) {
 }
 
 $error = 0;
-
 
 /*
  * Actions
@@ -289,6 +289,7 @@ if ($action == 'create') {
 
 // Part to edit record
 if (($id || $ref) && $action == 'edit') {
+
 	print load_fiche_titre($langs->trans("Vehicule"), '', 'object_'.$object->picto);
 
 	print '<form method="POST" action="'.$_SERVER["PHP_SELF"].'">';
@@ -301,6 +302,7 @@ if (($id || $ref) && $action == 'edit') {
 	if ($backtopageforcancel) {
 		print '<input type="hidden" name="backtopageforcancel" value="'.$backtopageforcancel.'">';
 	}
+
 
 	print dol_get_fiche_head();
 
@@ -398,11 +400,11 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 		if (!getDolGlobalInt('MAIN_DISABLE_OTHER_LINK') && isset($object->thirdparty) && $object->thirdparty->id > 0) {
 			$morehtmlref .= '<br>'.$object->thirdparty->getNomUrl(1, 'customer');
 			$vehOther = new Vehicule($db);
-			$vehOthers= $vehOther->fetchAll('','',1,0,'(fk_soc:=:'.$object->thirdparty->id.')');
+			$vehOthers= $vehOther->fetchAll('','',2,0,'(fk_soc:=:'.$object->thirdparty->id.')');
 			if (!is_array($vehOthers) && $vehOthers<0) {
 				setEventMessages($vehOther->error, $vehOther->errors, 'errors');
 			} elseif (is_array($vehOthers) && count($vehOthers)>1) {
-				$morehtmlref .= ' (<a href="'.dol_buildpath('/workshop/vehicule/vehicule_list.php',2).'?socid='.$object->thirdparty->id.'&search_societe='.urlencode($object->thirdparty->name).'">'.$langs->trans("OtherVehicules").'</a>)';
+				$morehtmlref .= ' (<a href="'.dol_buildpath('/workshop/vehicule/vehicule_list.php',2).'?search_fk_soc='.$object->thirdparty->id.'">'.$langs->trans("OtherVehicules").'</a>)';
 			}
 
 		}
