@@ -907,7 +907,7 @@ class Vehicule extends CommonObject
 				} else {
 					$statuspicto = img_picto('', 'statut6');
 				}
-				$out = $statuspicto . ' ' . dol_print_date($this->date_end_contract, "daytext");
+				$out = $statuspicto . ' ' . $this->contract_type_cache[$this->fk_contract_type] . ' - ' . $langs->trans('ctends',dol_print_date($this->date_end_contract, "daytext"));
 			} else {
 				$out ='';
 			}
