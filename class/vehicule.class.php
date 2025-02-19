@@ -481,122 +481,12 @@ class Vehicule extends CommonObject
 	 */
 	public function validate($user, $notrigger = 0)
 	{
-		global $conf;
-
-		require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
-
-		$error = 0;
-
 		// Protection
 		if ($this->status == self::STATUS_ACTIVATED) {
-			dol_syslog(get_class($this)."::validate action abandoned: already validated", LOG_WARNING);
 			return 0;
 		}
 
-		$now = dol_now();
-
-		$this->db->begin();
-
-		// Define new ref
-		if (!$error && (preg_match('/^[\(]?PROV/i', $this->ref) || empty($this->ref))) { // empty should not happened, but when it occurs, the test save life
-			$num = $this->getNextNumRef();
-		} else {
-			$num = $this->ref;
-		}
-		$this->newref = $num;
-
-		if (!empty($num)) {
-			// Validate
-			$sql = "UPDATE ".MAIN_DB_PREFIX.$this->table_element;
-			$sql .= " SET ";
-			if (!empty($this->fields['ref'])) {
-				$sql .= " ref = '".$this->db->escape($num)."',";
-			}
-			$sql .= " status = ".self::STATUS_ACTIVATED;
-			if (!empty($this->fields['date_validation'])) {
-				$sql .= ", date_validation = '".$this->db->idate($now)."'";
-			}
-			if (!empty($this->fields['fk_user_valid'])) {
-				$sql .= ", fk_user_valid = ".((int) $user->id);
-			}
-			$sql .= " WHERE rowid = ".((int) $this->id);
-
-			dol_syslog(get_class($this)."::validate()", LOG_DEBUG);
-			$resql = $this->db->query($sql);
-			if (!$resql) {
-				dol_print_error($this->db);
-				$this->error = $this->db->lasterror();
-				$error++;
-			}
-
-			if (!$error && !$notrigger) {
-				// Call trigger
-				$result = $this->call_trigger('MYOBJECT_VALIDATE', $user);
-				if ($result < 0) {
-					$error++;
-				}
-				// End call triggers
-			}
-		}
-
-		if (!$error) {
-			$this->oldref = $this->ref;
-
-			// Rename directory if dir was a temporary ref
-			if (preg_match('/^[\(]?PROV/i', $this->ref)) {
-				// Now we rename also files into index
-				$sql = 'UPDATE '.MAIN_DB_PREFIX."ecm_files set filename = CONCAT('".$this->db->escape($this->newref)."', SUBSTR(filename, ".(strlen($this->ref) + 1).")), filepath = 'vehicule/".$this->db->escape($this->newref)."'";
-				$sql .= " WHERE filename LIKE '".$this->db->escape($this->ref)."%' AND filepath = 'vehicule/".$this->db->escape($this->ref)."' and entity = ".$conf->entity;
-				$resql = $this->db->query($sql);
-				if (!$resql) {
-					$error++;
-					$this->error = $this->db->lasterror();
-				}
-				$sql = 'UPDATE '.MAIN_DB_PREFIX."ecm_files set filepath = 'vehicule/".$this->db->escape($this->newref)."'";
-				$sql .= " WHERE filepath = 'vehicule/".$this->db->escape($this->ref)."' and entity = ".$conf->entity;
-				$resql = $this->db->query($sql);
-				if (!$resql) {
-					$error++;
-					$this->error = $this->db->lasterror();
-				}
-
-				// We rename directory ($this->ref = old ref, $num = new ref) in order not to lose the attachments
-				$oldref = dol_sanitizeFileName($this->ref);
-				$newref = dol_sanitizeFileName($num);
-				$dirsource = $conf->workshop->dir_output.'/vehicule/'.$oldref;
-				$dirdest = $conf->workshop->dir_output.'/vehicule/'.$newref;
-				if (!$error && file_exists($dirsource)) {
-					dol_syslog(get_class($this)."::validate() rename dir ".$dirsource." into ".$dirdest);
-
-					if (@rename($dirsource, $dirdest)) {
-						dol_syslog("Rename ok");
-						// Rename docs starting with $oldref with $newref
-						$listoffiles = dol_dir_list($conf->workshop->dir_output.'/vehicule/'.$newref, 'files', 1, '^'.preg_quote($oldref, '/'));
-						foreach ($listoffiles as $fileentry) {
-							$dirsource = $fileentry['name'];
-							$dirdest = preg_replace('/^'.preg_quote($oldref, '/').'/', $newref, $dirsource);
-							$dirsource = $fileentry['path'].'/'.$dirsource;
-							$dirdest = $fileentry['path'].'/'.$dirdest;
-							@rename($dirsource, $dirdest);
-						}
-					}
-				}
-			}
-		}
-
-		// Set new ref and current status
-		if (!$error) {
-			$this->ref = $num;
-			$this->status = self::STATUS_ACTIVATED;
-		}
-
-		if (!$error) {
-			$this->db->commit();
-			return 1;
-		} else {
-			$this->db->rollback();
-			return -1;
-		}
+		return $this->setStatusCommon($user, self::STATUS_ACTIVATED, $notrigger, 'WORKSHOP_MYOBJECT_VALIDATE');
 	}
 
 
