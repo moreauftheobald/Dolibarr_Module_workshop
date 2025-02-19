@@ -119,7 +119,7 @@ class Vehicule extends CommonObject
 		"km" => array("type"=>"double", "label"=>"Km", "picto"=>"", "enabled"=>"1", 'position'=>80, 'notnull'=>0, "visible"=>"1",),
 		"km_date" => array("type"=>"datetime", "label"=>"Kmdate", "picto"=>"", "enabled"=>"1", 'position'=>90, 'notnull'=>0, "visible"=>"-1",),
 		"fk_contract_type" => array("type"=>"integer:VehiculeContractType:workshop/class/vehiculecontracttype.class.php", "label"=>"Fkcontracttype", "picto"=>"", "enabled"=>"1", 'position'=>100, 'notnull'=>0, "visible"=>"-1", "css"=>"maxwidth500 widthcentpercentminusxx",),
-		"date_end_contract" => array("type"=>"datetime", "label"=>"Dateendcontract", "picto"=>"", "enabled"=>"1", 'position'=>110, 'notnull'=>0, "visible"=>"4",),
+		"date_end_contract" => array("type"=>"date", "label"=>"Dateendcontract", "picto"=>"", "enabled"=>"1", 'position'=>110, 'notnull'=>0, "visible"=>"4",),
 		"carrosserie" => array("type"=>"html", "label"=>"Carrosserie", "picto"=>"", "enabled"=>"1", 'position'=>120, 'notnull'=>0, "visible"=>"1",),
 		"dim_pneu" => array("type"=>"chkbxlst:workshop_vehicule_c_vehicule_dimpneu:code:rowid", "label"=>"Dimpneu", "picto"=>"", "enabled"=>"1", 'position'=>130, 'notnull'=>0, "visible"=>"3",),
 		"nb_pneu" => array("type"=>"integer", "label"=>"Nbpneu", "picto"=>"", "enabled"=>"1", 'position'=>140, 'notnull'=>0, "visible"=>"1",),
