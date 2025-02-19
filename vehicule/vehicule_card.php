@@ -237,7 +237,7 @@ if ($action == 'create') {
 	if (empty($permissiontoadd)) {
 		accessforbidden('NotEnoughPermissions', 0, 1);
 	}
-
+	$object->fields['date_end_contract']['visible'] =0;
 	print load_fiche_titre($title, '', 'object_'.$object->picto);
 
 	print '<form method="POST" action="'.$_SERVER["PHP_SELF"].'">';
@@ -280,6 +280,7 @@ if ($action == 'create') {
 
 // Part to edit record
 if (($id || $ref) && $action == 'edit') {
+	$object->fields['date_end_contract']['visible'] =1;
 
 	print load_fiche_titre($langs->trans("Vehicule"), '', 'object_'.$object->picto);
 
@@ -316,6 +317,7 @@ if (($id || $ref) && $action == 'edit') {
 
 // Part to show record
 if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'create'))) {
+	$object->fields['date_end_contract']['visible'] =0;
 	$head = vehiculePrepareHead($object);
 
 	print dol_get_fiche_head($head, 'card', $langs->trans("Vehicule"), -1, $object->picto, 0, '', '', 0, '', 1);
