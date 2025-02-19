@@ -57,12 +57,10 @@ class Vehicule extends CommonObject
 	/**
 	 * @var string 	String with name of icon for vehicule. Must be a 'fa-xxx' fontawesome code (or 'fa-xxx_fa_color_size') or 'vehicule@workshop' if picto is file 'img/object_vehicule.png'.
 	 */
-	public $picto = 'fa-file';
+	public $picto = 'fa-truck';
 
-
-	const STATUS_DRAFT = 0;
-	const STATUS_VALIDATED = 1;
-	const STATUS_CANCELED = 9;
+	const STATUS_ACTIVATED = 4;
+	const STATUS_DISACTIVATED  = 8;
 
 	/**
 	 *  'type' field format:
@@ -292,7 +290,7 @@ class Vehicule extends CommonObject
 			$object->label = empty($this->fields['label']['default']) ? $langs->trans("CopyOf")." ".$object->label : $this->fields['label']['default'];
 		}
 		if (property_exists($object, 'status')) {
-			$object->status = self::STATUS_DRAFT;
+			$object->status = self::STATUS_DISACTIVATED;
 		}
 		if (property_exists($object, 'date_creation')) {
 			$object->date_creation = dol_now();
@@ -525,7 +523,7 @@ class Vehicule extends CommonObject
 		$error = 0;
 
 		// Protection
-		if ($this->status == self::STATUS_VALIDATED) {
+		if ($this->status == self::STATUS_ACTIVATED) {
 			dol_syslog(get_class($this)."::validate action abandoned: already validated", LOG_WARNING);
 			return 0;
 		}
@@ -557,7 +555,7 @@ class Vehicule extends CommonObject
 			if (!empty($this->fields['ref'])) {
 				$sql .= " ref = '".$this->db->escape($num)."',";
 			}
-			$sql .= " status = ".self::STATUS_VALIDATED;
+			$sql .= " status = ".self::STATUS_ACTIVATED;
 			if (!empty($this->fields['date_validation'])) {
 				$sql .= ", date_validation = '".$this->db->idate($now)."'";
 			}
@@ -632,7 +630,7 @@ class Vehicule extends CommonObject
 		// Set new ref and current status
 		if (!$error) {
 			$this->ref = $num;
-			$this->status = self::STATUS_VALIDATED;
+			$this->status = self::STATUS_ACTIVATED;
 		}
 
 		if (!$error) {
@@ -655,7 +653,7 @@ class Vehicule extends CommonObject
 	public function setDraft($user, $notrigger = 0)
 	{
 		// Protection
-		if ($this->status <= self::STATUS_DRAFT) {
+		if ($this->status <= self::STATUS_DISACTIVATED) {
 			return 0;
 		}
 
@@ -666,7 +664,7 @@ class Vehicule extends CommonObject
 		 return -1;
 		 }*/
 
-		return $this->setStatusCommon($user, self::STATUS_DRAFT, $notrigger, 'WORKSHOP_MYOBJECT_UNVALIDATE');
+		return $this->setStatusCommon($user, self::STATUS_DISACTIVATED, $notrigger, 'WORKSHOP_MYOBJECT_UNVALIDATE');
 	}
 
 	/**
@@ -679,7 +677,7 @@ class Vehicule extends CommonObject
 	public function cancel($user, $notrigger = 0)
 	{
 		// Protection
-		if ($this->status != self::STATUS_VALIDATED) {
+		if ($this->status != self::STATUS_ACTIVATED) {
 			return 0;
 		}
 
@@ -690,7 +688,7 @@ class Vehicule extends CommonObject
 		 return -1;
 		 }*/
 
-		return $this->setStatusCommon($user, self::STATUS_CANCELED, $notrigger, 'WORKSHOP_MYOBJECT_CANCEL');
+		return $this->setStatusCommon($user, self::STATUS_DISACTIVATED, $notrigger, 'WORKSHOP_MYOBJECT_CANCEL');
 	}
 
 	/**
@@ -703,7 +701,7 @@ class Vehicule extends CommonObject
 	public function reopen($user, $notrigger = 0)
 	{
 		// Protection
-		if ($this->status == self::STATUS_VALIDATED) {
+		if ($this->status == self::STATUS_ACTIVATED) {
 			return 0;
 		}
 
@@ -714,7 +712,7 @@ class Vehicule extends CommonObject
 		 return -1;
 		 }*/
 
-		return $this->setStatusCommon($user, self::STATUS_VALIDATED, $notrigger, 'WORKSHOP_MYOBJECT_REOPEN');
+		return $this->setStatusCommon($user, self::STATUS_ACTIVATED, $notrigger, 'WORKSHOP_MYOBJECT_REOPEN');
 	}
 
 	/**
@@ -959,19 +957,15 @@ class Vehicule extends CommonObject
 		if (empty($this->labelStatus) || empty($this->labelStatusShort)) {
 			global $langs;
 			//$langs->load("workshop@workshop");
-			$this->labelStatus[self::STATUS_DRAFT] = $langs->transnoentitiesnoconv('Draft');
-			$this->labelStatus[self::STATUS_VALIDATED] = $langs->transnoentitiesnoconv('Enabled');
-			$this->labelStatus[self::STATUS_CANCELED] = $langs->transnoentitiesnoconv('Disabled');
-			$this->labelStatusShort[self::STATUS_DRAFT] = $langs->transnoentitiesnoconv('Draft');
-			$this->labelStatusShort[self::STATUS_VALIDATED] = $langs->transnoentitiesnoconv('Enabled');
-			$this->labelStatusShort[self::STATUS_CANCELED] = $langs->transnoentitiesnoconv('Disabled');
+			$this->labelStatus[self::STATUS_DISACTIVATED] = $langs->transnoentitiesnoconv('Draft');
+			$this->labelStatus[self::STATUS_ACTIVATED] = $langs->transnoentitiesnoconv('Enabled');
+			$this->labelStatusShort[self::STATUS_DISACTIVATED] = $langs->transnoentitiesnoconv('Draft');
+			$this->labelStatusShort[self::STATUS_ACTIVATED] = $langs->transnoentitiesnoconv('Enabled');
 		}
 
 		$statusType = 'status'.$status;
-		//if ($status == self::STATUS_VALIDATED) $statusType = 'status1';
-		if ($status == self::STATUS_CANCELED) {
-			$statusType = 'status6';
-		}
+		if ($status == self::STATUS_ACTIVATED) $statusType = 'status4';
+		if ($status == self::STATUS_DISACTIVATED) $statusType = 'status8';
 
 		return dolGetStatus($this->labelStatus[$status], $this->labelStatusShort[$status], '', $statusType, $mode);
 	}

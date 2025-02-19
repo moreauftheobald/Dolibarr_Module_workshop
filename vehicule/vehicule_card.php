@@ -139,7 +139,7 @@ $enablepermissioncheck = 0;
 if ($enablepermissioncheck) {
 	$permissiontoread = $user->hasRight('workshop', 'vehicule', 'read');
 	$permissiontoadd = $user->hasRight('workshop', 'vehicule', 'write'); // Used by the include of actions_addupdatedelete.inc.php and actions_lineupdown.inc.php
-	$permissiontodelete = $user->hasRight('workshop', 'vehicule', 'delete') || ($permissiontoadd && isset($object->status) && $object->status == $object::STATUS_DRAFT);
+	$permissiontodelete = $user->hasRight('workshop', 'vehicule', 'delete') || ($permissiontoadd && isset($object->status) && $object->status == $object::STATUS_ACTIVATED);
 	$permissionnote = $user->hasRight('workshop', 'vehicule', 'write'); // Used by the include of actions_setnotes.inc.php
 	$permissiondellink = $user->hasRight('workshop', 'vehicule', 'write'); // Used by the include of actions_dellink.inc.php
 } else {
@@ -486,7 +486,7 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 		}
 
 		print '<div class="div-table-responsive-no-min">';
-		if (!empty($object->lines) || ($object->status == $object::STATUS_DRAFT && $permissiontoadd && $action != 'selectlines' && $action != 'editline')) {
+		if (!empty($object->lines) || ($object->status == $object::STATUS_DISACTIVATED && $permissiontoadd && $action != 'selectlines' && $action != 'editline')) {
 			print '<table id="tablelines" class="noborder noshadow" width="100%">';
 		}
 
@@ -510,7 +510,7 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 			}
 		}
 
-		if (!empty($object->lines) || ($object->status == $object::STATUS_DRAFT && $permissiontoadd && $action != 'selectlines' && $action != 'editline')) {
+		if (!empty($object->lines) || ($object->status == $object::STATUS_DISACTIVATED && $permissiontoadd && $action != 'selectlines' && $action != 'editline')) {
 			print '</table>';
 		}
 		print '</div>';
@@ -536,7 +536,7 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 			}
 
 			// Back to draft
-			if ($object->status == $object::STATUS_VALIDATED) {
+			if ($object->status == $object::STATUS_ACTIVATED) {
 				print dolGetButtonAction('', $langs->trans('SetToDraft'), 'default', $_SERVER["PHP_SELF"].'?id='.$object->id.'&action=confirm_setdraft&confirm=yes&token='.newToken(), '', $permissiontoadd);
 			}
 
@@ -544,7 +544,7 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 			print dolGetButtonAction('', $langs->trans('Modify'), 'default', $_SERVER["PHP_SELF"].'?id='.$object->id.'&action=edit&token='.newToken(), '', $permissiontoadd);
 
 			// Validate
-			if ($object->status == $object::STATUS_DRAFT) {
+			if ($object->status == $object::STATUS_DISACTIVATED) {
 				if (empty($object->table_element_line) || (is_array($object->lines) && count($object->lines) > 0)) {
 					print dolGetButtonAction('', $langs->trans('Validate'), 'default', $_SERVER['PHP_SELF'].'?id='.$object->id.'&action=confirm_validate&confirm=yes&token='.newToken(), '', $permissiontoadd);
 				} else {
