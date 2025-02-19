@@ -41,13 +41,13 @@ function vehiculePrepareHead($object)
 	$h = 0;
 	$head = array();
 
-	$head[$h][0] = dol_buildpath("/workshop/vehicule_card.php", 1).'?id='.$object->id;
+	$head[$h][0] = dol_buildpath("/workshop/vehicule/vehicule_card.php", 1).'?id='.$object->id;
 	$head[$h][1] = $langs->trans("Vehicule");
 	$head[$h][2] = 'card';
 	$h++;
 
 	if ($showtabofpagecontact) {
-		$head[$h][0] = dol_buildpath("/workshop/vehicule_contact.php", 1).'?id='.$object->id;
+		$head[$h][0] = dol_buildpath("/workshop/vehicule/vehicule_contact.php", 1).'?id='.$object->id;
 		$head[$h][1] = $langs->trans("Contacts");
 		$head[$h][2] = 'contact';
 		$h++;
@@ -62,7 +62,7 @@ function vehiculePrepareHead($object)
 			if (!empty($object->note_public)) {
 				$nbNote++;
 			}
-			$head[$h][0] = dol_buildpath('/workshop/vehicule_note.php', 1).'?id='.$object->id;
+			$head[$h][0] = dol_buildpath('/workshop/vehicule/vehicule_note.php', 1).'?id='.$object->id;
 			$head[$h][1] = $langs->trans('Notes');
 			if ($nbNote > 0) {
 				$head[$h][1] .= (!getDolGlobalInt('MAIN_OPTIMIZEFORTEXTBROWSER') ? '<span class="badge marginleftonlyshort">'.$nbNote.'</span>' : '');
@@ -78,7 +78,7 @@ function vehiculePrepareHead($object)
 		$upload_dir = $conf->workshop->dir_output."/vehicule/".dol_sanitizeFileName($object->ref);
 		$nbFiles = count(dol_dir_list($upload_dir, 'files', 0, '', '(\.meta|_preview.*\.png)$'));
 		$nbLinks = Link::count($db, $object->element, $object->id);
-		$head[$h][0] = dol_buildpath("/workshop/vehicule_document.php", 1).'?id='.$object->id;
+		$head[$h][0] = dol_buildpath("/workshop/vehicule/vehicule_document.php", 1).'?id='.$object->id;
 		$head[$h][1] = $langs->trans('Documents');
 		if (($nbFiles + $nbLinks) > 0) {
 			$head[$h][1] .= '<span class="badge marginleftonlyshort">'.($nbFiles + $nbLinks).'</span>';
@@ -88,7 +88,7 @@ function vehiculePrepareHead($object)
 	}
 
 	if ($showtabofpageagenda) {
-		$head[$h][0] = dol_buildpath("/workshop/vehicule_agenda.php", 1).'?id='.$object->id;
+		$head[$h][0] = dol_buildpath("/workshop/vehicule/vehicule_agenda.php", 1).'?id='.$object->id;
 		$head[$h][1] = $langs->trans("Events");
 		$head[$h][2] = 'agenda';
 		$h++;
