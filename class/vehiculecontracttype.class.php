@@ -62,7 +62,8 @@ class VehiculeContractType extends CommonObject
 		"tms" => array("type"=>"timestamp", "label"=>"DateModification", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>20, 'notnull'=>1, "visible"=>"-1",),
 		"code" => array("type"=>"varchar(20)", "label"=>"Code", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>25, 'notnull'=>0, "visible"=>"-1", "showoncombobox"=>"1",),
 		"active" => array("type"=>"integer", "label"=>"Active", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>35, 'notnull'=>1, "visible"=>"-1",),
-		"label" => array("type"=>"varchar(255)", "label"=>"Label", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>40, 'notnull'=>0, "visible"=>"-1", "alwayseditable"=>"1", "css"=>"minwidth300", "cssview"=>"wordbreak", "csslist"=>"tdoverflowmax150",),
+		"fk_vehicule_mark" => array("type"=>"integer:VehiculeMark:workshop/class/vehiculemark.class.php", "label"=>"Fkvehiculemark", "picto"=>"", "enabled"=>"1", 'position'=>40, 'notnull'=>0, "visible"=>"1", "css"=>"maxwidth500 widthcentpercentminusxx",),
+		"label" => array("type"=>"varchar(255)", "label"=>"Label", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>50, 'notnull'=>0, "visible"=>"-1", "alwayseditable"=>"1", "css"=>"minwidth300", "cssview"=>"wordbreak", "csslist"=>"tdoverflowmax150",),
 	);
 	public $rowid;
 	public $date_creation;
@@ -70,6 +71,7 @@ class VehiculeContractType extends CommonObject
 	public $code;
 	public $active;
 	public $label;
+	public $fk_vehicule_mark;
 	// END MODULEBUILDER PROPERTIES
 
 	/**

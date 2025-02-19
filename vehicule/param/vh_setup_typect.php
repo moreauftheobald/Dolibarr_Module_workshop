@@ -62,10 +62,12 @@ if (!$res) {
 
 dol_include_once('/workshop/lib/workshop_vehicule.lib.php');
 dol_include_once('/workshop/class/vehiculecontracttype.class.php');
+dol_include_once('/workshop/class/vehiculemark.class.php');
 // Load translation files required by the page
 $langs->load("workshop@workshop");
 
 $object = new VehiculeContractType($db);
+$objectMark = new VehiculeMark($db);
 
 // Get parameters
 $action = GETPOST('action', 'aZ09');
@@ -75,6 +77,7 @@ $rowid = GETPOST('rowid', 'int');
 $code = GETPOST('code', 'alpha');
 $label = GETPOST('label', 'alpha');
 $active = GETPOST('active', 'int');
+$fk_vehicule_mark = GETPOST('fk_vehicule_mark', 'int');
 $page = GETPOST('page', 'int');
 
 if (!$user->hasRight("workshop", "vehicule", "write")) {
@@ -82,6 +85,25 @@ if (!$user->hasRight("workshop", "vehicule", "write")) {
 }
 
 if (!isModEnabled("workshop")) accessforbidden();
+
+$marksActivDatas=['0'=>$langs->trans('AllMarks')];
+$marksInactivDatas=[];
+$marks=$objectMark->fetchAll('','',0);
+if (!is_array($marks) && $marks<0) {
+	setEventMessages($objectMark->error,$objectMark->errors,'errors');
+}  elseif(is_array($marks) && count($marks)>1) {
+	foreach($marks as $mark) {
+		/**
+		 * @var $mark VehiculeMark
+		 */
+		if ($mark->active) {
+			$marksActivDatas[$mark->id]=$mark->label;
+		} else {
+			$marksInactivDatas[$mark->id]=$mark->label;
+		}
+
+	}
+}
 
 $hookmanager->initHooks(array('vhsetuptypect', 'globalcard')); // Note that conf->hooks_modules contains array
 
@@ -121,12 +143,14 @@ if (empty($reshook)) {
 					if ($action == 'confirmnew') {
 						$object->entity = 0;
 						$object->code = $code;
+						$object->fk_vehicule_mark = $fk_vehicule_mark;
 						$object->label = $label;
 						$object->active = $active;
 						$object->date_creation = dol_now();
 						$res=$object->create($user);
 					} elseif ($action == 'confirmedit') {
 						$object->code = $code;
+						$object->fk_vehicule_mark = $fk_vehicule_mark;
 						$object->label = $label;
 						$object->active = $active;
 						$res = $object->update($user);
@@ -164,6 +188,7 @@ if (empty($reshook)) {
 				unset($cancel);
 				unset($rowid);
 				unset($code);
+				unset($fk_vehicule_mark);
 				unset($label);
 				unset($active);
 			}
@@ -181,7 +206,7 @@ if (empty($page) || $page < 0 || GETPOST('button_search', 'alpha') || GETPOST('b
 $limit = 25;
 $offset = $limit * $page;
 
-$sql  = "SELECT p.rowid as rowid, p.code as code, p.label as label, p.active as active ";
+$sql  = "SELECT p.rowid as rowid, p.code as code, p.fk_vehicule_mark, p.label as label, p.active as active ";
 $sql .= "FROM ".MAIN_DB_PREFIX. $object->table_element . " as p ";
 $sql .= "WHERE 1=1";
 
@@ -210,6 +235,7 @@ if ($resql) {
 		$typect = new stdClass();
 		$typect->id = $obj->rowid;
 		$typect->code = $obj->code;
+		$typect->fk_vehicule_mark = $obj->fk_vehicule_mark;
 		$typect->label = $obj->label;
 		$typect->active = $obj->active;
 		$typectarray[$typect->id] = $typect;
@@ -240,6 +266,7 @@ if ($action=='delete' && !empty($rowid)) {
 	$formconfirm = $form->formconfirm($_SERVER["PHP_SELF"], $langs->trans('DeleteTypect'), $langs->trans('DeleteTypectQuestion'), 'confirmdelete', $formquestion, 'yes', 1);
 } elseif ($action =='new') {
 	$formquestion[] = array('type'=>'text','label'=>$langs->trans('code'), 'name'=>'code','value'=> $code);
+	$formquestion[] = array('type'=>'select','label'=>$langs->trans('Fkvehiculemark'), 'name'=>'fk_vehicule_mark','values'=>$marksActivDatas);
 	$formquestion[] = array('type'=>'text','label'=>$langs->trans('typectlabel'), 'name'=>'label','value'=>$label);
 	$formquestion[] = array('type'=>'select','label'=>$langs->trans('active'), 'name'=>'active','values'=>array('0'=>'Non', '1'=>'Oui'), 'default'=>empty($active)?'1':$active);
 	$formconfirm = $form->formconfirm($_SERVER["PHP_SELF"], $langs->trans('NewTypect'), '', 'confirmnew', $formquestion, 'yes', 1, 0, 700);
@@ -247,6 +274,22 @@ if ($action=='delete' && !empty($rowid)) {
 	$dataedit = $typectarray[$rowid];
 	$formquestion[] = array('type'=>'hidden','name'=>'rowid','value'=>$rowid);
 	$formquestion[] = array('type'=>'text','label'=>$langs->trans('code'), 'name'=>'code','value'=> $dataedit->code);
+	if (isset($marksActivDatas[$dataedit->fk_vehicule_mark])) {
+		$formquestion[] = array(
+			'type'=>'select',
+			'label'=>$langs->trans('Fkvehiculemark'),
+			'name'=>'fk_vehicule_mark',
+			'values'=> $marksActivDatas,
+			'default'=>$dataedit->fk_vehicule_mark);
+	} elseif (isset($marksInactivDatas[$dataedit->fk_vehicule_mark])) {
+		var_dump($dataedit->fk_vehicule_mark);
+		$formquestion[] = array(
+			'type'=>'select',
+			'label'=>$langs->trans('Fkvehiculemark'). img_error($langs->trans("MarkInactive")),
+			'name'=>'fk_vehicule_mark',
+			'values'=>$marksActivDatas,
+			'default'=>$dataedit->fk_vehicule_mark);
+	}
 	$formquestion[] = array('type'=>'text','label'=>$langs->trans('typectlabel'), 'name'=>'label','value'=>$dataedit->label);
 	$formquestion[] = array('type'=>'select','label'=>$langs->trans('active'), 'name'=>'active','values'=>array('0'=>'Non', '1'=>'Oui'), 'default'=>$dataedit->active);
 	$formconfirm = $form->formconfirm($_SERVER["PHP_SELF"], $langs->trans('EditTypect'), '', 'confirmedit', $formquestion, 'yes', 1, 0, 700);
@@ -272,7 +315,8 @@ print '<div class="fichecenter">';
 print '<table class="border centpercent tableforfield liste">' . "\n";
 print '<tr class="liste_titre">';
 print '<th class="liste_titre">' . $langs->trans("code") . '</th>';
-print '<th class="liste_titre">' . $langs->trans("typectlabel") . '</th>';
+print '<th class="liste_titre">' . $langs->trans("label") . '</th>';
+print '<th class="liste_titre">' . $langs->trans("Fkvehiculemark") . '</th>';
 print '<th class="liste_titre">' . $langs->trans("active") . '</th>';
 print '<th class="liste_titre">' . $langs->trans("action") . '</th>';
 print '</tr>';
@@ -280,6 +324,15 @@ foreach ($typectarray as $key=>$data) {
 	print '<tr class="oddeven">';
 	print '<td>' . $data->code . '</td>';
 	print '<td>' . $data->label . '</td>';
+	print '<td>';
+	if (empty($data->fk_vehicule_mark)) {
+		print $langs->trans('AllMarks');
+	} elseif (isset($marksActivDatas[$data->fk_vehicule_mark])) {
+		print $marksActivDatas[$data->fk_vehicule_mark];
+	} elseif (isset($marksInactivDatas[$data->fk_vehicule_mark])) {
+		print img_error($langs->trans("MarkInactive")).$marksInactivDatas[$data->fk_vehicule_mark];
+	}
+	print '</td>';
 	if ($data->active == 1) {
 		$out = 'switch_on';
 	} else {

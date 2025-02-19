@@ -135,6 +135,7 @@ DeletePneuQuestion=Etes vous sur de vouloir supprimer un type de pneu ?
 NewPneu=Créer un type de pneu
 EditPneu=Editer un type de pneu
 pneulabel=Nom du type de pneu
+AllMarks=Toute marques
 
 #
 # Page véhicules
