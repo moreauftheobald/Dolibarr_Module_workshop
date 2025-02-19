@@ -119,7 +119,7 @@ class Vehicule extends CommonObject
 		"km" => array("type"=>"double", "label"=>"Km", "picto"=>"", "enabled"=>"1", 'position'=>80, 'notnull'=>0, "visible"=>"1",),
 		"km_date" => array("type"=>"datetime", "label"=>"Kmdate", "picto"=>"", "enabled"=>"1", 'position'=>90, 'notnull'=>0, "visible"=>"-1",),
 		"fk_contract_type" => array("type"=>"integer:VehiculeContractType:workshop/class/vehiculecontracttype.class.php", "label"=>"Fkcontracttype", "picto"=>"", "enabled"=>"1", 'position'=>100, 'notnull'=>0, "visible"=>"-1", "css"=>"maxwidth500 widthcentpercentminusxx",),
-		"date_end_contract" => array("type"=>"datetime", "label"=>"Dateendcontract", "picto"=>"", "enabled"=>"1", 'position'=>110, 'notnull'=>0, "visible"=>"-1",),
+		"date_end_contract" => array("type"=>"datetime", "label"=>"Dateendcontract", "picto"=>"", "enabled"=>"1", 'position'=>110, 'notnull'=>0, "visible"=>"4",),
 		"carrosserie" => array("type"=>"html", "label"=>"Carrosserie", "picto"=>"", "enabled"=>"1", 'position'=>120, 'notnull'=>0, "visible"=>"1",),
 		"dim_pneu" => array("type"=>"chkbxlst:workshop_vehicule_c_vehicule_dimpneu:code:rowid", "label"=>"Dimpneu", "picto"=>"", "enabled"=>"1", 'position'=>130, 'notnull'=>0, "visible"=>"3",),
 		"nb_pneu" => array("type"=>"integer", "label"=>"Nbpneu", "picto"=>"", "enabled"=>"1", 'position'=>140, 'notnull'=>0, "visible"=>"1",),
@@ -1146,6 +1146,37 @@ class Vehicule extends CommonObject
 		dol_syslog(__METHOD__." end", LOG_INFO);
 
 		return $error;
+	}
+
+	public function showOutputField($val, $key, $value, $moreparam = '', $keysuffix = '', $keyprefix = '', $morecss = '')
+	{
+		require_once DOL_DOCUMENT_ROOT.'/core/lib/date.lib.php';
+		global $conf, $langs, $form;
+
+		if($key=='fk_contract_type'){
+			if(!empty($this->fk_contract_type)) {
+				$now = dol_now();
+				$near = dol_time_plus_duree($now, 3, 'm');
+				if (!empty($this->date_end_contract)) {
+					if ($this->date_end_contract < $now) {
+						$statuspicto = img_picto('', 'statut8');
+					} elseif ($this->date_end_contract > $now && $this->date_end_contract < $near) {
+						$statuspicto = img_picto('', 'statut1');
+					} else {
+						$statuspicto = img_picto('', 'statut4');
+					}
+				} else {
+					$statuspicto = img_picto('', 'statut6');
+				}
+				$out = $statuspicto . ' ' . dol_print_date($this->date_end_contract, "daytext");
+			} else {
+				$out ='';
+			}
+		} else {
+			$out = parent::showOutputField($val, $key, $value, $moreparam = '', $keysuffix = '', $keyprefix = '', $morecss = '');
+		}
+
+		return $out;
 	}
 }
 
