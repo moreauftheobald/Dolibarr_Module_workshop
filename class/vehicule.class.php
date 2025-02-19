@@ -364,7 +364,7 @@ class Vehicule extends CommonObject
 //			$this->fetchLines($noextrafields);
 //		}
 
-		if ($result > 0) {
+		if ($result > 0 && !empty($this->fk_soc)) {
 			$result = $this->fetch_thirdparty();
 		}
 
