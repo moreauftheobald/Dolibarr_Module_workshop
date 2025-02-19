@@ -150,44 +150,6 @@ class Vehicule extends CommonObject
 	private $thirdparty_cache=[];
 	// END MODULEBUILDER PROPERTIES
 
-
-
-	// If this object has a subtable with lines
-
-	// /**
-	//  * @var string    Name of subtable line
-	//  */
-	// public $table_element_line = 'workshop_vehiculeline';
-
-	// /**
-	//  * @var string    Field with ID of parent key if this object has a parent
-	//  */
-	// public $fk_element = 'fk_vehicule';
-
-	// /**
-	//  * @var string    Name of subtable class that manage subtable lines
-	//  */
-	// public $class_element_line = 'Vehiculeline';
-
-	// /**
-	//  * @var array	List of child tables. To test if we can delete object.
-	//  */
-	// protected $childtables = array('mychildtable' => array('name'=>'Vehicule', 'fk_element'=>'fk_vehicule'));
-
-	// /**
-	//  * @var array    List of child tables. To know object to delete on cascade.
-	//  *               If name matches '@ClassNAme:FilePathClass;ParentFkFieldName' it will
-	//  *               call method deleteByParentField(parentId, ParentFkFieldName) to fetch and delete child object
-	//  */
-	// protected $childtablesoncascade = array('workshop_vehiculedet');
-
-	// /**
-	//  * @var VehiculeLine[]     Array of subtable lines
-	//  */
-	// public $lines = array();
-
-
-
 	/**
 	 * Constructor
 	 *
@@ -364,21 +326,6 @@ class Vehicule extends CommonObject
 	}
 
 	/**
-	 * Load object lines in memory from the database
-	 *
-	 * @param	int		$noextrafields	0=Default to load extrafields, 1=No extrafields
-	 * @return 	int         			Return integer <0 if KO, 0 if not found, >0 if OK
-	 */
-	public function fetchLines($noextrafields = 0)
-	{
-		$this->lines = array();
-
-		$result = $this->fetchLinesCommon('', $noextrafields);
-		return $result;
-	}
-
-
-	/**
 	 * Load list of objects in memory from the database.
 	 * Using a fetchAll() with limit = 0 is a very bad practice. Instead try to forge yourself an optimized SQL request with
 	 * your own loop with start and stop pagination.
@@ -478,25 +425,6 @@ class Vehicule extends CommonObject
 	{
 		return $this->deleteCommon($user, $notrigger);
 	}
-
-	/**
-	 *  Delete a line of object in database
-	 *
-	 *	@param  User	$user       User that delete
-	 *  @param	int		$idline		Id of line to delete
-	 *  @param 	int 	$notrigger  0=launch triggers after, 1=disable triggers
-	 *  @return int         		>0 if OK, <0 if KO
-	 */
-	public function deleteLine(User $user, $idline, $notrigger = 0)
-	{
-		if ($this->status < 0) {
-			$this->error = 'ErrorDeleteLineNotAllowedByObjectStatus';
-			return -2;
-		}
-
-		return $this->deleteLineCommon($user, $idline, $notrigger);
-	}
-
 
 	/**
 	 *	Validate object
@@ -641,23 +569,6 @@ class Vehicule extends CommonObject
 		}
 
 		return $this->setStatusCommon($user, self::STATUS_DISACTIVATED, $notrigger, 'WORKSHOP_MYOBJECT_UNVALIDATE');
-	}
-
-	/**
-	 *	Set back to validated status
-	 *
-	 *	@param	User	$user			Object user that modify
-	 *  @param	int		$notrigger		1=Does not execute triggers, 0=Execute triggers
-	 *	@return	int						Return integer <0 if KO, 0=Nothing done, >0 if OK
-	 */
-	public function reopen($user, $notrigger = 0)
-	{
-		// Protection
-		if ($this->status == self::STATUS_ACTIVATED) {
-			return 0;
-		}
-
-		return $this->setStatusCommon($user, self::STATUS_ACTIVATED, $notrigger, 'WORKSHOP_MYOBJECT_REOPEN');
 	}
 
 	/**
@@ -970,97 +881,6 @@ class Vehicule extends CommonObject
 	}
 
 	/**
-	 * Initialise object with example values
-	 * Id must be 0 if object instance is a specimen
-	 *
-	 * @return int
-	 */
-	public function initAsSpecimen()
-	{
-		// Set here init that are not commonf fields
-		// $this->property1 = ...
-		// $this->property2 = ...
-
-		return $this->initAsSpecimenCommon();
-	}
-
-	/**
-	 * 	Create an array of lines
-	 *
-	 * 	@return array|int		array of lines if OK, <0 if KO
-	 */
-	public function getLinesArray()
-	{
-		$this->lines = array();
-
-		$objectline = new VehiculeLine($this->db);
-		$result = $objectline->fetchAll('ASC', 'position', 0, 0, '(fk_vehicule:=:'.((int) $this->id).')');
-
-		if (is_numeric($result)) {
-			$this->setErrorsFromObject($objectline);
-			return $result;
-		} else {
-			$this->lines = $result;
-			return $this->lines;
-		}
-	}
-
-	/**
-	 *  Returns the reference to the following non used object depending on the active numbering module.
-	 *
-	 *  @return string      		Object free reference
-	 */
-	public function getNextNumRef()
-	{
-		global $langs, $conf;
-		$langs->load("workshop@workshop");
-
-		if (!getDolGlobalString('WORKSHOP_MYOBJECT_ADDON')) {
-			$conf->global->WORKSHOP_MYOBJECT_ADDON = 'mod_vehicule_standard';
-		}
-
-		if (getDolGlobalString('WORKSHOP_MYOBJECT_ADDON')) {
-			$mybool = false;
-
-			$file = getDolGlobalString('WORKSHOP_MYOBJECT_ADDON').".php";
-			$classname = getDolGlobalString('WORKSHOP_MYOBJECT_ADDON');
-
-			// Include file with class
-			$dirmodels = array_merge(array('/'), (array) $conf->modules_parts['models']);
-			foreach ($dirmodels as $reldir) {
-				$dir = dol_buildpath($reldir."core/modules/workshop/");
-
-				// Load file with numbering class (if found)
-				$mybool |= @include_once $dir.$file;
-			}
-
-			if ($mybool === false) {
-				dol_print_error(null, "Failed to include file ".$file);
-				return '';
-			}
-
-			if (class_exists($classname)) {
-				$obj = new $classname();
-				$numref = $obj->getNextValue($this);
-
-				if ($numref != '' && $numref != '-1') {
-					return $numref;
-				} else {
-					$this->error = $obj->error;
-					//dol_print_error($this->db,get_class($this)."::getNextNumRef ".$obj->error);
-					return "";
-				}
-			} else {
-				print $langs->trans("Error")." ".$langs->trans("ClassNotFound").' '.$classname;
-				return "";
-			}
-		} else {
-			print $langs->trans("ErrorNumberingModuleNotSetup", $this->element);
-			return "";
-		}
-	}
-
-	/**
 	 *  Create a document onto disk according to template module.
 	 *
 	 *  @param	    string		$modele			Force template to use ('' to not force)
@@ -1097,23 +917,6 @@ class Vehicule extends CommonObject
 		}
 
 		return $result;
-	}
-
-	/**
-	 * Return validation test result for a field.
-	 * Need MAIN_ACTIVATE_VALIDATION_RESULT to be called.
-	 *
-	 * @param  array   $fields	       		Array of properties of field to show
-	 * @param  string  $fieldKey            Key of attribute
-	 * @param  string  $fieldValue          value of attribute
-	 * @return bool 						Return false if fail, true on success, set $this->error for error message
-	 */
-	public function validateField($fields, $fieldKey, $fieldValue)
-	{
-		// Add your own validation rules here.
-		// ...
-
-		return parent::validateField($fields, $fieldKey, $fieldValue);
 	}
 
 	/**
@@ -1177,41 +980,5 @@ class Vehicule extends CommonObject
 		}
 
 		return $out;
-	}
-}
-
-
-require_once DOL_DOCUMENT_ROOT.'/core/class/commonobjectline.class.php';
-
-/**
- * Class VehiculeLine. You can also remove this and generate a CRUD class for lines objects.
- */
-class VehiculeLine extends CommonObjectLine
-{
-	// To complete with content of an object VehiculeLine
-	// We should have a field rowid, fk_vehicule and position
-
-	/**
-	 * To overload
-	 * @see CommonObjectLine
-	 */
-	public $parent_element = '';		// Example: '' or 'vehicule'
-
-	/**
-	 * To overload
-	 * @see CommonObjectLine
-	 */
-	public $fk_parent_attribute = '';	// Example: '' or 'fk_vehicule'
-
-	/**
-	 * Constructor
-	 *
-	 * @param DoliDB $db Database handler
-	 */
-	public function __construct(DoliDB $db)
-	{
-		$this->db = $db;
-
-		$this->isextrafieldmanaged = 0;
 	}
 }
