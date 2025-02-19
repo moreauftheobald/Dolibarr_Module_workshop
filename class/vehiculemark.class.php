@@ -62,7 +62,7 @@ class VehiculeMark extends CommonObject
 		"rowid" => array("type"=>"integer", "label"=>"TechnicalID", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>10, 'notnull'=>1, "visible"=>"-1",),
 		"date_creation" => array("type"=>"datetime", "label"=>"Datecreation", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>15, 'notnull'=>0, "visible"=>"-1",),
 		"tms" => array("type"=>"timestamp", "label"=>"DateModification", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>20, 'notnull'=>1, "visible"=>"-1",),
-		"code" => array("type"=>"varchar(20)", "label"=>"Code", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>25, 'notnull'=>0, "visible"=>"-1", "showoncombobox"=>"1",),
+		"code" => array("type"=>"varchar(20)", "label"=>"Code", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>25, 'notnull'=>0, "visible"=>"-1", "showoncombobox"=>"0",),
 		"active" => array("type"=>"integer", "label"=>"Active", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>35, 'notnull'=>1, "visible"=>"-1",),
 		"label" => array("type"=>"varchar(255)", "label"=>"Label", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>40, 'notnull'=>0, "visible"=>"-1", "alwayseditable"=>"1", "css"=>"minwidth300", "cssview"=>"wordbreak", "csslist"=>"tdoverflowmax150",),
 	);
@@ -431,7 +431,7 @@ class VehiculeMark extends CommonObject
 	{
 		global $conf, $langs, $hookmanager;
 
-		$result = $this->code . ' '. $this->label;
+		$result = $this->label;
 
 
 		return $result;
