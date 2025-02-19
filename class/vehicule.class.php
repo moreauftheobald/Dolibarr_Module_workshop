@@ -636,7 +636,7 @@ class Vehicule extends CommonObject
 	public function setDraft($user, $notrigger = 0)
 	{
 		// Protection
-		if ($this->status <= self::STATUS_DISACTIVATED) {
+		if ($this->status == self::STATUS_DISACTIVATED) {
 			return 0;
 		}
 
