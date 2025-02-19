@@ -108,14 +108,14 @@ class Vehicule extends CommonObject
 	 */
 	public $fields=array(
 		"rowid" => array("type"=>"integer", "label"=>"TechnicalID", "picto"=>"fa-truck", "enabled"=>"1", 'position'=>10, 'notnull'=>1, "visible"=>"0",),
-		"vin" => array("type"=>"varchar(50)", "label"=>"Vin", "picto"=>"fa-truck", "enabled"=>"1", 'position'=>20, 'notnull'=>0, "visible"=>"1","showoncombobox"=>1),
-		"status" => array("type"=>"integer", "label"=>"Status", "picto"=>"", "enabled"=>"1", 'arrayofkeyval' => array('4' => 'Valid','8' => 'Cancelled'), 'position'=>500, 'notnull'=>1, "visible"=>"1",),
-		"fk_vehicule_type" => array("type"=>"integer:VehiculeType:workshop/class/vehiculetype.class.php", "label"=>"Fkvehiculetype", "picto"=>"", "enabled"=>"1", 'position'=>40, 'notnull'=>0, "visible"=>"1", "css"=>"maxwidth500 widthcentpercentminusxx",),
-		"fk_vehicule_mark" => array("type"=>"integer:VehiculeMark:workshop/class/vehiculemark.class.php", "label"=>"Fkvehiculemark", "picto"=>"", "enabled"=>"1", 'position'=>50, 'notnull'=>0, "visible"=>"1", "css"=>"maxwidth500 widthcentpercentminusxx",),
+		"vin" => array("type"=>"varchar(50)", "label"=>"Vin", "picto"=>"fa-truck", "enabled"=>"1", 'position'=>20, 'notnull'=>1, "visible"=>"1","showoncombobox"=>1),
+		"status" => array("type"=>"integer", "label"=>"Status", "picto"=>"", "enabled"=>"1", 'arrayofkeyval' => array('4' => 'Valid','8' => 'Cancelled'), 'position'=>500, 'notnull'=>1, "visible"=>"1",'default'=>'4'),
+		"fk_vehicule_type" => array("type"=>"integer:VehiculeType:workshop/class/vehiculetype.class.php", "label"=>"Fkvehiculetype", "picto"=>"", "enabled"=>"1", 'position'=>40, 'notnull'=>0, "visible"=>"1", "css"=>"maxwidth500 widthcentpercentminusxx","notnull"=>1),
+		"fk_vehicule_mark" => array("type"=>"integer:VehiculeMark:workshop/class/vehiculemark.class.php", "label"=>"Fkvehiculemark", "picto"=>"", "enabled"=>"1", 'position'=>50, 'notnull'=>0, "visible"=>"1", "css"=>"maxwidth500 widthcentpercentminusxx","notnull"=>1),
 		"modele" => array("type"=>"varchar(255)", "label"=>"Modele", "picto"=>"", "enabled"=>"1", 'position'=>60, 'notnull'=>0, "visible"=>"1",),
-		"immatriculation" => array("type"=>"varchar(255)", "label"=>"Immatriculation", "picto"=>"", "enabled"=>"1", 'position'=>55, 'notnull'=>0, "visible"=>"1","showoncombobox"=>1),
+		"immatriculation" => array("type"=>"varchar(255)", "label"=>"Immatriculation", "picto"=>"", "enabled"=>"1", 'position'=>55, 'notnull'=>1, "visible"=>"1","showoncombobox"=>1),
 		"date_immat" => array("type"=>"datetime", "label"=>"Dateimmat", "picto"=>"", "enabled"=>"1", 'position'=>60, 'notnull'=>0, "visible"=>"-1",),
-		"fk_soc" => array("type"=>"integer:Societe:societe/class/societe.class.php", "label"=>"ThirdParty", "picto"=>"company", "enabled"=>"1", 'position'=>70, 'notnull'=>0, "visible"=>"1", "css"=>"maxwidth500 widthcentpercentminusxx", "csslist"=>"tdoverflowmax150","showoncombobox"=>1),
+		"fk_soc" => array("type"=>"integer:Societe:societe/class/societe.class.php", "label"=>"ThirdParty", "picto"=>"company", "enabled"=>"1", 'position'=>70, 'notnull'=>1, "visible"=>"1", "css"=>"maxwidth500 widthcentpercentminusxx", "csslist"=>"tdoverflowmax150","showoncombobox"=>1),
 		"km" => array("type"=>"double", "label"=>"Km", "picto"=>"", "enabled"=>"1", 'position'=>80, 'notnull'=>0, "visible"=>"1",),
 		"km_date" => array("type"=>"datetime", "label"=>"Kmdate", "picto"=>"", "enabled"=>"1", 'position'=>90, 'notnull'=>0, "visible"=>"-1",),
 		"fk_contract_type" => array("type"=>"integer:VehiculeContractType:workshop/class/vehiculecontracttype.class.php", "label"=>"Fkcontracttype", "picto"=>"", "enabled"=>"1", 'position'=>100, 'notnull'=>0, "visible"=>"-1", "css"=>"maxwidth500 widthcentpercentminusxx",),
@@ -148,6 +148,9 @@ class Vehicule extends CommonObject
 	public $import_key;
 
 	private $thirdparty_cache=[];
+	private $vehicule_type_cache=[];
+	private $vehicule_mark_cache=[];
+	private $contract_type_cache=[];
 	// END MODULEBUILDER PROPERTIES
 
 
@@ -222,6 +225,49 @@ class Vehicule extends CommonObject
 					foreach ($val['arrayofkeyval'] as $key2 => $val2) {
 						$this->fields[$key]['arrayofkeyval'][$key2] = $langs->trans($val2);
 					}
+				}
+			}
+		}
+
+		if (empty($this->vehicule_type_cache)) {
+			dol_include_once('/workshop/class/vehiculetype.class.php');
+			$vehiculeType = new VehiculeType($this->db);
+			$resVehType=$vehiculeType->fetchAll('','','',0);
+			if (!is_array($resVehType) && $resVehType<0) {
+				$this->error=$vehiculeType->error;
+				$this->errors = array_merge([$this->error],$this->errors,$vehiculeType->errors);
+			} elseif (is_array($resVehType) && count($resVehType)>0) {
+				foreach ($resVehType as $vehType) {
+					$this->vehicule_type_cache[$vehType->id] = $vehType->label;
+				}
+			}
+		}
+
+		if (empty($this->vehicule_mark_cache)) {
+			dol_include_once('/workshop/class/vehiculemark.class.php');
+			$vehiculeMark = new VehiculeMark($this->db);
+			$resVehMark=$vehiculeMark->fetchAll('','','',0);
+
+			if (!is_array($vehiculeMark) && $vehiculeMark<0) {
+				$this->error=$vehiculeMark->error;
+				$this->errors = array_merge([$this->error],$this->errors,$vehiculeMark->errors);
+			} elseif (is_array($resVehMark) && count($resVehMark)>0) {
+				foreach ($resVehMark as $vehMark) {
+					$this->vehicule_mark_cache[$vehMark->id] = $vehMark->label;
+				}
+			}
+		}
+
+		if (empty($this->contract_type_cache)) {
+			dol_include_once('/workshop/class/vehiculecontracttype.class.php');
+			$vehiculeContractType = new VehiculeContractType($this->db);
+			$resVehContractType=$vehiculeContractType->fetchAll('','','',0);
+			if (!is_array($resVehContractType) && $resVehContractType<0) {
+				$this->error=$vehiculeContractType->error;
+				$this->errors = array_merge([$this->error],$this->errors,$resVehContractType->errors);
+			} elseif (is_array($resVehContractType) && count($resVehContractType)>0) {
+				foreach ($resVehContractType as $vehContractType) {
+					$this->contract_type_cache[$vehContractType->id] = $vehContractType->label;
 				}
 			}
 		}
