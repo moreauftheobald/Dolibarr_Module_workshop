@@ -109,7 +109,7 @@ class Vehicule extends CommonObject
 	public $fields=array(
 		"rowid" => array("type"=>"integer", "label"=>"TechnicalID", "picto"=>"fa-truck", "enabled"=>"1", 'position'=>10, 'notnull'=>1, "visible"=>"0",),
 		"vin" => array("type"=>"varchar(50)", "label"=>"Vin", "picto"=>"fa-truck", "enabled"=>"1", 'position'=>20, 'notnull'=>0, "visible"=>"1","showoncombobox"=>1),
-		"status" => array("type"=>"integer", "label"=>"Status", "picto"=>"", "enabled"=>"1", 'arrayofkeyval' => array('0' => 'Draft', '1' => 'Valid','9' => 'Cancelled'), 'position'=>500, 'notnull'=>1, "visible"=>"1",),
+		"status" => array("type"=>"integer", "label"=>"Status", "picto"=>"", "enabled"=>"1", 'arrayofkeyval' => array('4' => 'Valid','8' => 'Cancelled'), 'position'=>500, 'notnull'=>1, "visible"=>"1",),
 		"fk_vehicule_type" => array("type"=>"integer:VehiculeType:workshop/class/vehiculetype.class.php", "label"=>"Fkvehiculetype", "picto"=>"", "enabled"=>"1", 'position'=>40, 'notnull'=>0, "visible"=>"1", "css"=>"maxwidth500 widthcentpercentminusxx",),
 		"fk_vehicule_mark" => array("type"=>"integer:VehiculeMark:workshop/class/vehiculemark.class.php", "label"=>"Fkvehiculemark", "picto"=>"", "enabled"=>"1", 'position'=>50, 'notnull'=>0, "visible"=>"1", "css"=>"maxwidth500 widthcentpercentminusxx",),
 		"modele" => array("type"=>"varchar(255)", "label"=>"Modele", "picto"=>"", "enabled"=>"1", 'position'=>60, 'notnull'=>0, "visible"=>"1",),
@@ -208,12 +208,6 @@ class Vehicule extends CommonObject
 			$this->fields['entity']['enabled'] = 0;
 		}
 
-		// Example to show how to set values of fields definition dynamically
-		/*if ($user->hasRight('workshop', 'vehicule', 'read')) {
-			$this->fields['myfield']['visible'] = 1;
-			$this->fields['myfield']['noteditable'] = 0;
-		}*/
-
 		// Unset fields that are disabled
 		foreach ($this->fields as $key => $val) {
 			if (isset($val['enabled']) && empty($val['enabled'])) {
@@ -243,8 +237,6 @@ class Vehicule extends CommonObject
 	public function create(User $user, $notrigger = 0)
 	{
 		$resultcreate = $this->createCommon($user, $notrigger);
-
-		//$resultvalidate = $this->validate($user, $notrigger);
 
 		return $resultcreate;
 	}
@@ -485,7 +477,6 @@ class Vehicule extends CommonObject
 	public function delete(User $user, $notrigger = 0)
 	{
 		return $this->deleteCommon($user, $notrigger);
-		//return $this->deleteCommon($user, $notrigger, 1);
 	}
 
 	/**
@@ -527,14 +518,6 @@ class Vehicule extends CommonObject
 			dol_syslog(get_class($this)."::validate action abandoned: already validated", LOG_WARNING);
 			return 0;
 		}
-
-		/* if (! ((!getDolGlobalInt('MAIN_USE_ADVANCED_PERMS') && $user->hasRight('workshop', 'vehicule', 'write'))
-		 || (getDolGlobalInt('MAIN_USE_ADVANCED_PERMS') && $user->hasRight('workshop', 'vehicule_advance', 'validate')))
-		 {
-		 $this->error='NotEnoughPermissions';
-		 dol_syslog(get_class($this)."::valid ".$this->error, LOG_ERR);
-		 return -1;
-		 }*/
 
 		$now = dol_now();
 
@@ -657,38 +640,7 @@ class Vehicule extends CommonObject
 			return 0;
 		}
 
-		/* if (! ((!getDolGlobalInt('MAIN_USE_ADVANCED_PERMS') && $user->hasRight('workshop','write'))
-		 || (getDolGlobalInt('MAIN_USE_ADVANCED_PERMS') && $user->hasRight('workshop','workshop_advance','validate'))))
-		 {
-		 $this->error='Permission denied';
-		 return -1;
-		 }*/
-
 		return $this->setStatusCommon($user, self::STATUS_DISACTIVATED, $notrigger, 'WORKSHOP_MYOBJECT_UNVALIDATE');
-	}
-
-	/**
-	 *	Set cancel status
-	 *
-	 *	@param	User	$user			Object user that modify
-	 *  @param	int		$notrigger		1=Does not execute triggers, 0=Execute triggers
-	 *	@return	int						Return integer <0 if KO, 0=Nothing done, >0 if OK
-	 */
-	public function cancel($user, $notrigger = 0)
-	{
-		// Protection
-		if ($this->status != self::STATUS_ACTIVATED) {
-			return 0;
-		}
-
-		/* if (! ((!getDolGlobalInt('MAIN_USE_ADVANCED_PERMS') && $user->hasRight('workshop','write'))
-		 || (getDolGlobalInt('MAIN_USE_ADVANCED_PERMS') && $user->hasRight('workshop','workshop_advance','validate'))))
-		 {
-		 $this->error='Permission denied';
-		 return -1;
-		 }*/
-
-		return $this->setStatusCommon($user, self::STATUS_DISACTIVATED, $notrigger, 'WORKSHOP_MYOBJECT_CANCEL');
 	}
 
 	/**
@@ -704,13 +656,6 @@ class Vehicule extends CommonObject
 		if ($this->status == self::STATUS_ACTIVATED) {
 			return 0;
 		}
-
-		/*if (! ((!getDolGlobalInt('MAIN_USE_ADVANCED_PERMS') && $user->hasRight('workshop','write'))
-		 || (getDolGlobalInt('MAIN_USE_ADVANCED_PERMS') && $user->hasRight('workshop','workshop_advance','validate'))))
-		 {
-		 $this->error='Permission denied';
-		 return -1;
-		 }*/
 
 		return $this->setStatusCommon($user, self::STATUS_ACTIVATED, $notrigger, 'WORKSHOP_MYOBJECT_REOPEN');
 	}
