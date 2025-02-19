@@ -438,7 +438,7 @@ class VehiculeType extends CommonObject
 	{
 		global $conf, $langs, $hookmanager;
 
-		$result = $this->code . ' '. $this->label;
+		$result = $this->label;
 
 
 		return $result;
