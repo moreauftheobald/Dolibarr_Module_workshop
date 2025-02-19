@@ -790,7 +790,7 @@ while ($i < $imaxinloop) {
 
 			if (in_array($val['type'], array('timestamp'))) {
 				$cssforfield .= ($cssforfield ? ' ' : '').'nowraponall';
-			} elseif ($key == 'ref') {
+			} elseif ($key == 'vin') {
 				$cssforfield .= ($cssforfield ? ' ' : '').'nowraponall';
 			}
 
@@ -800,15 +800,16 @@ while ($i < $imaxinloop) {
 			//if (in_array($key, array('fk_soc', 'fk_user', 'fk_warehouse'))) $cssforfield = 'tdoverflowmax100';
 
 			if (!empty($arrayfields['t.'.$key]['checked'])) {
-				print '<td'.($cssforfield ? ' class="'.$cssforfield.((preg_match('/tdoverflow/', $cssforfield) && !in_array($val['type'], array('ip', 'url')) && !is_numeric($object->$key)) ? ' classfortooltip' : '').'"' : '');
+				print '<td'.($cssforfield ? ' class="'.$cssforfield.((preg_match('/tdoverflow/', $cssforfield)
+							&& !in_array($val['type'], array('ip', 'url')) && !is_numeric($object->$key)) ? ' classfortooltip' : '').'"' : '');
 				if (preg_match('/tdoverflow/', $cssforfield) && !in_array($val['type'], array('ip', 'url')) && !is_numeric($object->$key)) {
 					print ' title="'.dol_escape_htmltag($object->$key).'"';
 				}
 				print '>';
 				if ($key == 'status') {
 					print $object->getLibStatut(5);
-				} elseif ($key == 'rowid') {
-					print $object->showOutputField($val, $key, $object->id, '');
+				} elseif ($key == 'vin') {
+					print $object->getNomUrl();
 				} else {
 					print $object->showOutputField($val, $key, $object->$key, '');
 				}

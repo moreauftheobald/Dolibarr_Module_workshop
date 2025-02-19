@@ -110,24 +110,24 @@ class Vehicule extends CommonObject
 	 */
 	public $fields=array(
 		"rowid" => array("type"=>"integer", "label"=>"TechnicalID", "picto"=>"fa-truck", "enabled"=>"1", 'position'=>10, 'notnull'=>1, "visible"=>"0",),
-		"date_creation" => array("type"=>"datetime", "label"=>"Datecreation", "picto"=>"fa-truck", "enabled"=>"1", 'position'=>15, 'notnull'=>0, "visible"=>"5",),
-		"tms" => array("type"=>"timestamp", "label"=>"DateModification", "picto"=>"fa-truck", "enabled"=>"1", 'position'=>20, 'notnull'=>1, "visible"=>"5",),
-		"vin" => array("type"=>"varchar(50)", "label"=>"Vin", "picto"=>"fa-truck", "enabled"=>"1", 'position'=>25, 'notnull'=>0, "visible"=>"1",),
+		"vin" => array("type"=>"varchar(50)", "label"=>"Vin", "picto"=>"fa-truck", "enabled"=>"1", 'position'=>20, 'notnull'=>0, "visible"=>"1","showoncombobox"=>1),
 		"status" => array("type"=>"integer", "label"=>"Status", "picto"=>"", "enabled"=>"1", 'arrayofkeyval' => array('0' => 'Draft', '1' => 'Valid','9' => 'Cancelled'), 'position'=>500, 'notnull'=>1, "visible"=>"1",),
 		"fk_vehicule_type" => array("type"=>"integer:VehiculeType:workshop/class/vehiculetype.class.php", "label"=>"Fkvehiculetype", "picto"=>"", "enabled"=>"1", 'position'=>40, 'notnull'=>0, "visible"=>"1", "css"=>"maxwidth500 widthcentpercentminusxx",),
-		"fk_vehicule_mark" => array("type"=>"integer:VehiculeMark:workshop/class/vehiculemark.class.php", "label"=>"Fkvehiculemark", "picto"=>"", "enabled"=>"1", 'position'=>45, 'notnull'=>0, "visible"=>"1", "css"=>"maxwidth500 widthcentpercentminusxx",),
-		"modele" => array("type"=>"varchar(255)", "label"=>"Modele", "picto"=>"", "enabled"=>"1", 'position'=>50, 'notnull'=>0, "visible"=>"1",),
-		"immatriculation" => array("type"=>"varchar(255)", "label"=>"Immatriculation", "picto"=>"", "enabled"=>"1", 'position'=>55, 'notnull'=>0, "visible"=>"1",),
+		"fk_vehicule_mark" => array("type"=>"integer:VehiculeMark:workshop/class/vehiculemark.class.php", "label"=>"Fkvehiculemark", "picto"=>"", "enabled"=>"1", 'position'=>50, 'notnull'=>0, "visible"=>"1", "css"=>"maxwidth500 widthcentpercentminusxx",),
+		"modele" => array("type"=>"varchar(255)", "label"=>"Modele", "picto"=>"", "enabled"=>"1", 'position'=>60, 'notnull'=>0, "visible"=>"1",),
+		"immatriculation" => array("type"=>"varchar(255)", "label"=>"Immatriculation", "picto"=>"", "enabled"=>"1", 'position'=>55, 'notnull'=>0, "visible"=>"1","showoncombobox"=>1),
 		"date_immat" => array("type"=>"datetime", "label"=>"Dateimmat", "picto"=>"", "enabled"=>"1", 'position'=>60, 'notnull'=>0, "visible"=>"-1",),
-		"fk_soc" => array("type"=>"integer:Societe:societe/class/societe.class.php", "label"=>"ThirdParty", "picto"=>"company", "enabled"=>"1", 'position'=>65, 'notnull'=>0, "visible"=>"1", "css"=>"maxwidth500 widthcentpercentminusxx", "csslist"=>"tdoverflowmax150",),
-		"km" => array("type"=>"double", "label"=>"Km", "picto"=>"", "enabled"=>"1", 'position'=>70, 'notnull'=>0, "visible"=>"1",),
-		"km_date" => array("type"=>"datetime", "label"=>"Kmdate", "picto"=>"", "enabled"=>"1", 'position'=>75, 'notnull'=>0, "visible"=>"-1",),
-		"fk_contract_type" => array("type"=>"integer:VehiculeContractType:workshop/class/vehiculecontracttype.class.php", "label"=>"Fkcontracttype", "picto"=>"", "enabled"=>"1", 'position'=>80, 'notnull'=>0, "visible"=>"-1", "css"=>"maxwidth500 widthcentpercentminusxx",),
-		"date_end_contract" => array("type"=>"datetime", "label"=>"Dateendcontract", "picto"=>"", "enabled"=>"1", 'position'=>85, 'notnull'=>0, "visible"=>"-1",),
-		"carrosserie" => array("type"=>"html", "label"=>"Carrosserie", "picto"=>"", "enabled"=>"1", 'position'=>90, 'notnull'=>0, "visible"=>"1",),
-		"dim_pneu" => array("type"=>"chkbxlst:workshop_vehicule_c_vehicule_dimpneu:code:rowid", "label"=>"Dimpneu", "picto"=>"", "enabled"=>"1", 'position'=>95, 'notnull'=>0, "visible"=>"3",),
-		"nb_pneu" => array("type"=>"integer", "label"=>"Nbpneu", "picto"=>"", "enabled"=>"1", 'position'=>100, 'notnull'=>0, "visible"=>"1",),
-		"import_key" => array("type"=>"varchar(255)", "label"=>"ImportId", "picto"=>"", "enabled"=>"1", 'position'=>900, 'notnull'=>0, "visible"=>"-5",),
+		"fk_soc" => array("type"=>"integer:Societe:societe/class/societe.class.php", "label"=>"ThirdParty", "picto"=>"company", "enabled"=>"1", 'position'=>70, 'notnull'=>0, "visible"=>"1", "css"=>"maxwidth500 widthcentpercentminusxx", "csslist"=>"tdoverflowmax150","showoncombobox"=>1),
+		"km" => array("type"=>"double", "label"=>"Km", "picto"=>"", "enabled"=>"1", 'position'=>80, 'notnull'=>0, "visible"=>"1",),
+		"km_date" => array("type"=>"datetime", "label"=>"Kmdate", "picto"=>"", "enabled"=>"1", 'position'=>90, 'notnull'=>0, "visible"=>"-1",),
+		"fk_contract_type" => array("type"=>"integer:VehiculeContractType:workshop/class/vehiculecontracttype.class.php", "label"=>"Fkcontracttype", "picto"=>"", "enabled"=>"1", 'position'=>100, 'notnull'=>0, "visible"=>"-1", "css"=>"maxwidth500 widthcentpercentminusxx",),
+		"date_end_contract" => array("type"=>"datetime", "label"=>"Dateendcontract", "picto"=>"", "enabled"=>"1", 'position'=>110, 'notnull'=>0, "visible"=>"-1",),
+		"carrosserie" => array("type"=>"html", "label"=>"Carrosserie", "picto"=>"", "enabled"=>"1", 'position'=>120, 'notnull'=>0, "visible"=>"1",),
+		"dim_pneu" => array("type"=>"chkbxlst:workshop_vehicule_c_vehicule_dimpneu:code:rowid", "label"=>"Dimpneu", "picto"=>"", "enabled"=>"1", 'position'=>130, 'notnull'=>0, "visible"=>"3",),
+		"nb_pneu" => array("type"=>"integer", "label"=>"Nbpneu", "picto"=>"", "enabled"=>"1", 'position'=>140, 'notnull'=>0, "visible"=>"1",),
+		"date_creation" => array("type"=>"datetime", "label"=>"Datecreation", "picto"=>"fa-truck", "enabled"=>"1", 'position'=>200, 'notnull'=>0, "visible"=>"5",),
+		"tms" => array("type"=>"timestamp", "label"=>"DateModification", "picto"=>"fa-truck", "enabled"=>"1", 'position'=>210, 'notnull'=>1, "visible"=>"5",),
+		"import_key" => array("type"=>"varchar(255)", "label"=>"ImportId", "picto"=>"", "enabled"=>"1", 'position'=>900, 'notnull'=>0, "visible"=>"0",),
 	);
 	public $rowid;
 	public $date_creation;
@@ -148,6 +148,8 @@ class Vehicule extends CommonObject
 	public $dim_pneu;
 	public $nb_pneu;
 	public $import_key;
+
+	private $thirdparty_cache=[];
 	// END MODULEBUILDER PROPERTIES
 
 
@@ -360,9 +362,14 @@ class Vehicule extends CommonObject
 	public function fetch($id, $ref = null, $noextrafields = 0, $nolines = 0)
 	{
 		$result = $this->fetchCommon($id, $ref, '', $noextrafields);
-		if ($result > 0 && !empty($this->table_element_line) && empty($nolines)) {
-			$this->fetchLines($noextrafields);
+//		if ($result > 0 && !empty($this->table_element_line) && empty($nolines)) {
+//			$this->fetchLines($noextrafields);
+//		}
+
+		if ($result > 0) {
+			$result = $this->fetch_thirdparty();
 		}
+
 		return $result;
 	}
 
@@ -730,11 +737,22 @@ class Vehicule extends CommonObject
 		if (isset($this->status)) {
 			$datas['picto'] .= ' '.$this->getLibStatut(5);
 		}
-		if (property_exists($this, 'ref')) {
-			$datas['ref'] = '<br><b>'.$langs->trans('Ref').':</b> '.$this->ref;
+		if (property_exists($this, 'vin')) {
+			$datas['vin'] = '<br><b>'.$langs->trans('Vin').':</b> '.$this->vin;
 		}
-		if (property_exists($this, 'label')) {
-			$datas['ref'] = '<br>'.$langs->trans('Label').':</b> '.$this->label;
+		if (property_exists($this, 'immatriculation')) {
+			$datas['immat'] = '<br><b>'.$langs->trans('ImmatShort').':</b> '.$this->immatriculation;
+		}
+		if (property_exists($this, 'fk_soc')) {
+			if (empty($this->thirdparty)) {
+				if (!isset($this->thirdparty_cache[$this->fk_soc])) {
+					$this->fetch_thirdparty();
+					$this->thirdparty_cache=$this->thirdparty;
+				} else {
+					$this->thirdparty = $this->thirdparty_cache[$this->fk_soc];
+				}
+			};
+			$datas['fk_soc'] = '<br><b>'.$langs->trans('Customer').':</b> '.$this->thirdparty->name;
 		}
 
 		return $datas;
@@ -843,7 +861,7 @@ class Vehicule extends CommonObject
 		}
 
 		if ($withpicto != 2) {
-			$result .= $this->ref;
+			$result .= $this->vin;
 		}
 
 		$result .= $linkend;
@@ -885,15 +903,11 @@ class Vehicule extends CommonObject
 		if ($selected >= 0) {
 			$return .= '<input id="cb'.$this->id.'" class="flat checkforselect fright" type="checkbox" name="toselect[]" value="'.$this->id.'"'.($selected ? ' checked="checked"' : '').'>';
 		}
-		if (property_exists($this, 'label')) {
-			$return .= ' <div class="inline-block opacitymedium valignmiddle tdoverflowmax100">'.$this->label.'</div>';
+		if (property_exists($this, 'immatriculation')) {
+			$return .= ' <div class="inline-block opacitymedium valignmiddle tdoverflowmax100">'.$this->immatriculation.'</div>';
 		}
-		if (property_exists($this, 'thirdparty') && is_object($this->thirdparty)) {
+		if (property_exists($this, 'fk_soc') && is_object($this->thirdparty)) {
 			$return .= '<br><div class="info-box-ref tdoverflowmax150">'.$this->thirdparty->getNomUrl(1).'</div>';
-		}
-		if (property_exists($this, 'amount')) {
-			$return .= '<br>';
-			$return .= '<span class="info-box-label amount">'.price($this->amount, 0, $langs, 1, -1, -1, $conf->currency).'</span>';
 		}
 		if (method_exists($this, 'getLibStatut')) {
 			$return .= '<br><div class="info-box-status">'.$this->getLibStatut(3).'</div>';
