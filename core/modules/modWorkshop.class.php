@@ -305,6 +305,11 @@ class modWorkshop extends DolibarrModules
 		$this->rights[$r][4] = 'operationorders';
 		$this->rights[$r][5] = 'delete';
 		$r++;
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + 3 + 1);
+		$this->rights[$r][1] = 'Readworkshopsext';
+		$this->rights[$r][4] = 'operationorders';
+		$this->rights[$r][5] = 'readext';
+		$r++;
 		$this->rights[$r][0] = $this->numero . sprintf('%02d', (1 * 10) + 0 + 1);
 		$this->rights[$r][1] = 'ReadWorkshopPlanning';
 		$this->rights[$r][4] = 'workshopplanning';
@@ -716,9 +721,9 @@ class modWorkshop extends DolibarrModules
 		}
 
 		// Create extrafields during init
-		include_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
+		//include_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
 		//$extrafields = new ExtraFields($this->db);
-		//$result0=$extrafields->addExtraField('workshop_service_type', "ServiceType", 'select', 1,  '', 'product',   0, 0, '', array('options'=>array('MO'=>'MO','ST','Sous traitance')), 1, '', 1, 0, '', '', 'workshop@workshop', 'isModEnabled("workshop")');
+		//$result0=$extrafields->addExtraField('workshop_service_type', "ServiceType", 'selllist', 1,  '', 'product',   0, 0, '', array('options'=>array('MO'=>'MO','ST','Sous traitance')), 1, '', 1, 0, '', '', 'workshop@workshop', 'isModEnabled("workshop")');
 		//$result1=$extrafields->addExtraField('workshop_myattr1', "New Attr 1 label", 'boolean', 1,  3, 'thirdparty',   0, 0, '', '', 1, '', -1, 0, '', '', 'workshop@workshop', 'isModEnabled("workshop")');
 		//$result2=$extrafields->addExtraField('workshop_myattr2', "New Attr 2 label", 'varchar', 1, 10, 'project',      0, 0, '', '', 1, '', -1, 0, '', '', 'workshop@workshop', 'isModEnabled("workshop")');
 		//$result3=$extrafields->addExtraField('workshop_myattr3', "New Attr 3 label", 'varchar', 1, 10, 'bank_account', 0, 0, '', '', 1, '', -1, 0, '', '', 'workshop@workshop', 'isModEnabled("workshop")');

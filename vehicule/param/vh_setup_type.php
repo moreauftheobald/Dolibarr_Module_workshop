@@ -77,7 +77,7 @@ $label = GETPOST('label', 'alpha');
 $active = GETPOST('active', 'int');
 $page = GETPOST('page', 'int');
 
-if (!$user->hasRight("workshop", "vehicule", "write")) {
+if (!$user->hasRight("workshop", "vehicule", "readext")) {
 	accessforbidden();
 }
 

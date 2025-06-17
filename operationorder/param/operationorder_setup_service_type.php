@@ -80,7 +80,7 @@ $product_type = GETPOST('product_type', 'int');
 $group_type = GETPOST('group_type', 'int');
 $page = GETPOST('page', 'int');
 
-if (!$user->hasRight("workshop", "vehicule", "write")) {
+if (!$user->hasRight("workshop", "operationorders", "readext")) {
 	accessforbidden();
 }
 

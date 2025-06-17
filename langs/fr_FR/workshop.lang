@@ -35,9 +35,10 @@ ReadWorkshopPlanning=Lire le Planning Atelier
 WriteWorkshopPlanning=Modifier le Planning Atelier
 ReadWorkshopMecanicsPlanning=Lire le Planning de pointage
 WriteWorkshopMecanicsPlanning=Modifier le planning de pointage
+Readworkshopsext=Atelier - Permission de gestion avancée
 # Vehicules
 Readvehicules=Lire les véhicules
-Readvehiculesext=Permission de lecture Avancée
+Readvehiculesext=Vehicule - Permission de gestion avancée
 Writetevehicules=Créer les véhicules
 Deletevehicules=Supprimer les véhicules
 

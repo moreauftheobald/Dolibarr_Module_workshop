@@ -80,7 +80,7 @@ $active = GETPOST('active', 'int');
 $fk_vehicule_mark = GETPOST('fk_vehicule_mark', 'int');
 $page = GETPOST('page', 'int');
 
-if (!$user->hasRight("workshop", "vehicule", "write")) {
+if (!$user->hasRight("workshop", "vehicule", "readext")) {
 	accessforbidden();
 }
 
