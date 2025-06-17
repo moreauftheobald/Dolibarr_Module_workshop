@@ -917,4 +917,28 @@ class Vehicule extends CommonObject
 
 		return $out;
 	}
+
+	public function getBanner(Form $form, $permissiontoadd = false) {
+		$morehtmlref = '<div class="refidno">';
+
+		// Ref customer
+		$morehtmlref .= $form->editfieldval("ImmatShort", 'immatriculation', $this->immatriculation, $this, $permissiontoadd);
+		// Thirdparty
+
+		if (!getDolGlobalInt('MAIN_DISABLE_OTHER_LINK') && isset($this->thirdparty) && $this->thirdparty->id > 0) {
+			$morehtmlref .= '<br>'.$this->thirdparty->getNomUrl(1, 'customer');
+			$vehOther = new Vehicule($this->db);
+			$vehOthers= $vehOther->fetchAll('','',2,0,'(fk_soc:=:'.$this->thirdparty->id.')');
+			if (!is_array($vehOthers) && $vehOthers<0) {
+				setEventMessages($vehOther->error, $vehOther->errors, 'errors');
+			} elseif (is_array($vehOthers) && count($vehOthers)>1) {
+				$morehtmlref .= ' (<a href="'.dol_buildpath('/workshop/vehicule/vehicule_list.php',2).'?search_fk_soc='.$this->thirdparty->id.'">'.$langs->trans("OtherVehicules").'</a>)';
+			}
+
+		}
+
+		$morehtmlref .= '</div>';
+
+		return $morehtmlref;
+	}
 }

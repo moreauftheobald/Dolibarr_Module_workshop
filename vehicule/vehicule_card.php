@@ -383,25 +383,7 @@ if ($object->id > 0 && (empty($action) || ($action != 'edit' && $action != 'crea
 	// ------------------------------------------------------------
 	$linkback = '<a href="'.dol_buildpath('/workshop/vehicule/vehicule_list.php', 1).'?restore_lastsearch_values=1'.(!empty($socid) ? '&socid='.$socid : '').'">'.$langs->trans("BackToList").'</a>';
 
-	$morehtmlref = '<div class="refidno">';
-
-		// Ref customer
-		$morehtmlref .= $form->editfieldval("ImmatShort", 'immatriculation', $object->immatriculation, $object, $permissiontoadd);
-		// Thirdparty
-
-		if (!getDolGlobalInt('MAIN_DISABLE_OTHER_LINK') && isset($object->thirdparty) && $object->thirdparty->id > 0) {
-			$morehtmlref .= '<br>'.$object->thirdparty->getNomUrl(1, 'customer');
-			$vehOther = new Vehicule($db);
-			$vehOthers= $vehOther->fetchAll('','',2,0,'(fk_soc:=:'.$object->thirdparty->id.')');
-			if (!is_array($vehOthers) && $vehOthers<0) {
-				setEventMessages($vehOther->error, $vehOther->errors, 'errors');
-			} elseif (is_array($vehOthers) && count($vehOthers)>1) {
-				$morehtmlref .= ' (<a href="'.dol_buildpath('/workshop/vehicule/vehicule_list.php',2).'?search_fk_soc='.$object->thirdparty->id.'">'.$langs->trans("OtherVehicules").'</a>)';
-			}
-
-		}
-
-	$morehtmlref .= '</div>';
+	$morehtmlref = $object->getBanner($form, $permissiontoadd);
 
 	dol_banner_tab($object, 'vin', $linkback, 1, 'id', 'vin', $morehtmlref);
 
