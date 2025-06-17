@@ -17,7 +17,7 @@
  */
 
 /**
- *    	\file       vh_setup_typect.php
+ *    	\file       operationorder_setup_service_type.php
  *      \ingroup    workshop
  *      \brief      Page to create/edit/view vehicule Contract type
  */
@@ -60,14 +60,13 @@ if (!$res) {
 	die("Include of main fails");
 }
 
-dol_include_once('/workshop/lib/workshop_vehicule.lib.php');
-dol_include_once('/workshop/class/vehiculecontracttype.class.php');
-dol_include_once('/workshop/class/vehiculemark.class.php');
+dol_include_once('/workshop/lib/workshop.lib.php');
+dol_include_once('/workshop/class/servicetype.class.php');
+
 // Load translation files required by the page
 $langs->load("workshop@workshop");
 
-$object = new VehiculeContractType($db);
-$objectMark = new VehiculeMark($db);
+$object = new ServiceType($db);
 
 // Get parameters
 $action = GETPOST('action', 'aZ09');
@@ -77,7 +76,8 @@ $rowid = GETPOST('rowid', 'int');
 $code = GETPOST('code', 'alpha');
 $label = GETPOST('label', 'alpha');
 $active = GETPOST('active', 'int');
-$fk_vehicule_mark = GETPOST('fk_vehicule_mark', 'int');
+$product_type = GETPOST('product_type', 'int');
+$group_type = GETPOST('group_type', 'int');
 $page = GETPOST('page', 'int');
 
 if (!$user->hasRight("workshop", "vehicule", "write")) {
@@ -86,26 +86,7 @@ if (!$user->hasRight("workshop", "vehicule", "write")) {
 
 if (!isModEnabled("workshop")) accessforbidden();
 
-$marksActivDatas=['0'=>$langs->trans('AllMarks')];
-$marksInactivDatas=[];
-$marks=$objectMark->fetchAll('','',0);
-if (!is_array($marks) && $marks<0) {
-	setEventMessages($objectMark->error,$objectMark->errors,'errors');
-}  elseif(is_array($marks) && count($marks)>1) {
-	foreach($marks as $mark) {
-		/**
-		 * @var $mark VehiculeMark
-		 */
-		if ($mark->active) {
-			$marksActivDatas[$mark->id]=$mark->label;
-		} else {
-			$marksInactivDatas[$mark->id]=$mark->label;
-		}
-
-	}
-}
-
-$hookmanager->initHooks(array('vhsetuptypect', 'globalcard')); // Note that conf->hooks_modules contains array
+$hookmanager->initHooks(array('vhsetupservice_type', 'globalcard')); // Note that conf->hooks_modules contains array
 
 
 $parameters = array();
@@ -143,14 +124,16 @@ if (empty($reshook)) {
 					if ($action == 'confirmnew') {
 						$object->entity = 0;
 						$object->code = $code;
-						$object->fk_vehicule_mark = $fk_vehicule_mark;
+						$object->product_type = $product_type;
+						$object->group_type = $group_type;
 						$object->label = $label;
 						$object->active = $active;
 						$object->date_creation = dol_now();
 						$res=$object->create($user);
 					} elseif ($action == 'confirmedit') {
 						$object->code = $code;
-						$object->fk_vehicule_mark = $fk_vehicule_mark;
+						$object->product_type = $product_type;
+						$object->group_type = $group_type;
 						$object->label = $label;
 						$object->active = $active;
 						$res = $object->update($user);
@@ -188,7 +171,8 @@ if (empty($reshook)) {
 				unset($cancel);
 				unset($rowid);
 				unset($code);
-				unset($fk_vehicule_mark);
+				unset($product_type);
+				unset($group_type);
 				unset($label);
 				unset($active);
 			}
@@ -196,7 +180,7 @@ if (empty($reshook)) {
 	}
 }
 
-$typectarray = array();
+$service_typearray = array();
 $limit = GETPOST('limit', 'int') ?GETPOST('limit', 'int') : $conf->liste_limit;
 $page = GETPOSTISSET('pageplusone') ? (GETPOST('pageplusone') - 1) : GETPOST("page", 'int');
 if (empty($page) || $page < 0 || GETPOST('button_search', 'alpha') || GETPOST('button_removefilter', 'alpha')) {
@@ -206,7 +190,7 @@ if (empty($page) || $page < 0 || GETPOST('button_search', 'alpha') || GETPOST('b
 $limit = 25;
 $offset = $limit * $page;
 
-$sql  = "SELECT p.rowid as rowid, p.code as code, p.fk_vehicule_mark, p.label as label, p.active as active ";
+$sql  = "SELECT p.rowid as rowid, p.code as code, p.product_type,p.group_type, p.label as label, p.active as active ";
 $sql .= "FROM ".MAIN_DB_PREFIX. $object->table_element . " as p ";
 $sql .= "WHERE 1=1";
 
@@ -232,13 +216,14 @@ if ($resql) {
 	$i = 0;
 	while ($i < ($limit ? min($limit, $num) : $num)) {
 		$obj = $db->fetch_object($resql);
-		$typect = new stdClass();
-		$typect->id = $obj->rowid;
-		$typect->code = $obj->code;
-		$typect->fk_vehicule_mark = $obj->fk_vehicule_mark;
-		$typect->label = $obj->label;
-		$typect->active = $obj->active;
-		$typectarray[$typect->id] = $typect;
+		$service_type = new stdClass();
+		$service_type->id = $obj->rowid;
+		$service_type->code = $obj->code;
+		$service_type->product_type = $obj->product_type;
+		$service_type->group_type = $obj->group_type;
+		$service_type->label = $obj->label;
+		$service_type->active = $obj->active;
+		$service_typearray[$service_type->id] = $service_type;
 
 		$i++;
 	}
@@ -252,46 +237,34 @@ if ($resql) {
  */
 
 $form = new Form($db);
-$title = $langs->trans('WorkshopSetupTypeCt');
+$title = $langs->trans('WorkshopSetupService_Type');
 $help_url = '';
 llxHeader('', $title, $help_url);
 
-$head = VhSetupPrepareHead();
-print dol_get_fiche_head($head, 'typect', $langs->Trans("WorkshopSetupTypeCt"), -1, "fontawesome_fa-tools");
+$head = workshopSetupPrepareHead();
+print dol_get_fiche_head($head, 'service_type', $langs->Trans("WorkshopSetupService_Type"), -1, "fontawesome_fa-tools");
 // Part to show record
 
 $formconfirm = '';
 if ($action=='delete' && !empty($rowid)) {
 	$formquestion[] = array('type'=>'hidden','name'=>'rowid','value'=>$rowid);
-	$formconfirm = $form->formconfirm($_SERVER["PHP_SELF"], $langs->trans('DeleteTypect'), $langs->trans('DeleteTypectQuestion'), 'confirmdelete', $formquestion, 'yes', 1);
+	$formconfirm = $form->formconfirm($_SERVER["PHP_SELF"], $langs->trans('DeleteService_Type'), $langs->trans('DeleteService_TypeQuestion'), 'confirmdelete', $formquestion, 'yes', 1);
 } elseif ($action =='new') {
 	$formquestion[] = array('type'=>'text','label'=>$langs->trans('code'), 'name'=>'code','value'=> $code);
-	$formquestion[] = array('type'=>'select','label'=>$langs->trans('Fkvehiculemark'), 'name'=>'fk_vehicule_mark','values'=>$marksActivDatas);
-	$formquestion[] = array('type'=>'text','label'=>$langs->trans('typectlabel'), 'name'=>'label','value'=>$label);
+	$formquestion[] = array('type'=>'select','label'=>$langs->trans('ProductType'), 'name'=>'product_type','values'=>$object->fields['product_type']['options']);
+	$formquestion[] = array('type'=>'select','label'=>$langs->trans('GroupType'), 'name'=>'group_type','values'=>$object->fields['group_type']['options']);
+	$formquestion[] = array('type'=>'text','label'=>$langs->trans('service_typelabel'), 'name'=>'label','value'=>$label);
 	$formquestion[] = array('type'=>'select','label'=>$langs->trans('active'), 'name'=>'active','values'=>array('0'=>'Non', '1'=>'Oui'), 'default'=>empty($active)?'1':$active);
-	$formconfirm = $form->formconfirm($_SERVER["PHP_SELF"], $langs->trans('NewTypect'), '', 'confirmnew', $formquestion, 'yes', 1, 0, 700);
+	$formconfirm = $form->formconfirm($_SERVER["PHP_SELF"], $langs->trans('NewService_Type'), '', 'confirmnew', $formquestion, 'yes', 1, 0, 700);
 } elseif ($action =='edit' && !empty($rowid)) {
-	$dataedit = $typectarray[$rowid];
+	$dataedit = $service_typearray[$rowid];
 	$formquestion[] = array('type'=>'hidden','name'=>'rowid','value'=>$rowid);
 	$formquestion[] = array('type'=>'text','label'=>$langs->trans('code'), 'name'=>'code','value'=> $dataedit->code);
-	if (isset($marksActivDatas[$dataedit->fk_vehicule_mark])) {
-		$formquestion[] = array(
-			'type'=>'select',
-			'label'=>$langs->trans('Fkvehiculemark'),
-			'name'=>'fk_vehicule_mark',
-			'values'=> $marksActivDatas,
-			'default'=>$dataedit->fk_vehicule_mark);
-	} elseif (isset($marksInactivDatas[$dataedit->fk_vehicule_mark])) {
-		$formquestion[] = array(
-			'type'=>'select',
-			'label'=>$langs->trans('Fkvehiculemark'). img_error($langs->trans("MarkInactive")),
-			'name'=>'fk_vehicule_mark',
-			'values'=>$marksActivDatas,
-			'default'=>$dataedit->fk_vehicule_mark);
-	}
-	$formquestion[] = array('type'=>'text','label'=>$langs->trans('typectlabel'), 'name'=>'label','value'=>$dataedit->label);
+	$formquestion[] = array('type'=>'select','label'=>$langs->trans('ProductType'), 'name'=>'product_type','values'=>$object->fields['product_type']['options'],'default'=>$dataedit->product_type);
+	$formquestion[] = array('type'=>'select','label'=>$langs->trans('GroupType'), 'name'=>'group_type','values'=>$object->fields['group_type']['options'],'default'=>$dataedit->group_type);
+	$formquestion[] = array('type'=>'text','label'=>$langs->trans('service_typelabel'), 'name'=>'label','value'=>$dataedit->label);
 	$formquestion[] = array('type'=>'select','label'=>$langs->trans('active'), 'name'=>'active','values'=>array('0'=>'Non', '1'=>'Oui'), 'default'=>$dataedit->active);
-	$formconfirm = $form->formconfirm($_SERVER["PHP_SELF"], $langs->trans('EditTypect'), '', 'confirmedit', $formquestion, 'yes', 1, 0, 700);
+	$formconfirm = $form->formconfirm($_SERVER["PHP_SELF"], $langs->trans('EditService_Type'), '', 'confirmedit', $formquestion, 'yes', 1, 0, 700);
 }
 
 // Call Hook formConfirm
@@ -305,7 +278,7 @@ if (empty($reshook)) {
 
 // Print form confirm
 print $formconfirm;
-$actionpathnew = dol_buildpath('/workshop/vehicule/param/vh_setup_typect.php', 2). '?action=new';
+$actionpathnew = dol_buildpath('/workshop/operationorder/param/operationorder_setup_service_type.php', 2). '?action=new';
 $newcardbutton = dolGetButtonTitle($langs->trans('New'), '', 'fa fa-plus-circle', $actionpathnew, '', $user->hasRight("workshop", "vehicule", "write"));
 print_barre_liste($title, $page, $_SERVER["PHP_SELF"], '', '', '', '', $num, $nbtotalofrecords, 'service', 0, $newcardbutton, '', $limit, 0, 0, 1);
 
@@ -315,22 +288,17 @@ print '<table class="border centpercent tableforfield liste">' . "\n";
 print '<tr class="liste_titre">';
 print '<th class="liste_titre">' . $langs->trans("code") . '</th>';
 print '<th class="liste_titre">' . $langs->trans("label") . '</th>';
-print '<th class="liste_titre">' . $langs->trans("Fkvehiculemark") . '</th>';
+print '<th class="liste_titre">' . $langs->trans("ProductType") . '</th>';
+print '<th class="liste_titre">' . $langs->trans("GroupType") . '</th>';
 print '<th class="liste_titre">' . $langs->trans("active") . '</th>';
 print '<th class="liste_titre">' . $langs->trans("action") . '</th>';
 print '</tr>';
-foreach ($typectarray as $key=>$data) {
+foreach ($service_typearray as $key=>$data) {
 	print '<tr class="oddeven">';
 	print '<td>' . $data->code . '</td>';
 	print '<td>' . $data->label . '</td>';
-	print '<td>';
-	if (empty($data->fk_vehicule_mark)) {
-		print $langs->trans('AllMarks');
-	} elseif (isset($marksActivDatas[$data->fk_vehicule_mark])) {
-		print $marksActivDatas[$data->fk_vehicule_mark];
-	} elseif (isset($marksInactivDatas[$data->fk_vehicule_mark])) {
-		print img_error($langs->trans("MarkInactive")).$marksInactivDatas[$data->fk_vehicule_mark];
-	}
+	print '<td>'.$langs->trans($object->fields['product_type']['options'][$data->product_type]).'</td>';
+	print '<td>'.$langs->trans($object->fields['group_type']['options'][$data->group_type]).'</td>';
 	print '</td>';
 	if ($data->active == 1) {
 		$out = 'switch_on';
@@ -339,7 +307,7 @@ foreach ($typectarray as $key=>$data) {
 	}
 	print '<td><span>' . img_picto($langs->trans('off'), $out) . '</span></td>';
 
-	$actionpath = dol_buildpath('/workshop/vehicule/param/vh_setup_typect.php', 2) . '?rowid=' . $data->id . '&action=';
+	$actionpath = dol_buildpath('/workshop/operationorder/param/operationorder_setup_service_type.php', 2) . '?rowid=' . $data->id . '&action=';
 	$action  = '<a href="' . $actionpath . 'edit"><span class="fas fa-pen" title="' . $langs->trans('Edit') . '"></span></a>';
 	if ($user->admin) {
 		$action .= '&nbsp &nbsp';

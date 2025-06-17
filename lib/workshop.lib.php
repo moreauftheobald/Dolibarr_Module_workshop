@@ -74,3 +74,30 @@ function workshopAdminPrepareHead()
 
 	return $head;
 }
+
+
+/**
+ * Prepare array of tabs for Vehicule Setup screen
+ * @return    array                    Array of tabs
+ */
+function workshopSetupPrepareHead(): array
+{
+	global $langs, $conf;
+
+	$langs->load("workshop@workshop");
+
+	$h = 0;
+	$head = array();
+
+	$head[$h][0] = dol_buildpath("/workshop/operationorder/param/operationorder_setup_service_type.php", 1);
+	$head[$h][1] = $langs->trans("WorkshopSetupServiceType");
+	$head[$h][2] = 'service_type';
+	$h++;
+
+
+	complete_head_from_modules($conf, $langs,null, $head, $h, 'workshopsetup@workshop');
+
+	complete_head_from_modules($conf, $langs, null, $head, $h, 'workshopsetup@workshop', 'remove');
+
+	return $head;
+}

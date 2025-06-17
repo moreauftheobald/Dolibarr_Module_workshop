@@ -460,6 +460,38 @@ class modWorkshop extends DolibarrModules
 			'object'=>'OperationOrder'
 		);
 
+		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=workshop',
+			'type'=>'left',
+			'titre'=>'Param_Workshop',
+			'mainmenu'=>'workshop',
+			'leftmenu'=>'workshop_param',
+			'url'=>'/workshop/operationorder/param/operationorder_setup_service_type.php',
+			'langs'=>'workshop@workshop',
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop")',
+			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
+			'target'=>'',
+			'user'=>2,
+			'object'=>'OperationOrder'
+		);
+
+		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=workshop,fk_leftmenu=workshop_param',
+			'type'=>'left',
+			'titre'=>'Param_Service_Type',
+			'mainmenu'=>'workshop',
+			'leftmenu'=>'workshop_param_service_type',
+			'url'=>'/workshop/operationorder/param/operationorder_setup_service_type.php',
+			'langs'=>'workshop@workshop',
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop")',
+			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
+			'target'=>'',
+			'user'=>2,
+			'object'=>'OperationOrder'
+		);
+
 		/*
 		 * Vehicules Menu Section
 		 */
@@ -684,9 +716,9 @@ class modWorkshop extends DolibarrModules
 		}
 
 		// Create extrafields during init
-		//include_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
+		include_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
 		//$extrafields = new ExtraFields($this->db);
-		//$result0=$extrafields->addExtraField('workshop_separator1', "Separator 1", 'separator', 1,  0, 'thirdparty',   0, 0, '', array('options'=>array(1=>1)), 1, '', 1, 0, '', '', 'workshop@workshop', 'isModEnabled("workshop")');
+		//$result0=$extrafields->addExtraField('workshop_service_type', "ServiceType", 'select', 1,  '', 'product',   0, 0, '', array('options'=>array('MO'=>'MO','ST','Sous traitance')), 1, '', 1, 0, '', '', 'workshop@workshop', 'isModEnabled("workshop")');
 		//$result1=$extrafields->addExtraField('workshop_myattr1', "New Attr 1 label", 'boolean', 1,  3, 'thirdparty',   0, 0, '', '', 1, '', -1, 0, '', '', 'workshop@workshop', 'isModEnabled("workshop")');
 		//$result2=$extrafields->addExtraField('workshop_myattr2', "New Attr 2 label", 'varchar', 1, 10, 'project',      0, 0, '', '', 1, '', -1, 0, '', '', 'workshop@workshop', 'isModEnabled("workshop")');
 		//$result3=$extrafields->addExtraField('workshop_myattr3', "New Attr 3 label", 'varchar', 1, 10, 'bank_account', 0, 0, '', '', 1, '', -1, 0, '', '', 'workshop@workshop', 'isModEnabled("workshop")');
