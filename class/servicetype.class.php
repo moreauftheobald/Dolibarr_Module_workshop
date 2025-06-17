@@ -110,11 +110,10 @@ class ServiceType extends CommonObject
 		"rowid" => array("type"=>"integer", "label"=>"TechnicalID", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>10, 'notnull'=>1, "visible"=>"-1",),
 		"date_creation" => array("type"=>"datetime", "label"=>"Datecreation", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>15, 'notnull'=>0, "visible"=>"-1",),
 		"tms" => array("type"=>"timestamp", "label"=>"DateModification", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>20, 'notnull'=>1, "visible"=>"-1",),
-		"code" => array("type"=>"varchar(20)", "label"=>"Code", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>25, 'notnull'=>0, "visible"=>"-1", "showoncombobox"=>"0",),
+		"code" => array("type"=>"varchar(20)", "label"=>"Code", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>25, 'notnull'=>0, "visible"=>"-1", "showoncombobox"=>"1",),
 		"active" => array("type"=>"integer", "label"=>"Active", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>35, 'notnull'=>1, "visible"=>"-1",),
-		"product_type" => array("type"=>"select", "label"=>"ProductType", "picto"=>"", "enabled"=>"1", 'position'=>40, 'notnull'=>0, "visible"=>"1", "css"=>"maxwidth500 widthcentpercentminusxx",'options'=>array(0=>'Product',1=>'Service'), "showoncombobox"=>"1",),
-		"label" => array("type"=>"varchar(255)", "label"=>"Label", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>50, 'notnull'=>0, "visible"=>"-1", "alwayseditable"=>"1", "css"=>"minwidth300", "cssview"=>"wordbreak", "csslist"=>"tdoverflowmax150","showoncombobox"=>"1"),
-		"group_type" => array("type"=>"select", "label"=>"GroupType", "picto"=>"", "enabled"=>"1", 'position'=>60, 'notnull'=>0, "visible"=>"1", "css"=>"maxwidth500 widthcentpercentminusxx",'options'=>array(0=>'MO',1=>'Piece',2=>'Divers',3=>'Forfait',4=>'Ext'), "showoncombobox"=>"1",),
+		"label" => array("type"=>"varchar(255)", "label"=>"Label", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>50, 'notnull'=>0, "visible"=>"-1", "alwayseditable"=>"1", "css"=>"minwidth300", "cssview"=>"wordbreak", "csslist"=>"tdoverflowmax150","showoncombobox"=>"0"),
+		"group_type" => array("type"=>"select", "label"=>"GroupType", "picto"=>"", "enabled"=>"1", 'position'=>60, 'notnull'=>0, "visible"=>"1", "css"=>"maxwidth500 widthcentpercentminusxx",'options'=>array(0=>'MO',1=>'Piece',2=>'Divers',3=>'Forfait',4=>'Ext'), "showoncombobox"=>"0",),
 	);
 	public $rowid;
 	public $date_creation;
@@ -122,7 +121,6 @@ class ServiceType extends CommonObject
 	public $code;
 	public $active;
 	public $label;
-	public $product_type;
 	public $group_type;
 	// END MODULEBUILDER PROPERTIES
 
@@ -422,19 +420,19 @@ class ServiceType extends CommonObject
 
 		$datas = [];
 
-		if (getDolGlobalInt('MAIN_OPTIMIZEFORTEXTBROWSER')) {
-			return ['optimize' => $langs->trans("ShowServiceType")];
-		}
-		$datas['picto'] = img_picto('', $this->picto).' <u>'.$langs->trans("ServiceType").'</u>';
-		if (isset($this->status)) {
-			$datas['picto'] .= ' '.$this->getLibStatut(5);
-		}
-		if (property_exists($this, 'ref')) {
-			$datas['ref'] = '<br><b>'.$langs->trans('Ref').':</b> '.$this->ref;
-		}
-		if (property_exists($this, 'label')) {
-			$datas['ref'] = '<br>'.$langs->trans('Label').':</b> '.$this->label;
-		}
+//		if (getDolGlobalInt('MAIN_OPTIMIZEFORTEXTBROWSER')) {
+//			return ['optimize' => $langs->trans("ShowServiceType")];
+//		}
+//		$datas['picto'] = img_picto('', $this->picto).' <u>'.$langs->trans("ServiceType").'</u>';
+//		if (isset($this->status)) {
+//			$datas['picto'] .= ' '.$this->getLibStatut(5);
+//		}
+//		if (property_exists($this, 'ref')) {
+//			$datas['ref'] = '<br><b>'.$langs->trans('Ref').':</b> '.$this->ref;
+//		}
+//		if (property_exists($this, 'label')) {
+//			$datas['ref'] = '<br>'.$langs->trans('Label').':</b> '.$this->label;
+//		}
 
 		return $datas;
 	}
@@ -463,16 +461,10 @@ class ServiceType extends CommonObject
 			'objecttype' => $this->element.($this->module ? '@'.$this->module : ''),
 			'option' => $option,
 		];
-		$classfortooltip = 'classfortooltip';
+		$classfortooltip = '';
 		$dataparams = '';
-		if (getDolGlobalInt('MAIN_ENABLE_AJAX_TOOLTIP')) {
-			$classfortooltip = 'classforajaxtooltip';
-			$dataparams = ' data-params="'.dol_escape_htmltag(json_encode($params)).'"';
-			$label = '';
-		} else {
-			$label = implode($this->getTooltipContentArray($params));
-		}
 
+		$label = $this->code;
 		$url = dol_buildpath('/workshop/servicetype_card.php', 1).'?id='.$this->id;
 
 		if ($option !== 'nolink') {
@@ -542,7 +534,7 @@ class ServiceType extends CommonObject
 		}
 
 		if ($withpicto != 2) {
-			$result .= $this->ref;
+			$result .= $this->code;
 		}
 
 		$result .= $linkend;

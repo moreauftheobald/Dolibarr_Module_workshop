@@ -76,7 +76,6 @@ $rowid = GETPOST('rowid', 'int');
 $code = GETPOST('code', 'alpha');
 $label = GETPOST('label', 'alpha');
 $active = GETPOST('active', 'int');
-$product_type = GETPOST('product_type', 'int');
 $group_type = GETPOST('group_type', 'int');
 $page = GETPOST('page', 'int');
 
@@ -124,7 +123,6 @@ if (empty($reshook)) {
 					if ($action == 'confirmnew') {
 						$object->entity = 0;
 						$object->code = $code;
-						$object->product_type = $product_type;
 						$object->group_type = $group_type;
 						$object->label = $label;
 						$object->active = $active;
@@ -132,7 +130,6 @@ if (empty($reshook)) {
 						$res=$object->create($user);
 					} elseif ($action == 'confirmedit') {
 						$object->code = $code;
-						$object->product_type = $product_type;
 						$object->group_type = $group_type;
 						$object->label = $label;
 						$object->active = $active;
@@ -171,7 +168,6 @@ if (empty($reshook)) {
 				unset($cancel);
 				unset($rowid);
 				unset($code);
-				unset($product_type);
 				unset($group_type);
 				unset($label);
 				unset($active);
@@ -219,7 +215,6 @@ if ($resql) {
 		$service_type = new stdClass();
 		$service_type->id = $obj->rowid;
 		$service_type->code = $obj->code;
-		$service_type->product_type = $obj->product_type;
 		$service_type->group_type = $obj->group_type;
 		$service_type->label = $obj->label;
 		$service_type->active = $obj->active;
@@ -251,7 +246,6 @@ if ($action=='delete' && !empty($rowid)) {
 	$formconfirm = $form->formconfirm($_SERVER["PHP_SELF"], $langs->trans('DeleteService_Type'), $langs->trans('DeleteService_TypeQuestion'), 'confirmdelete', $formquestion, 'yes', 1);
 } elseif ($action =='new') {
 	$formquestion[] = array('type'=>'text','label'=>$langs->trans('code'), 'name'=>'code','value'=> $code);
-	$formquestion[] = array('type'=>'select','label'=>$langs->trans('ProductType'), 'name'=>'product_type','values'=>$object->fields['product_type']['options']);
 	$formquestion[] = array('type'=>'select','label'=>$langs->trans('GroupType'), 'name'=>'group_type','values'=>$object->fields['group_type']['options']);
 	$formquestion[] = array('type'=>'text','label'=>$langs->trans('service_typelabel'), 'name'=>'label','value'=>$label);
 	$formquestion[] = array('type'=>'select','label'=>$langs->trans('active'), 'name'=>'active','values'=>array('0'=>'Non', '1'=>'Oui'), 'default'=>empty($active)?'1':$active);
@@ -260,7 +254,6 @@ if ($action=='delete' && !empty($rowid)) {
 	$dataedit = $service_typearray[$rowid];
 	$formquestion[] = array('type'=>'hidden','name'=>'rowid','value'=>$rowid);
 	$formquestion[] = array('type'=>'text','label'=>$langs->trans('code'), 'name'=>'code','value'=> $dataedit->code);
-	$formquestion[] = array('type'=>'select','label'=>$langs->trans('ProductType'), 'name'=>'product_type','values'=>$object->fields['product_type']['options'],'default'=>$dataedit->product_type);
 	$formquestion[] = array('type'=>'select','label'=>$langs->trans('GroupType'), 'name'=>'group_type','values'=>$object->fields['group_type']['options'],'default'=>$dataedit->group_type);
 	$formquestion[] = array('type'=>'text','label'=>$langs->trans('service_typelabel'), 'name'=>'label','value'=>$dataedit->label);
 	$formquestion[] = array('type'=>'select','label'=>$langs->trans('active'), 'name'=>'active','values'=>array('0'=>'Non', '1'=>'Oui'), 'default'=>$dataedit->active);
@@ -288,7 +281,6 @@ print '<table class="border centpercent tableforfield liste">' . "\n";
 print '<tr class="liste_titre">';
 print '<th class="liste_titre">' . $langs->trans("code") . '</th>';
 print '<th class="liste_titre">' . $langs->trans("label") . '</th>';
-print '<th class="liste_titre">' . $langs->trans("ProductType") . '</th>';
 print '<th class="liste_titre">' . $langs->trans("GroupType") . '</th>';
 print '<th class="liste_titre">' . $langs->trans("active") . '</th>';
 print '<th class="liste_titre">' . $langs->trans("action") . '</th>';
@@ -297,7 +289,6 @@ foreach ($service_typearray as $key=>$data) {
 	print '<tr class="oddeven">';
 	print '<td>' . $data->code . '</td>';
 	print '<td>' . $data->label . '</td>';
-	print '<td>'.$langs->trans($object->fields['product_type']['options'][$data->product_type]).'</td>';
 	print '<td>'.$langs->trans($object->fields['group_type']['options'][$data->group_type]).'</td>';
 	print '</td>';
 	if ($data->active == 1) {
