@@ -94,6 +94,11 @@ function vehiculePrepareHead($object)
 		$h++;
 	}
 
+	$head[$h][0] = dol_buildpath("/workshop/vehicule/vehicule_history.php", 1).'?id='.$object->id;
+	$head[$h][1] = $langs->trans("History");
+	$head[$h][2] = 'history';
+	$h++;
+
 	// Show more tabs from modules
 	// Entries must be declared in modules descriptor with line
 	//$this->tabs = array(

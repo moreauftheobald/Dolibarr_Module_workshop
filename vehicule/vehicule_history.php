@@ -17,7 +17,7 @@
  */
 
 /**
- *  \file       vehicule_agenda.php
+ *  \file       vehicule_history.php
  *  \ingroup    workshop
  *  \brief      Tab of events on Vehicule
  */
@@ -96,10 +96,10 @@ if (GETPOST('actioncode', 'array')) {
 		$actioncode = '0';
 	}
 } else {
-	$actioncode = GETPOST("actioncode", "alpha", 3) ? GETPOST("actioncode", "alpha", 3) : (GETPOST("actioncode") == '0' ? '0' : getDolGlobalString('AGENDA_DEFAULT_FILTER_TYPE_FOR_OBJECT'));
+	$actioncode = GETPOST("actioncode", "alpha", 3) ? GETPOST("actioncode", "alpha", 3) : (GETPOST("actioncode") == '0' ? '0' : getDolGlobalString('HISTORY_DEFAULT_FILTER_TYPE_FOR_OBJECT'));
 }
 $search_rowid = GETPOST('search_rowid');
-$search_agenda_label = GETPOST('search_agenda_label');
+$search_history_label = GETPOST('search_history_label');
 
 $limit = GETPOST('limit', 'int') ? GETPOST('limit', 'int') : $conf->liste_limit;
 $sortfield = GETPOST('sortfield', 'aZ09comma');
@@ -122,7 +122,7 @@ if (!$sortorder) {
 $object = new Vehicule($db);
 $extrafields = new ExtraFields($db);
 $diroutputmassaction = $conf->workshop->dir_output.'/temp/massgeneration/'.$user->id;
-$hookmanager->initHooks(array($object->element.'agenda', 'globalcard')); // Note that conf->hooks_modules contains array
+$hookmanager->initHooks(array($object->element.'history', 'globalcard')); // Note that conf->hooks_modules contains array
 // Fetch optionals attributes and labels
 $extrafields->fetch_name_optionals_label($object->table_element);
 
@@ -137,15 +137,16 @@ if ($id > 0 || !empty($ref)) {
 $permissiontoread = $user->hasRight('workshop', 'vehicule', 'read');
 $permissiontoadd = $user->hasRight('workshop', 'vehicule', 'write');
 
-
 // Security check (enable the most restrictive one)
 //if ($user->socid > 0) accessforbidden();
 //if ($user->socid > 0) $socid = $user->socid;
 //$isdraft = (($object->status == $object::STATUS_DRAFT) ? 1 : 0);
 //restrictedArea($user, $object->module, $object->id, $object->table_element, $object->element, 'fk_soc', 'rowid', $isdraft);
+
 if (!isModEnabled("workshop")) {
 	accessforbidden();
 }
+
 if (!$permissiontoread) {
 	accessforbidden();
 }
@@ -171,7 +172,7 @@ if (empty($reshook)) {
 	// Purge search criteria
 	if (GETPOST('button_removefilter_x', 'alpha') || GETPOST('button_removefilter.x', 'alpha') || GETPOST('button_removefilter', 'alpha')) { // All tests are required to be compatible with all browsers
 		$actioncode = '';
-		$search_agenda_label = '';
+		$search_history_label = '';
 	}
 }
 
@@ -184,11 +185,11 @@ if (empty($reshook)) {
 $form = new Form($db);
 
 if ($object->id > 0) {
-	$title = $langs->trans("Vehicule")." - ".$langs->trans('Agenda');
-	//$title = $object->ref." - ".$langs->trans("Agenda");
-	$help_url = 'EN:Module_Agenda_En|DE:Modul_Terminplanung';
+	$title = $langs->trans("Vehicule")." - ".$langs->trans('History');
+	//$title = $object->ref." - ".$langs->trans("History");
+	$help_url = 'EN:Module_history_En|DE:Modul_Terminplanung';
 
-	llxHeader('', $title, $help_url, '', 0, 0, '', '', '', 'mod-workshop page-card_agenda');
+	llxHeader('', $title, $help_url, '', 0, 0, '', '', '', 'mod-workshop page-card_history');
 
 	if (isModEnabled('notification')) {
 		$langs->load("mails");
@@ -196,7 +197,7 @@ if ($object->id > 0) {
 	$head = vehiculePrepareHead($object);
 
 
-	print dol_get_fiche_head($head, 'agenda', $langs->trans("Vehicule"), -1, $object->picto);
+	print dol_get_fiche_head($head, 'history', $langs->trans("Vehicule"), -1, $object->picto);
 
 	// Object card
 	// ------------------------------------------------------------
@@ -226,7 +227,7 @@ if ($object->id > 0) {
 	$out = '&origin='.urlencode($object->element.(property_exists($object, 'module') ? '@'.$object->module : '')).'&originid='.urlencode($object->id);
 	$urlbacktopage = $_SERVER['PHP_SELF'].'?id='.$object->id;
 	$out .= '&backtopage='.urlencode($urlbacktopage);
-	$permok = $user->hasRight('agenda', 'myactions', 'create');
+	$permok = $user->hasRight('history', 'myactions', 'create');
 	if ((!empty($objthirdparty->id) || !empty($objcon->id)) && $permok) {
 		//$out.='<a href="'.DOL_URL_ROOT.'/comm/action/card.php?action=create';
 		if (get_class($objthirdparty) == 'Societe') {
@@ -242,11 +243,11 @@ if ($object->id > 0) {
 
 	//$messagingUrl = DOL_URL_ROOT.'/societe/messaging.php?socid='.$object->id;
 	//$morehtmlright .= dolGetButtonTitle($langs->trans('ShowAsConversation'), '', 'fa fa-comments imgforviewmode', $messagingUrl, '', 1);
-	//$messagingUrl = DOL_URL_ROOT.'/societe/agenda.php?socid='.$object->id;
+	//$messagingUrl = DOL_URL_ROOT.'/societe/history.php?socid='.$object->id;
 	//$morehtmlright .= dolGetButtonTitle($langs->trans('MessageListViewType'), '', 'fa fa-bars imgforviewmode', $messagingUrl, '', 2);
 
-	if (isModEnabled('agenda')) {
-		if ($user->hasRight('agenda', 'myactions', 'create') || $user->hasRight('agenda', 'allactions', 'create')) {
+	if (isModEnabled('history')) {
+		if ($user->hasRight('history', 'myactions', 'create') || $user->hasRight('history', 'allactions', 'create')) {
 			$morehtmlright .= dolGetButtonTitle($langs->trans('AddAction'), '', 'fa fa-plus-circle', DOL_URL_ROOT.'/comm/action/card.php?action=create'.$out);
 		} else {
 			$morehtmlright .= dolGetButtonTitle($langs->trans('AddAction'), '', 'fa fa-plus-circle', DOL_URL_ROOT.'/comm/action/card.php?action=create'.$out, '', 0);
@@ -254,7 +255,7 @@ if ($object->id > 0) {
 	}
 
 
-	if (isModEnabled('agenda') && ($user->hasRight('agenda', 'myactions', 'read') || $user->hasRight('agenda', 'allactions', 'read'))) {
+	if (isModEnabled('history') && ($user->hasRight('history', 'myactions', 'read') || $user->hasRight('history', 'allactions', 'read'))) {
 		print '<br>';
 
 		$param = '&id='.$object->id.(!empty($socid) ? '&socid='.$socid : '');
@@ -276,7 +277,7 @@ if ($object->id > 0) {
 
 		// List of all actions
 		$filters = array();
-		$filters['search_agenda_label'] = $search_agenda_label;
+		$filters['search_history_label'] = $search_history_label;
 		$filters['search_rowid'] = $search_rowid;
 
 		// TODO Replace this with same code than into list.php
