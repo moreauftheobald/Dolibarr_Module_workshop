@@ -18,5 +18,9 @@ CREATE TABLE llx_workshop_vehicule (
   carrosserie longtext DEFAULT NULL,
   dim_pneu varchar(255) DEFAULT NULL,
   nb_pneu integer DEFAULT 0,
-  import_key varchar(255) DEFAULT NULL
+  import_key varchar(255) DEFAULT NULL,
+  note_private longtext DEFAULT NULL,
+  note_public longtext DEFAULT NULL,
+  fk_user_create INTEGER DEFAULT NULL,
+  fk_user_modif INTEGER DEFAULT NULL
 )ENGINE=innodb;

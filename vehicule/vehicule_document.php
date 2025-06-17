@@ -194,7 +194,7 @@ $linkback = '<a href="'.dol_buildpath('/workshop/vehicule/vehicule_list.php', 1)
 
 $morehtmlref = $object->getBanner($form, $permissiontoadd);
 
-dol_banner_tab($object, 'vin', $linkback, 1, 'id', 'vin', $morehtmlref);
+dol_banner_tab($object, 'vin', $linkback, 0, 'id', 'vin', $morehtmlref);
 
 print '<div class="fichecenter">';
 

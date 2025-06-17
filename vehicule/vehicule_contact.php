@@ -173,7 +173,7 @@ if ($object->id) {
 
 	$morehtmlref = $object->getBanner($form, $permissiontoadd);
 
-	dol_banner_tab($object, 'vin', $linkback, 1, 'id', 'vin', $morehtmlref);
+	dol_banner_tab($object, 'vin', $linkback, 0, 'id', 'vin', $morehtmlref);
 
 	print dol_get_fiche_end();
 

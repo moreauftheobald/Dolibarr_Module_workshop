@@ -209,7 +209,7 @@ if ($object->id > 0) {
 
 	$morehtmlref = $object->getBanner($form, $permissiontoadd);
 
-	dol_banner_tab($object, 'vin', $linkback, 1, 'id', 'vin', $morehtmlref);
+	dol_banner_tab($object, 'vin', $linkback, 0, 'id', 'vin', $morehtmlref);
 
 	print '<div class="fichecenter">';
 	print '<div class="underbanner clearboth"></div>';
