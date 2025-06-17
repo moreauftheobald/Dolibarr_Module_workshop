@@ -153,3 +153,10 @@ OtherVehicules=Autres véhicules
 Disactivate=Desactiver
 Activate=Activer
 ctends=(Fin de contrat le: %s)
+
+
+#Contact Type
+TypeContact_vehicule_external_DRIVER=Conducteur
+TypeContact_vehicule_external_TECHRESP=Responsable technique
+TypeContact_vehicule_external_RESPWARNTY=Responsable garantie
+TypeContact_vehicule_external_RESPCTMAINT=Responsable contrat maintenance
