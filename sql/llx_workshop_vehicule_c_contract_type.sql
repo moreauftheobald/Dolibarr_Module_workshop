@@ -1,5 +1,4 @@
 
-DROP TABLE llx_workshop_vehicule_c_contract_type;
 CREATE TABLE llx_workshop_vehicule_c_contract_type (
     rowid integer AUTO_INCREMENT PRIMARY KEY,
     date_creation datetime DEFAULT NULL,
