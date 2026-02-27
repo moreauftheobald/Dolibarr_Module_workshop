@@ -71,6 +71,8 @@ class Operationorder_jobs extends CommonObject
 		'description'       => array('type' => 'html',        'label' => 'Description',  'enabled' => 1, 'position' => 30,  'notnull' => 0, 'visible' => 3, 'cssview' => 'wordbreak'),
 		'fk_service_type'   => array('type' => 'integer:ServiceType:workshop/class/servicetype.class.php', 'label' => 'ServiceType', 'enabled' => 1, 'position' => 40, 'notnull' => 0, 'visible' => 1, 'css' => 'maxwidth500 widthcentpercentminusxx'),
 		'fk_user_assign'    => array('type' => 'integer:User:user/class/user.class.php', 'label' => 'AssignedTo', 'picto' => 'user', 'enabled' => 1, 'position' => 50, 'notnull' => 0, 'visible' => 1, 'csslist' => 'tdoverflowmax150'),
+		'qty_mo'            => array('type' => 'double',      'label' => 'QtyMO',        'enabled' => 1, 'position' => 55, 'notnull' => 0, 'visible' => 1, 'default' => 0, 'css' => 'maxwidth100'),
+		'prix_mo'           => array('type' => 'double',      'label' => 'PrixMO',       'enabled' => 1, 'position' => 56, 'notnull' => 0, 'visible' => 1, 'default' => 0, 'css' => 'maxwidth100'),
 		'rang'              => array('type' => 'integer',     'label' => 'Rang',         'enabled' => 1, 'position' => 60,  'notnull' => 0, 'visible' => 0, 'default' => 0),
 		'time_planned'      => array('type' => 'duration',    'label' => 'TimePlanned',  'enabled' => 1, 'position' => 70,  'notnull' => 0, 'visible' => 1),
 		'time_spent'        => array('type' => 'duration',    'label' => 'TimeSpent',    'enabled' => 1, 'position' => 80,  'notnull' => 0, 'visible' => 1),
@@ -97,6 +99,8 @@ class Operationorder_jobs extends CommonObject
 	public $description;
 	public $fk_service_type;
 	public $fk_user_assign;
+	public $qty_mo;
+	public $prix_mo;
 	public $rang;
 	public $time_planned;
 	public $time_spent;
@@ -305,6 +309,7 @@ class Operationorder_jobs extends CommonObject
 	 */
 	public function update(User $user, $notrigger = 0)
 	{
+		$this->computeMO();
 		return $this->updateCommon($user, $notrigger);
 	}
 
@@ -321,32 +326,51 @@ class Operationorder_jobs extends CommonObject
 	}
 
 	/**
-	 * Recalculate totals from detail lines
+	 * Compute total_ht_mo from qty_mo * prix_mo.
+	 * Called automatically by create() and update().
+	 *
+	 * @return void
+	 */
+	public function computeMO()
+	{
+		$this->total_ht_mo = (float) $this->qty_mo * (float) $this->prix_mo;
+	}
+
+	/**
+	 * Recalculate totals from detail lines and own MO cost.
+	 * Aggregates part/service/refund from Operationorderdet lines,
+	 * adds MO (qty_mo × prix_mo) and external (future dev), then persists.
 	 *
 	 * @param  User $user User performing the update
 	 * @return int        Return integer <0 if KO, >0 if OK
 	 */
 	public function updateTotals(User $user)
 	{
+		// MO cost: job's own theoretical quantity × hourly rate
+		$this->computeMO();
+
 		$sql  = 'SELECT';
-		$sql .= '  COALESCE(SUM(total_ht), 0)        AS total_ht,';
-		$sql .= '  COALESCE(SUM(total_ht_part), 0)   AS total_ht_part,';
-		$sql .= '  COALESCE(SUM(total_ht_service), 0) AS total_ht_service,';
-		$sql .= '  COALESCE(SUM(total_ht_refund), 0)  AS total_ht_refund';
+		$sql .= '  COALESCE(SUM(total_ht_part), 0)    AS total_ht_part,';
+		$sql .= '  COALESCE(SUM(total_ht_service), 0)  AS total_ht_service,';
+		$sql .= '  COALESCE(SUM(total_ht_refund), 0)   AS total_ht_refund';
 		$sql .= ' FROM '.$this->db->prefix().'workshop_operationorderdet';
 		$sql .= ' WHERE fk_operationorder_jobs = '.((int) $this->id);
 
 		$resql = $this->db->query($sql);
 		if ($resql) {
 			$obj = $this->db->fetch_object($resql);
-			$this->total_ht         = $obj->total_ht;
-			$this->total_ht_part    = $obj->total_ht_part;
-			$this->total_ht_mo      = 0;
-			$this->total_ht_service = $obj->total_ht_service;
-			$this->total_ht_external = 0;
-			$this->total_ht_refund  = $obj->total_ht_refund;
+			$this->total_ht_part     = (float) $obj->total_ht_part;
+			$this->total_ht_service  = (float) $obj->total_ht_service;
+			$this->total_ht_external = 0; // subcontracting – future dev
+			$this->total_ht_refund   = (float) $obj->total_ht_refund;
+			$this->total_ht          = $this->total_ht_part
+				+ $this->total_ht_mo
+				+ $this->total_ht_service
+				+ $this->total_ht_external
+				+ $this->total_ht_refund;
 			$this->db->free($resql);
-			return $this->update($user, 1);
+			// Use updateCommon directly to avoid triggering computeMO() again via update()
+			return $this->updateCommon($user, 1);
 		} else {
 			$this->error = $this->db->lasterror();
 			return -1;

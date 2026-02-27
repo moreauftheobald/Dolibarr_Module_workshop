@@ -114,6 +114,7 @@ class ServiceType extends CommonObject
 		"active" => array("type"=>"integer", "label"=>"Active", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>35, 'notnull'=>1, "visible"=>"-1",),
 		"label" => array("type"=>"varchar(255)", "label"=>"Label", "picto"=>"fa-file-o", "enabled"=>"1", 'position'=>50, 'notnull'=>0, "visible"=>"-1", "alwayseditable"=>"1", "css"=>"minwidth300", "cssview"=>"wordbreak", "csslist"=>"tdoverflowmax150","showoncombobox"=>"0"),
 		"group_type" => array("type"=>"select", "label"=>"GroupType", "picto"=>"", "enabled"=>"1", 'position'=>60, 'notnull'=>0, "visible"=>"1", "css"=>"maxwidth500 widthcentpercentminusxx",'options'=>array(0=>'MO',1=>'Piece',2=>'Divers',3=>'Forfait',4=>'Ext'), "showoncombobox"=>"0",),
+		"prix_mo" => array("type"=>"double", "label"=>"PrixMO", "picto"=>"", "enabled"=>"1", 'position'=>70, 'notnull'=>0, "visible"=>"1", "help"=>"TauxHoraireHTParH", "css"=>"maxwidth100", "default"=>0),
 	);
 	public $rowid;
 	public $date_creation;
@@ -122,6 +123,7 @@ class ServiceType extends CommonObject
 	public $active;
 	public $label;
 	public $group_type;
+	public $prix_mo;
 	// END MODULEBUILDER PROPERTIES
 
 
