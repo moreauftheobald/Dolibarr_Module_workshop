@@ -462,7 +462,33 @@ if ($action == 'create') {
 
 			// Banner
 			$linkback = '<a href="'.dol_buildpath('/workshop/vehicule/vehicule_list.php', 1).'?restore_lastsearch_values=1">'.$langs->trans('BackToList').'</a>';
-			$morehtmlref = $object->getBanner($form, $user->hasRight('workshop', 'vehicule', 'write'));
+
+			// Build morehtmlref (marque, type, tiers)
+			$morehtmlref = '<div class="refidno">';
+			$morehtmlref .= $langs->trans('immatriculation').': <b>'.dol_escape_htmltag($object->immatriculation).'</b>';
+
+			dol_include_once('/workshop/class/vehiculemark.class.php');
+			$markDict  = new VehiculeMark($db);
+			$markLabel = $markDict->getValueFromId($object->fk_vehicule_mark);
+			if (!empty($markLabel)) {
+				$morehtmlref .= ' &mdash; '.$langs->trans('vehiculeMark').': <b>'.dol_escape_htmltag($markLabel).'</b>';
+			}
+
+			dol_include_once('/workshop/class/vehiculetype.class.php');
+			$typeDict  = new VehiculeType($db);
+			$typeLabel = $typeDict->getValueFromId($object->fk_vehicule_type);
+			if (!empty($typeLabel)) {
+				$morehtmlref .= ' &mdash; '.$langs->trans('vehiculeType').': <b>'.dol_escape_htmltag($typeLabel).'</b>';
+			}
+
+			if (!empty($object->fk_soc)) {
+				$object->fetch_thirdparty();
+				if (!empty($object->thirdparty)) {
+					$morehtmlref .= '<br>'.$object->thirdparty->getNomUrl(1);
+				}
+			}
+			$morehtmlref .= '</div>';
+
 			dol_banner_tab($object, 'vin', $linkback, 1, 'vin', 'vin', $morehtmlref, '', 0, '', '');
 
 			print '<div class="fichecenter">';
