@@ -1,0 +1,5 @@
+ALTER TABLE llx_workshop_operationorder_jobs ADD INDEX idx_workshop_operationorder_jobs_fk_or (fk_operationorder);
+ALTER TABLE llx_workshop_operationorder_jobs ADD INDEX idx_workshop_operationorder_jobs_status (status);
+ALTER TABLE llx_workshop_operationorder_jobs ADD INDEX idx_workshop_operationorder_jobs_fk_user_assign (fk_user_assign);
+
+ALTER TABLE llx_workshop_operationorder_jobs ADD CONSTRAINT fk_jobs_operationorder FOREIGN KEY (fk_operationorder) REFERENCES llx_workshop_operationorder (rowid);

@@ -1,0 +1,6 @@
+ALTER TABLE llx_workshop_operationorderdet ADD INDEX idx_workshop_operationorderdet_fk_or (fk_operationorder);
+ALTER TABLE llx_workshop_operationorderdet ADD INDEX idx_workshop_operationorderdet_fk_jobs (fk_operationorder_jobs);
+ALTER TABLE llx_workshop_operationorderdet ADD INDEX idx_workshop_operationorderdet_fk_product (fk_product);
+
+ALTER TABLE llx_workshop_operationorderdet ADD CONSTRAINT fk_ordet_operationorder FOREIGN KEY (fk_operationorder) REFERENCES llx_workshop_operationorder (rowid);
+ALTER TABLE llx_workshop_operationorderdet ADD CONSTRAINT fk_ordet_operationorder_jobs FOREIGN KEY (fk_operationorder_jobs) REFERENCES llx_workshop_operationorder_jobs (rowid);

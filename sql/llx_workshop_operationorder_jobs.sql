@@ -1,0 +1,22 @@
+CREATE TABLE llx_workshop_operationorder_jobs (
+  rowid              integer AUTO_INCREMENT PRIMARY KEY,
+  date_creation      datetime         DEFAULT NULL,
+  tms                timestamp        DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  fk_operationorder  integer NOT NULL DEFAULT 0,
+  label              varchar(255)     DEFAULT NULL,
+  description        longtext         DEFAULT NULL,
+  fk_service_type    integer          DEFAULT NULL,
+  fk_user_assign     integer          DEFAULT NULL,
+  time_planned       integer          DEFAULT 0,
+  time_spent         integer          DEFAULT 0,
+  status             integer NOT NULL DEFAULT 0,
+  rang               integer          DEFAULT 0,
+  date_start         datetime         DEFAULT NULL,
+  date_end           datetime         DEFAULT NULL,
+  total_ht           double  NOT NULL DEFAULT 0,
+  note_public        longtext         DEFAULT NULL,
+  note_private       longtext         DEFAULT NULL,
+  fk_user_creat      integer NOT NULL DEFAULT 0,
+  fk_user_modif      integer          DEFAULT NULL,
+  import_key         varchar(255)     DEFAULT NULL
+) ENGINE=innodb;

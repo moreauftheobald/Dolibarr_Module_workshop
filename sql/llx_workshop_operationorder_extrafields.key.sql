@@ -1,0 +1,1 @@
+ALTER TABLE llx_workshop_operationorder_extrafields ADD INDEX idx_workshop_operationorder_extrafields (fk_object);
