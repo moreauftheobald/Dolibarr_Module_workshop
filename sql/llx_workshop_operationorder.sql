@@ -5,10 +5,8 @@ CREATE TABLE llx_workshop_operationorder (
   ref                    varchar(255)     DEFAULT NULL,
   ref_client             varchar(255)     DEFAULT NULL,
   entity                 integer NOT NULL DEFAULT 1,
-  status                 integer NOT NULL DEFAULT 0,
   fk_soc                 integer NOT NULL DEFAULT 0,
   fk_vehicule            integer NOT NULL DEFAULT 0,
-  fk_contrat             integer          DEFAULT NULL,
   date_valid             datetime         DEFAULT NULL,
   date_start             datetime         DEFAULT NULL,
   date_end               datetime         DEFAULT NULL,
@@ -27,6 +25,6 @@ CREATE TABLE llx_workshop_operationorder (
   total_ht_mo            double  NOT NULL DEFAULT 0,
   total_ht_service       double  NOT NULL DEFAULT 0,
   total_ht_external      double  NOT NULL DEFAULT 0,
-  total_ht_reimbursement double  NOT NULL DEFAULT 0,
+  total_ht_refund        double  NOT NULL DEFAULT 0,
   import_key             varchar(255)     DEFAULT NULL
 ) ENGINE=innodb;

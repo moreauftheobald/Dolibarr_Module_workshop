@@ -50,12 +50,10 @@ class Operationorderdet extends CommonObject
 	 */
 	public $picto = 'fa-list';
 
-	/** Product type constants (aligned with Dolibarr standard) */
+	/** Product type constants */
 	const TYPE_PRODUCT = 0;
 	const TYPE_SERVICE = 1;
-	const TYPE_MO      = 2;
-	const TYPE_EXTERNAL = 3;
-	const TYPE_REIMBURSEMENT = 4;
+	const TYPE_REFUND  = 2;
 
 	// BEGIN MODULEBUILDER PROPERTIES
 	/**
@@ -63,38 +61,28 @@ class Operationorderdet extends CommonObject
 	 */
 	public $fields = array(
 		'rowid'                  => array('type' => 'integer',      'label' => 'TechnicalID',       'enabled' => 1, 'position' => 1,   'notnull' => 1,  'visible' => 0),
-		'fk_operationorder'      => array('type' => 'integer:Operationorder:workshop/class/operationorder.class.php', 'label' => 'OperationOrder', 'enabled' => 1, 'position' => 10, 'notnull' => 1, 'visible' => 0),
-		'fk_operationorder_jobs' => array('type' => 'integer:Operationorder_jobs:workshop/class/operationorder_jobs.class.php', 'label' => 'OperationorderJob', 'enabled' => 1, 'position' => 15, 'notnull' => 1, 'visible' => 0),
+		'fk_operationorder_jobs' => array('type' => 'integer:Operationorder_jobs:workshop/class/operationorder_jobs.class.php', 'label' => 'OperationorderJob', 'enabled' => 1, 'position' => 10, 'notnull' => 1, 'visible' => 0),
 		'fk_product'             => array('type' => 'integer:Product:product/class/product.class.php', 'label' => 'Product', 'picto' => 'product', 'enabled' => 1, 'position' => 20, 'notnull' => 0, 'visible' => 1, 'css' => 'maxwidth500 widthcentpercentminusxx', 'csslist' => 'tdoverflowmax150'),
 		'label'                  => array('type' => 'varchar(255)', 'label' => 'Label',             'enabled' => 1, 'position' => 30,  'notnull' => 0,  'visible' => 1, 'searchall' => 1, 'css' => 'minwidth300'),
 		'description'            => array('type' => 'html',         'label' => 'Description',       'enabled' => 1, 'position' => 40,  'notnull' => 0,  'visible' => 3, 'cssview' => 'wordbreak'),
 		'product_type'           => array('type' => 'integer',      'label' => 'ProductType',       'enabled' => 1, 'position' => 50,  'notnull' => 1,  'visible' => 1, 'default' => self::TYPE_PRODUCT, 'arrayofkeyval' => array(
-			self::TYPE_PRODUCT       => 'Product',
-			self::TYPE_SERVICE       => 'Service',
-			self::TYPE_MO            => 'LaborMO',
-			self::TYPE_EXTERNAL      => 'External',
-			self::TYPE_REIMBURSEMENT => 'Reimbursement',
+			self::TYPE_PRODUCT => 'Product',
+			self::TYPE_SERVICE => 'Service',
+			self::TYPE_REFUND  => 'Refund',
 		)),
-		'fk_workshop_c_type'     => array('type' => 'integer',      'label' => 'WorkshopType',      'enabled' => 1, 'position' => 55,  'notnull' => 0,  'visible' => -1),
 		'qty'                    => array('type' => 'double',        'label' => 'Qty',               'enabled' => 1, 'position' => 60,  'notnull' => 0,  'visible' => 1, 'isameasure' => 1),
 		'price'                  => array('type' => 'double',        'label' => 'UnitPriceHT',       'enabled' => 1, 'position' => 70,  'notnull' => 0,  'visible' => 1),
 		'remise_percent'         => array('type' => 'real',          'label' => 'DiscountPercent',   'enabled' => 1, 'position' => 80,  'notnull' => 0,  'visible' => 1),
 		'remise'                 => array('type' => 'real',          'label' => 'DiscountAmount',    'enabled' => 1, 'position' => 85,  'notnull' => 0,  'visible' => -1),
-		'total_ht'               => array('type' => 'double',        'label' => 'TotalHT',           'enabled' => 1, 'position' => 90,  'notnull' => 1,  'visible' => 1, 'isameasure' => 1),
-		'total_ht_part'          => array('type' => 'double',        'label' => 'TotalHTPart',       'enabled' => 1, 'position' => 100, 'notnull' => 1,  'visible' => -1),
-		'total_ht_mo'            => array('type' => 'double',        'label' => 'TotalHTMO',         'enabled' => 1, 'position' => 110, 'notnull' => 1,  'visible' => -1),
-		'total_ht_service'       => array('type' => 'double',        'label' => 'TotalHTService',    'enabled' => 1, 'position' => 120, 'notnull' => 1,  'visible' => -1),
-		'total_ht_external'      => array('type' => 'double',        'label' => 'TotalHTExternal',   'enabled' => 1, 'position' => 130, 'notnull' => 1,  'visible' => -1),
-		'total_ht_reimbursement' => array('type' => 'double',        'label' => 'TotalHTReimbursement', 'enabled' => 1, 'position' => 140, 'notnull' => 1, 'visible' => -1),
-		'time_planned'           => array('type' => 'duration',      'label' => 'TimePlanned',       'enabled' => 1, 'position' => 150, 'notnull' => 0,  'visible' => -1),
-		'time_spent'             => array('type' => 'duration',      'label' => 'TimeSpent',         'enabled' => 1, 'position' => 160, 'notnull' => 0,  'visible' => -1),
-		'emplacement'            => array('type' => 'varchar(255)',   'label' => 'Emplacement',       'enabled' => 1, 'position' => 170, 'notnull' => 0,  'visible' => -1),
-		'pc'                     => array('type' => 'varchar(255)',   'label' => 'PC',                'enabled' => 1, 'position' => 175, 'notnull' => 0,  'visible' => -1),
-		'pr'                     => array('type' => 'double',         'label' => 'PR',                'enabled' => 1, 'position' => 180, 'notnull' => 0,  'visible' => -1),
-		'fk_warehouse'           => array('type' => 'varchar(255)',   'label' => 'Warehouse',         'enabled' => 1, 'position' => 185, 'notnull' => 0,  'visible' => -1),
-		'info_bits'              => array('type' => 'integer',        'label' => 'InfoBits',          'enabled' => 1, 'position' => 190, 'notnull' => 0,  'visible' => 0),
-		'rang'                   => array('type' => 'integer',        'label' => 'Rang',              'enabled' => 1, 'position' => 200, 'notnull' => 0,  'visible' => 0, 'default' => 0),
-		'fk_parent_line'         => array('type' => 'integer',        'label' => 'ParentLine',        'enabled' => 1, 'position' => 210, 'notnull' => 0,  'visible' => 0),
+		'total_ht'               => array('type' => 'double',        'label' => 'TotalHT',        'enabled' => 1, 'position' => 90,  'notnull' => 1,  'visible' => 1, 'isameasure' => 1),
+		'total_ht_part'          => array('type' => 'double',        'label' => 'TotalHTPart',    'enabled' => 1, 'position' => 100, 'notnull' => 1,  'visible' => -1),
+		'total_ht_service'       => array('type' => 'double',        'label' => 'TotalHTService', 'enabled' => 1, 'position' => 110, 'notnull' => 1,  'visible' => -1),
+		'total_ht_refund'        => array('type' => 'double',        'label' => 'TotalHTRefund',  'enabled' => 1, 'position' => 120, 'notnull' => 1,  'visible' => -1),
+		'pc'                     => array('type' => 'varchar(255)',   'label' => 'PC',             'enabled' => 1, 'position' => 130, 'notnull' => 0,  'visible' => -1),
+		'pr'                     => array('type' => 'double',         'label' => 'PR',             'enabled' => 1, 'position' => 140, 'notnull' => 0,  'visible' => -1),
+		'fk_warehouse'           => array('type' => 'varchar(255)',   'label' => 'Warehouse',      'enabled' => 1, 'position' => 150, 'notnull' => 0,  'visible' => -1),
+		'info_bits'              => array('type' => 'integer',        'label' => 'InfoBits',       'enabled' => 1, 'position' => 160, 'notnull' => 0,  'visible' => 0),
+		'rang'                   => array('type' => 'integer',        'label' => 'Rang',           'enabled' => 1, 'position' => 170, 'notnull' => 0,  'visible' => 0, 'default' => 0),
 		'fk_user_creat'          => array('type' => 'integer:User:user/class/user.class.php', 'label' => 'UserAuthor', 'picto' => 'user', 'enabled' => 1, 'position' => 510, 'notnull' => 1, 'visible' => -2, 'foreignkey' => 'user.rowid', 'csslist' => 'tdoverflowmax150'),
 		'fk_user_modif'          => array('type' => 'integer:User:user/class/user.class.php', 'label' => 'UserModif',  'picto' => 'user', 'enabled' => 1, 'position' => 511, 'notnull' => -1, 'visible' => -2, 'csslist' => 'tdoverflowmax150'),
 		'date_creation'          => array('type' => 'datetime',       'label' => 'DateCreation',      'enabled' => 1, 'position' => 520, 'notnull' => 0,  'visible' => -2),
@@ -103,27 +91,19 @@ class Operationorderdet extends CommonObject
 	);
 
 	public $rowid;
-	public $fk_operationorder;
 	public $fk_operationorder_jobs;
 	public $fk_product;
-	public $fk_parent_line;
 	public $label;
 	public $description;
 	public $product_type;
-	public $fk_workshop_c_type;
 	public $qty;
 	public $price;
 	public $remise_percent;
 	public $remise;
 	public $total_ht;
 	public $total_ht_part;
-	public $total_ht_mo;
 	public $total_ht_service;
-	public $total_ht_external;
-	public $total_ht_reimbursement;
-	public $time_planned;
-	public $time_spent;
-	public $emplacement;
+	public $total_ht_refund;
 	public $pc;
 	public $pr;
 	public $fk_warehouse;
@@ -276,17 +256,41 @@ class Operationorderdet extends CommonObject
 	}
 
 	/**
-	 * Load all detail lines for a given operation order (all jobs combined)
+	 * Load all detail lines for a given operation order (all jobs combined), via a JOIN on jobs.
 	 *
 	 * @param  int    $fk_operationorder Id of the parent OR
-	 * @param  string $sortfield         Sort field
+	 * @param  string $sortfield         Sort field (prefixed with 't.')
 	 * @param  string $sortorder         Sort order
 	 * @return array|int                 int <0 if KO, array if OK
 	 */
-	public function fetchAllByOperationorder($fk_operationorder, $sortfield = 'rang', $sortorder = 'ASC')
+	public function fetchAllByOperationorder($fk_operationorder, $sortfield = 't.rang', $sortorder = 'ASC')
 	{
-		$filter = '(fk_operationorder:=:'.((int) $fk_operationorder).')';
-		return $this->fetchAll($sortorder, $sortfield, 0, 0, $filter);
+		dol_syslog(__METHOD__, LOG_DEBUG);
+
+		$records = array();
+
+		$sql  = 'SELECT t.*';
+		$sql .= ' FROM '.$this->db->prefix().$this->table_element.' as t';
+		$sql .= ' INNER JOIN '.$this->db->prefix().'workshop_operationorder_jobs as j ON j.rowid = t.fk_operationorder_jobs';
+		$sql .= ' WHERE j.fk_operationorder = '.((int) $fk_operationorder);
+		if (!empty($sortfield)) {
+			$sql .= $this->db->order($sortfield, $sortorder);
+		}
+
+		$resql = $this->db->query($sql);
+		if ($resql) {
+			while ($obj = $this->db->fetch_object($resql)) {
+				$record = new self($this->db);
+				$record->setVarsFromFetchObj($obj);
+				$records[$record->id] = $record;
+			}
+			$this->db->free($resql);
+			return $records;
+		} else {
+			$this->errors[] = 'Error '.$this->db->lasterror();
+			dol_syslog(__METHOD__.' '.implode(',', $this->errors), LOG_ERR);
+			return -1;
+		}
 	}
 
 	/**
@@ -322,25 +326,23 @@ class Operationorderdet extends CommonObject
 	 */
 	public function computeTotals()
 	{
-		$qty   = (float) $this->qty;
-		$price = (float) $this->price;
+		$qty            = (float) $this->qty;
+		$price          = (float) $this->price;
 		$remise_percent = (float) $this->remise_percent;
 
 		$base = $qty * $price;
 		if ($remise_percent > 0) {
-			$remise = $base * $remise_percent / 100;
+			$remise       = $base * $remise_percent / 100;
 			$this->remise = $remise;
-			$base = $base - $remise;
+			$base         = $base - $remise;
 		} else {
 			$this->remise = 0;
 		}
 
-		$this->total_ht               = $base;
-		$this->total_ht_part          = 0;
-		$this->total_ht_mo            = 0;
-		$this->total_ht_service       = 0;
-		$this->total_ht_external      = 0;
-		$this->total_ht_reimbursement = 0;
+		$this->total_ht         = $base;
+		$this->total_ht_part    = 0;
+		$this->total_ht_service = 0;
+		$this->total_ht_refund  = 0;
 
 		switch ((int) $this->product_type) {
 			case self::TYPE_PRODUCT:
@@ -349,14 +351,8 @@ class Operationorderdet extends CommonObject
 			case self::TYPE_SERVICE:
 				$this->total_ht_service = $base;
 				break;
-			case self::TYPE_MO:
-				$this->total_ht_mo = $base;
-				break;
-			case self::TYPE_EXTERNAL:
-				$this->total_ht_external = $base;
-				break;
-			case self::TYPE_REIMBURSEMENT:
-				$this->total_ht_reimbursement = $base;
+			case self::TYPE_REFUND:
+				$this->total_ht_refund = $base;
 				break;
 		}
 	}

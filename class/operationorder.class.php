@@ -63,13 +63,6 @@ class Operationorder extends CommonObject
 	 */
 	public $picto = 'fa-tools';
 
-	/** Status constants */
-	const STATUS_DRAFT     = 0;
-	const STATUS_VALIDATED = 1;
-	const STATUS_INPROGRESS = 2;
-	const STATUS_DONE      = 3;
-	const STATUS_CANCELLED = 9;
-
 	// BEGIN MODULEBUILDER PROPERTIES
 	/**
 	 * @var array Array with all fields and their property.
@@ -80,14 +73,6 @@ class Operationorder extends CommonObject
 		'ref_client'     => array('type' => 'varchar(255)',  'label' => 'RefClient',      'enabled' => 1, 'position' => 20,  'notnull' => 0, 'visible' => 1, 'searchall' => 1),
 		'fk_soc'         => array('type' => 'integer:Societe:societe/class/societe.class.php', 'label' => 'ThirdParty', 'picto' => 'company', 'enabled' => 1, 'position' => 30, 'notnull' => 1, 'visible' => 1, 'css' => 'maxwidth500 widthcentpercentminusxx', 'csslist' => 'tdoverflowmax150', 'showoncombobox' => 1),
 		'fk_vehicule'    => array('type' => 'integer:Vehicule:workshop/class/vehicule.class.php', 'label' => 'Vehicule', 'picto' => 'fa-truck', 'enabled' => 1, 'position' => 40, 'notnull' => 1, 'visible' => 1, 'css' => 'maxwidth500 widthcentpercentminusxx', 'csslist' => 'tdoverflowmax150'),
-		'fk_contrat'     => array('type' => 'integer:Contrat:contrat/class/contrat.class.php', 'label' => 'Contract', 'enabled' => 1, 'position' => 45, 'notnull' => 0, 'visible' => -1),
-		'status'         => array('type' => 'integer',      'label' => 'Status',         'enabled' => 1, 'position' => 500, 'notnull' => 1, 'visible' => 1, 'default' => self::STATUS_DRAFT, 'arrayofkeyval' => array(
-			self::STATUS_DRAFT      => 'Draft',
-			self::STATUS_VALIDATED  => 'Validated',
-			self::STATUS_INPROGRESS => 'InProgress',
-			self::STATUS_DONE       => 'Done',
-			self::STATUS_CANCELLED  => 'Cancelled',
-		)),
 		'km'             => array('type' => 'double',        'label' => 'Km',             'enabled' => 1, 'position' => 50,  'notnull' => 0, 'visible' => 1),
 		'date_planned'   => array('type' => 'datetime',      'label' => 'DatePlanned',    'enabled' => 1, 'position' => 60,  'notnull' => 0, 'visible' => 1),
 		'date_valid'     => array('type' => 'datetime',      'label' => 'DateValidation', 'enabled' => 1, 'position' => 70,  'notnull' => 0, 'visible' => -1),
@@ -99,7 +84,7 @@ class Operationorder extends CommonObject
 		'total_ht_mo'    => array('type' => 'double',        'label' => 'TotalHTMO',      'enabled' => 1, 'position' => 220, 'notnull' => 1, 'visible' => -1),
 		'total_ht_service' => array('type' => 'double',      'label' => 'TotalHTService', 'enabled' => 1, 'position' => 230, 'notnull' => 1, 'visible' => -1),
 		'total_ht_external' => array('type' => 'double',     'label' => 'TotalHTExternal', 'enabled' => 1, 'position' => 240, 'notnull' => 1, 'visible' => -1),
-		'total_ht_reimbursement' => array('type' => 'double', 'label' => 'TotalHTReimbursement', 'enabled' => 1, 'position' => 250, 'notnull' => 1, 'visible' => -1),
+		'total_ht_refund' => array('type' => 'double', 'label' => 'TotalHTRefund', 'enabled' => 1, 'position' => 250, 'notnull' => 1, 'visible' => -1),
 		'note_public'    => array('type' => 'html',          'label' => 'NotePublic',     'enabled' => 1, 'position' => 300, 'notnull' => 0, 'visible' => 0, 'cssview' => 'wordbreak'),
 		'note_private'   => array('type' => 'html',          'label' => 'NotePrivate',    'enabled' => 1, 'position' => 310, 'notnull' => 0, 'visible' => 0, 'cssview' => 'wordbreak'),
 		'model_pdf'      => array('type' => 'varchar(255)',   'label' => 'ModelPdf',       'enabled' => 1, 'position' => 400, 'notnull' => 0, 'visible' => 0),
@@ -116,10 +101,8 @@ class Operationorder extends CommonObject
 	public $ref;
 	public $ref_client;
 	public $entity;
-	public $status;
 	public $fk_soc;
 	public $fk_vehicule;
-	public $fk_contrat;
 	public $km;
 	public $date_planned;
 	public $date_valid;
@@ -131,7 +114,7 @@ class Operationorder extends CommonObject
 	public $total_ht_mo;
 	public $total_ht_service;
 	public $total_ht_external;
-	public $total_ht_reimbursement;
+	public $total_ht_refund;
 	public $note_public;
 	public $note_private;
 	public $model_pdf;
@@ -228,9 +211,6 @@ class Operationorder extends CommonObject
 
 		if (property_exists($object, 'ref')) {
 			$object->ref = empty($this->fields['ref']['default']) ? 'Copy_Of_'.$object->ref : $this->fields['ref']['default'];
-		}
-		if (property_exists($object, 'status')) {
-			$object->status = self::STATUS_DRAFT;
 		}
 		if (property_exists($object, 'date_creation')) {
 			$object->date_creation = dol_now();
@@ -406,105 +386,6 @@ class Operationorder extends CommonObject
 	}
 
 	/**
-	 * Validate the operation order (change status from DRAFT to VALIDATED)
-	 *
-	 * @param  User   $user      User that validates
-	 * @param  int    $notrigger 0=launch triggers, 1=disable triggers
-	 * @return int               Return integer <0 if KO, >0 if OK
-	 */
-	public function validate(User $user, $notrigger = 0)
-	{
-		if ($this->status != self::STATUS_DRAFT) {
-			$this->error = 'BadStatusForAction';
-			return -1;
-		}
-
-		$this->status    = self::STATUS_VALIDATED;
-		$this->date_valid = dol_now();
-		$this->fk_user_valid = $user->id;
-
-		return $this->update($user, $notrigger);
-	}
-
-	/**
-	 * Set status to InProgress
-	 *
-	 * @param  User $user      User performing the action
-	 * @param  int  $notrigger 0=launch triggers, 1=disable triggers
-	 * @return int             Return integer <0 if KO, >0 if OK
-	 */
-	public function setInProgress(User $user, $notrigger = 0)
-	{
-		if ($this->status != self::STATUS_VALIDATED) {
-			$this->error = 'BadStatusForAction';
-			return -1;
-		}
-
-		$this->status     = self::STATUS_INPROGRESS;
-		$this->date_start = dol_now();
-
-		return $this->update($user, $notrigger);
-	}
-
-	/**
-	 * Set status to Done (close the OR)
-	 *
-	 * @param  User $user      User performing the action
-	 * @param  int  $notrigger 0=launch triggers, 1=disable triggers
-	 * @return int             Return integer <0 if KO, >0 if OK
-	 */
-	public function setDone(User $user, $notrigger = 0)
-	{
-		if ($this->status != self::STATUS_INPROGRESS) {
-			$this->error = 'BadStatusForAction';
-			return -1;
-		}
-
-		$this->status   = self::STATUS_DONE;
-		$this->date_end = dol_now();
-
-		return $this->update($user, $notrigger);
-	}
-
-	/**
-	 * Cancel the operation order
-	 *
-	 * @param  User $user      User performing the action
-	 * @param  int  $notrigger 0=launch triggers, 1=disable triggers
-	 * @return int             Return integer <0 if KO, >0 if OK
-	 */
-	public function cancel(User $user, $notrigger = 0)
-	{
-		if ($this->status == self::STATUS_CANCELLED) {
-			$this->error = 'BadStatusForAction';
-			return -1;
-		}
-
-		$this->status = self::STATUS_CANCELLED;
-
-		return $this->update($user, $notrigger);
-	}
-
-	/**
-	 * Reopen a cancelled or done OR back to validated
-	 *
-	 * @param  User $user      User performing the action
-	 * @param  int  $notrigger 0=launch triggers, 1=disable triggers
-	 * @return int             Return integer <0 if KO, >0 if OK
-	 */
-	public function reopen(User $user, $notrigger = 0)
-	{
-		if (!in_array($this->status, array(self::STATUS_CANCELLED, self::STATUS_DONE))) {
-			$this->error = 'BadStatusForAction';
-			return -1;
-		}
-
-		$this->status = self::STATUS_VALIDATED;
-
-		return $this->update($user, $notrigger);
-	}
-
-	/**
 	 * Recalculate totals from jobs and their detail lines
 	 *
 	 * @param  User $user User performing the update
@@ -513,24 +394,24 @@ class Operationorder extends CommonObject
 	public function updateTotals(User $user)
 	{
 		$sql  = 'SELECT';
-		$sql .= '  COALESCE(SUM(d.total_ht), 0)               AS total_ht,';
-		$sql .= '  COALESCE(SUM(d.total_ht_part), 0)          AS total_ht_part,';
-		$sql .= '  COALESCE(SUM(d.total_ht_mo), 0)            AS total_ht_mo,';
-		$sql .= '  COALESCE(SUM(d.total_ht_service), 0)       AS total_ht_service,';
-		$sql .= '  COALESCE(SUM(d.total_ht_external), 0)      AS total_ht_external,';
-		$sql .= '  COALESCE(SUM(d.total_ht_reimbursement), 0) AS total_ht_reimbursement';
-		$sql .= ' FROM '.$this->db->prefix().'workshop_operationorderdet as d';
-		$sql .= ' WHERE d.fk_operationorder = '.((int) $this->id);
+		$sql .= '  COALESCE(SUM(j.total_ht), 0)        AS total_ht,';
+		$sql .= '  COALESCE(SUM(j.total_ht_part), 0)   AS total_ht_part,';
+		$sql .= '  COALESCE(SUM(j.total_ht_mo), 0)     AS total_ht_mo,';
+		$sql .= '  COALESCE(SUM(j.total_ht_service), 0) AS total_ht_service,';
+		$sql .= '  COALESCE(SUM(j.total_ht_external), 0) AS total_ht_external,';
+		$sql .= '  COALESCE(SUM(j.total_ht_refund), 0)  AS total_ht_refund';
+		$sql .= ' FROM '.$this->db->prefix().'workshop_operationorder_jobs as j';
+		$sql .= ' WHERE j.fk_operationorder = '.((int) $this->id);
 
 		$resql = $this->db->query($sql);
 		if ($resql) {
 			$obj = $this->db->fetch_object($resql);
-			$this->total_ht               = $obj->total_ht;
-			$this->total_ht_part          = $obj->total_ht_part;
-			$this->total_ht_mo            = $obj->total_ht_mo;
-			$this->total_ht_service       = $obj->total_ht_service;
-			$this->total_ht_external      = $obj->total_ht_external;
-			$this->total_ht_reimbursement = $obj->total_ht_reimbursement;
+			$this->total_ht          = $obj->total_ht;
+			$this->total_ht_part     = $obj->total_ht_part;
+			$this->total_ht_mo       = $obj->total_ht_mo;
+			$this->total_ht_service  = $obj->total_ht_service;
+			$this->total_ht_external = $obj->total_ht_external;
+			$this->total_ht_refund   = $obj->total_ht_refund;
 			$this->db->free($resql);
 			return $this->update($user, 1);
 		} else {
@@ -638,56 +519,8 @@ class Operationorder extends CommonObject
 		if (!empty($this->ref_client)) {
 			$datas['ref_client'] = '<br><b>'.$langs->trans('RefClient').':</b> '.$this->ref_client;
 		}
-		if (isset($this->status)) {
-			$datas['status'] = '<br><b>'.$langs->trans('Status').':</b> '.$this->getLibStatut(5);
-		}
 
 		return $datas;
-	}
-
-	/**
-	 * Return label of status
-	 *
-	 * @param  int    $mode 0=Short label, 1=Long label, 5=Short label with picto, 6=Long label with picto
-	 * @return string       Label
-	 */
-	public function getLibStatut($mode = 0)
-	{
-		return $this->LibStatut($this->status, $mode);
-	}
-
-	/**
-	 * Return label of a given status
-	 *
-	 * @param  int    $status Status
-	 * @param  int    $mode   0=Short, 1=Long, 5=Short+picto, 6=Long+picto
-	 * @return string         Label
-	 */
-	public function LibStatut($status, $mode = 0)
-	{
-		global $langs;
-
-		$statusLabel = array(
-			self::STATUS_DRAFT      => array('label' => 'Draft',      'picto' => 'status0'),
-			self::STATUS_VALIDATED  => array('label' => 'Validated',  'picto' => 'status1'),
-			self::STATUS_INPROGRESS => array('label' => 'InProgress', 'picto' => 'status4'),
-			self::STATUS_DONE       => array('label' => 'Done',       'picto' => 'status6'),
-			self::STATUS_CANCELLED  => array('label' => 'Cancelled',  'picto' => 'status9'),
-		);
-
-		$infos = isset($statusLabel[$status]) ? $statusLabel[$status] : array('label' => 'Unknown', 'picto' => 'status0');
-
-		if ($mode == 0) {
-			return $langs->trans($infos['label']);
-		} elseif ($mode == 1) {
-			return $langs->trans($infos['label']);
-		} elseif ($mode == 5) {
-			return dolGetStatus($langs->trans($infos['label']), '', '', $infos['picto'], $mode);
-		} elseif ($mode == 6) {
-			return dolGetStatus($langs->trans($infos['label']), '', '', $infos['picto'], $mode);
-		}
-
-		return $langs->trans($infos['label']);
 	}
 
 	/**

@@ -60,12 +60,6 @@ class Operationorder_jobs extends CommonObject
 	 */
 	public $picto = 'fa-wrench';
 
-	/** Status constants */
-	const STATUS_TODO       = 0;
-	const STATUS_INPROGRESS = 1;
-	const STATUS_DONE       = 2;
-	const STATUS_CANCELLED  = 9;
-
 	// BEGIN MODULEBUILDER PROPERTIES
 	/**
 	 * @var array Array with all fields and their property.
@@ -77,19 +71,18 @@ class Operationorder_jobs extends CommonObject
 		'description'       => array('type' => 'html',        'label' => 'Description',  'enabled' => 1, 'position' => 30,  'notnull' => 0, 'visible' => 3, 'cssview' => 'wordbreak'),
 		'fk_service_type'   => array('type' => 'integer:ServiceType:workshop/class/servicetype.class.php', 'label' => 'ServiceType', 'enabled' => 1, 'position' => 40, 'notnull' => 0, 'visible' => 1, 'css' => 'maxwidth500 widthcentpercentminusxx'),
 		'fk_user_assign'    => array('type' => 'integer:User:user/class/user.class.php', 'label' => 'AssignedTo', 'picto' => 'user', 'enabled' => 1, 'position' => 50, 'notnull' => 0, 'visible' => 1, 'csslist' => 'tdoverflowmax150'),
-		'status'            => array('type' => 'integer',     'label' => 'Status',       'enabled' => 1, 'position' => 500, 'notnull' => 1, 'visible' => 1, 'default' => self::STATUS_TODO, 'arrayofkeyval' => array(
-			self::STATUS_TODO       => 'Todo',
-			self::STATUS_INPROGRESS => 'InProgress',
-			self::STATUS_DONE       => 'Done',
-			self::STATUS_CANCELLED  => 'Cancelled',
-		)),
 		'rang'              => array('type' => 'integer',     'label' => 'Rang',         'enabled' => 1, 'position' => 60,  'notnull' => 0, 'visible' => 0, 'default' => 0),
 		'time_planned'      => array('type' => 'duration',    'label' => 'TimePlanned',  'enabled' => 1, 'position' => 70,  'notnull' => 0, 'visible' => 1),
 		'time_spent'        => array('type' => 'duration',    'label' => 'TimeSpent',    'enabled' => 1, 'position' => 80,  'notnull' => 0, 'visible' => 1),
 		'date_start'        => array('type' => 'datetime',    'label' => 'DateStart',    'enabled' => 1, 'position' => 90,  'notnull' => 0, 'visible' => -1),
 		'date_end'          => array('type' => 'datetime',    'label' => 'DateEnd',      'enabled' => 1, 'position' => 100, 'notnull' => 0, 'visible' => -1),
-		'total_ht'          => array('type' => 'double',      'label' => 'TotalHT',      'enabled' => 1, 'position' => 200, 'notnull' => 1, 'visible' => 1, 'isameasure' => 1),
-		'note_public'       => array('type' => 'html',        'label' => 'NotePublic',   'enabled' => 1, 'position' => 300, 'notnull' => 0, 'visible' => 0, 'cssview' => 'wordbreak'),
+		'total_ht'          => array('type' => 'double',      'label' => 'TotalHT',        'enabled' => 1, 'position' => 200, 'notnull' => 1, 'visible' => 1, 'isameasure' => 1),
+		'total_ht_part'     => array('type' => 'double',      'label' => 'TotalHTPart',    'enabled' => 1, 'position' => 210, 'notnull' => 1, 'visible' => -1),
+		'total_ht_mo'       => array('type' => 'double',      'label' => 'TotalHTMO',      'enabled' => 1, 'position' => 220, 'notnull' => 1, 'visible' => -1),
+		'total_ht_service'  => array('type' => 'double',      'label' => 'TotalHTService', 'enabled' => 1, 'position' => 230, 'notnull' => 1, 'visible' => -1),
+		'total_ht_external' => array('type' => 'double',      'label' => 'TotalHTExternal', 'enabled' => 1, 'position' => 240, 'notnull' => 1, 'visible' => -1),
+		'total_ht_refund'   => array('type' => 'double',      'label' => 'TotalHTRefund',  'enabled' => 1, 'position' => 250, 'notnull' => 1, 'visible' => -1),
+		'note_public'       => array('type' => 'html',        'label' => 'NotePublic',     'enabled' => 1, 'position' => 300, 'notnull' => 0, 'visible' => 0, 'cssview' => 'wordbreak'),
 		'note_private'      => array('type' => 'html',        'label' => 'NotePrivate',  'enabled' => 1, 'position' => 310, 'notnull' => 0, 'visible' => 0, 'cssview' => 'wordbreak'),
 		'fk_user_creat'     => array('type' => 'integer:User:user/class/user.class.php', 'label' => 'UserAuthor', 'picto' => 'user', 'enabled' => 1, 'position' => 510, 'notnull' => 1, 'visible' => -2, 'foreignkey' => 'user.rowid', 'csslist' => 'tdoverflowmax150'),
 		'fk_user_modif'     => array('type' => 'integer:User:user/class/user.class.php', 'label' => 'UserModif',  'picto' => 'user', 'enabled' => 1, 'position' => 511, 'notnull' => -1, 'visible' => -2, 'csslist' => 'tdoverflowmax150'),
@@ -104,13 +97,17 @@ class Operationorder_jobs extends CommonObject
 	public $description;
 	public $fk_service_type;
 	public $fk_user_assign;
-	public $status;
 	public $rang;
 	public $time_planned;
 	public $time_spent;
 	public $date_start;
 	public $date_end;
 	public $total_ht;
+	public $total_ht_part;
+	public $total_ht_mo;
+	public $total_ht_service;
+	public $total_ht_external;
+	public $total_ht_refund;
 	public $note_public;
 	public $note_private;
 	public $fk_user_creat;
@@ -324,61 +321,30 @@ class Operationorder_jobs extends CommonObject
 	}
 
 	/**
-	 * Set status to InProgress
-	 *
-	 * @param  User $user      User performing the action
-	 * @param  int  $notrigger 0=launch triggers, 1=disable triggers
-	 * @return int             Return integer <0 if KO, >0 if OK
-	 */
-	public function setInProgress(User $user, $notrigger = 0)
-	{
-		if ($this->status != self::STATUS_TODO) {
-			$this->error = 'BadStatusForAction';
-			return -1;
-		}
-
-		$this->status     = self::STATUS_INPROGRESS;
-		$this->date_start = dol_now();
-
-		return $this->update($user, $notrigger);
-	}
-
-	/**
-	 * Set status to Done
-	 *
-	 * @param  User $user      User performing the action
-	 * @param  int  $notrigger 0=launch triggers, 1=disable triggers
-	 * @return int             Return integer <0 if KO, >0 if OK
-	 */
-	public function setDone(User $user, $notrigger = 0)
-	{
-		if ($this->status != self::STATUS_INPROGRESS) {
-			$this->error = 'BadStatusForAction';
-			return -1;
-		}
-
-		$this->status   = self::STATUS_DONE;
-		$this->date_end = dol_now();
-
-		return $this->update($user, $notrigger);
-	}
-
-	/**
-	 * Recalculate total from detail lines
+	 * Recalculate totals from detail lines
 	 *
 	 * @param  User $user User performing the update
 	 * @return int        Return integer <0 if KO, >0 if OK
 	 */
 	public function updateTotals(User $user)
 	{
-		$sql  = 'SELECT COALESCE(SUM(total_ht), 0) AS total_ht';
+		$sql  = 'SELECT';
+		$sql .= '  COALESCE(SUM(total_ht), 0)        AS total_ht,';
+		$sql .= '  COALESCE(SUM(total_ht_part), 0)   AS total_ht_part,';
+		$sql .= '  COALESCE(SUM(total_ht_service), 0) AS total_ht_service,';
+		$sql .= '  COALESCE(SUM(total_ht_refund), 0)  AS total_ht_refund';
 		$sql .= ' FROM '.$this->db->prefix().'workshop_operationorderdet';
 		$sql .= ' WHERE fk_operationorder_jobs = '.((int) $this->id);
 
 		$resql = $this->db->query($sql);
 		if ($resql) {
-			$obj             = $this->db->fetch_object($resql);
-			$this->total_ht  = $obj->total_ht;
+			$obj = $this->db->fetch_object($resql);
+			$this->total_ht         = $obj->total_ht;
+			$this->total_ht_part    = $obj->total_ht_part;
+			$this->total_ht_mo      = 0;
+			$this->total_ht_service = $obj->total_ht_service;
+			$this->total_ht_external = 0;
+			$this->total_ht_refund  = $obj->total_ht_refund;
 			$this->db->free($resql);
 			return $this->update($user, 1);
 		} else {
@@ -430,55 +396,8 @@ class Operationorder_jobs extends CommonObject
 		if (!empty($this->label)) {
 			$datas['label'] = '<br><b>'.$langs->trans('Label').':</b> '.$this->label;
 		}
-		if (isset($this->status)) {
-			$datas['status'] = '<br><b>'.$langs->trans('Status').':</b> '.$this->getLibStatut(5);
-		}
 
 		return $datas;
-	}
-
-	/**
-	 * Return label of status
-	 *
-	 * @param  int    $mode 0=Short label, 1=Long label, 5=Short label with picto, 6=Long label with picto
-	 * @return string       Label
-	 */
-	public function getLibStatut($mode = 0)
-	{
-		return $this->LibStatut($this->status, $mode);
-	}
-
-	/**
-	 * Return label of a given status
-	 *
-	 * @param  int    $status Status
-	 * @param  int    $mode   0=Short, 1=Long, 5=Short+picto, 6=Long+picto
-	 * @return string         Label
-	 */
-	public function LibStatut($status, $mode = 0)
-	{
-		global $langs;
-
-		$statusLabel = array(
-			self::STATUS_TODO       => array('label' => 'Todo',       'picto' => 'status0'),
-			self::STATUS_INPROGRESS => array('label' => 'InProgress', 'picto' => 'status4'),
-			self::STATUS_DONE       => array('label' => 'Done',       'picto' => 'status6'),
-			self::STATUS_CANCELLED  => array('label' => 'Cancelled',  'picto' => 'status9'),
-		);
-
-		$infos = isset($statusLabel[$status]) ? $statusLabel[$status] : array('label' => 'Unknown', 'picto' => 'status0');
-
-		if ($mode == 0) {
-			return $langs->trans($infos['label']);
-		} elseif ($mode == 1) {
-			return $langs->trans($infos['label']);
-		} elseif ($mode == 5) {
-			return dolGetStatus($langs->trans($infos['label']), '', '', $infos['picto'], $mode);
-		} elseif ($mode == 6) {
-			return dolGetStatus($langs->trans($infos['label']), '', '', $infos['picto'], $mode);
-		}
-
-		return $langs->trans($infos['label']);
 	}
 
 	/**
