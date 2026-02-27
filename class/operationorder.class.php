@@ -80,7 +80,6 @@ class Operationorder extends CommonObject
 		'ref_client'     => array('type' => 'varchar(255)',  'label' => 'RefClient',      'enabled' => 1, 'position' => 20,  'notnull' => 0, 'visible' => 1, 'searchall' => 1),
 		'fk_soc'         => array('type' => 'integer:Societe:societe/class/societe.class.php', 'label' => 'ThirdParty', 'picto' => 'company', 'enabled' => 1, 'position' => 30, 'notnull' => 1, 'visible' => 1, 'css' => 'maxwidth500 widthcentpercentminusxx', 'csslist' => 'tdoverflowmax150', 'showoncombobox' => 1),
 		'fk_vehicule'    => array('type' => 'integer:Vehicule:workshop/class/vehicule.class.php', 'label' => 'Vehicule', 'picto' => 'fa-truck', 'enabled' => 1, 'position' => 40, 'notnull' => 1, 'visible' => 1, 'css' => 'maxwidth500 widthcentpercentminusxx', 'csslist' => 'tdoverflowmax150'),
-		'fk_contrat'     => array('type' => 'integer:Contrat:contrat/class/contrat.class.php', 'label' => 'Contract', 'enabled' => 1, 'position' => 45, 'notnull' => 0, 'visible' => -1),
 		'status'         => array('type' => 'integer',      'label' => 'Status',         'enabled' => 1, 'position' => 500, 'notnull' => 1, 'visible' => 1, 'default' => self::STATUS_DRAFT, 'arrayofkeyval' => array(
 			self::STATUS_DRAFT      => 'Draft',
 			self::STATUS_VALIDATED  => 'Validated',
