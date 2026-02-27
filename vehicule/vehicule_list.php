@@ -57,7 +57,7 @@ if (!$res) {
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.form.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.formcompany.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/date.lib.php';
-dol_include_once('/workshop/class/vehicule.class.php');
+dol_include_once('/workshop/class/Vehicule.class.php');
 
 if (!$user->hasRight('workshop', 'vehicule', 'read')) {
 	accessforbidden();

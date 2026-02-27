@@ -56,7 +56,7 @@ if (!$res) {
 
 require_once DOL_DOCUMENT_ROOT.'/core/lib/functions.lib.php';
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.form.class.php';
-dol_include_once('/workshop/class/vehicule.class.php');
+dol_include_once('/workshop/class/Vehicule.class.php');
 dol_include_once('/workshop/class/vehiculeLink.class.php');
 dol_include_once('/workshop/lib/workshop_vehicule.lib.php');
 
