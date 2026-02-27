@@ -167,3 +167,86 @@ TypeContact_vehicule_external_RESPCTMAINT=Responsable contrat maintenance
 # Tabs
 #
 SchedulMaintenance=Calendrier d'entretient
+
+#
+# Vehicule V5 - Statuts
+#
+VehiculeStatusDraft=Inactif
+VehiculeStatusActivated=Actif
+VehiculeStatusShortDraft=Inactif
+VehiculeStatusShortActivated=Actif
+VehiculeStatusShortValidate=Actif
+
+#
+# Vehicule V5 - Opérations de maintenance
+#
+VehiculeOperationStatusDraft=Brouillon
+VehiculeOperationStatusToPlan=À planifier
+VehiculeOperationStatusPlanned=Planifié
+VehiculeOperationStatusDone=Réalisé
+VehiculeOperationStatusShortDraft=Brouillon
+VehiculeOperationStatusShortToPlan=À planifier
+VehiculeOperationStatusShortPlanned=Planifié
+VehiculeOperationStatusShortDone=Réalisé
+
+#
+# Vehicule V5 - Labels des champs
+#
+ShowVehicule=Voir le véhicule
+VIN=Numéro VIN
+vehiculeType=Type de véhicule
+vehiculeMark=Marque
+immatriculation=Immatriculation
+immatriculation_date=Date de première mise en circulation
+immatriculation_date_short=Mise en circulation
+date_customer_exploit=Date de mise en exploitation
+date_customer_exploit_help=Mise en exploitation peut différer de la mise en circulation
+km_date=Date de relevé kilométrique
+kilometrage=Kilométrage
+contractType=Type de contrat
+date_end_contract=Date fin de contrat
+AtelierPrincipal=Atelier principal
+Carrosserie=Carrosserie
+DFolVC=Véhicule dépliable
+NbPneu=Nombre de pneumatiques
+DimensionsPneumatiques=Dimensions pneumatiques
+SNEssieu=N° de série essieu
+CoutMensuel=Coût mensuel
+DateFinFinancement=Date fin de financement
+TypeFinancement=Type de financement
+Commentaire=Commentaire
+DateEndLocation=Date fin de location
+SortiePrevue=Sortie prévue
+AgeVeh=Âge véhicule
+
+#
+# Vehicule V5 - Opérations
+#
+VehiculeOperationDelay=Délai (mois)
+VehiculeOperationLastDateDone=Date dernière réalisation
+VehiculeOperationLastKmDone=Km dernière réalisation
+VehiculeOperationDateNext=Date prochaine opération
+VehiculeOperationDateDue=Date d'échéance
+VehiculeOperationKmNext=Km prochaine opération
+VehiculeOperationOnTime=En retard
+VehiculeOperationNextOR=Prochain OR
+OperationOrderToCreate=Ordres de réparation à créer
+
+#
+# Vehicule V5 - Messages d'erreur
+#
+ErrNoVinNumber=Le numéro VIN est obligatoire
+ErrVinAlreadyUsed=Ce VIN est déjà utilisé par le véhicule %s %s
+ErrInvalidVehiculeType=Le type de véhicule est obligatoire
+ErrInvalidVehiculeMark=La marque est obligatoire
+ErrEmptyVehiculeImmatriculation=L'immatriculation est obligatoire
+ErrEmptyVehiculeImmatDate=La date d'immatriculation est obligatoire
+ErrInvalidSocid=Le tiers est obligatoire
+ErrVehiculeAlreadyLinkedDates=Le véhicule %s est déjà lié à %s du %s au %s
+ErrVehiculeThirPartiesAreDifferent=Les tiers des deux véhicules doivent être identiques
+ErrNoActivityType=Le type d'activité est obligatoire
+ErrAlreadyInActivity=Le véhicule est déjà dans une activité sur cette période
+ErrInvalidFkVehicule=Le véhicule est obligatoire
+ErrOperationNoProdId=Le produit/service est obligatoire
+ErrOperationInvalidProduct=Le produit/service sélectionné est invalide
+ErrOperationNoCritera=Un critère (km ou délai) est obligatoire

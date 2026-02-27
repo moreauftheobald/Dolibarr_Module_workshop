@@ -53,3 +53,86 @@ MyPageName = My page name
 #
 MyWidget = My widget
 MyWidgetDescription = My widget description
+
+#
+# Vehicule V5 - Status
+#
+VehiculeStatusDraft=Inactive
+VehiculeStatusActivated=Active
+VehiculeStatusShortDraft=Inactive
+VehiculeStatusShortActivated=Active
+VehiculeStatusShortValidate=Active
+
+#
+# Vehicule V5 - Maintenance operations
+#
+VehiculeOperationStatusDraft=Draft
+VehiculeOperationStatusToPlan=To plan
+VehiculeOperationStatusPlanned=Planned
+VehiculeOperationStatusDone=Done
+VehiculeOperationStatusShortDraft=Draft
+VehiculeOperationStatusShortToPlan=To plan
+VehiculeOperationStatusShortPlanned=Planned
+VehiculeOperationStatusShortDone=Done
+
+#
+# Vehicule V5 - Field labels
+#
+ShowVehicule=Show vehicle
+VIN=VIN number
+vehiculeType=Vehicle type
+vehiculeMark=Brand
+immatriculation=Registration
+immatriculation_date=First registration date
+immatriculation_date_short=Registration
+date_customer_exploit=Customer start date
+date_customer_exploit_help=Customer start date may differ from registration date
+km_date=Mileage reading date
+kilometrage=Mileage
+contractType=Contract type
+date_end_contract=Contract end date
+AtelierPrincipal=Main workshop
+Carrosserie=Body type
+DFolVC=Foldable vehicle
+NbPneu=Number of tyres
+DimensionsPneumatiques=Tyre dimensions
+SNEssieu=Axle serial number
+CoutMensuel=Monthly cost
+DateFinFinancement=Financing end date
+TypeFinancement=Financing type
+Commentaire=Comment
+DateEndLocation=Rental end date
+SortiePrevue=Planned exit
+AgeVeh=Vehicle age
+
+#
+# Vehicule V5 - Operations
+#
+VehiculeOperationDelay=Delay (months)
+VehiculeOperationLastDateDone=Last done date
+VehiculeOperationLastKmDone=Last done mileage
+VehiculeOperationDateNext=Next operation date
+VehiculeOperationDateDue=Due date
+VehiculeOperationKmNext=Next operation mileage
+VehiculeOperationOnTime=Overdue
+VehiculeOperationNextOR=Next repair order
+OperationOrderToCreate=Repair orders to create
+
+#
+# Vehicule V5 - Error messages
+#
+ErrNoVinNumber=VIN number is required
+ErrVinAlreadyUsed=This VIN is already used by vehicle %s %s
+ErrInvalidVehiculeType=Vehicle type is required
+ErrInvalidVehiculeMark=Brand is required
+ErrEmptyVehiculeImmatriculation=Registration is required
+ErrEmptyVehiculeImmatDate=Registration date is required
+ErrInvalidSocid=Third party is required
+ErrVehiculeAlreadyLinkedDates=Vehicle %s is already linked to %s from %s to %s
+ErrVehiculeThirPartiesAreDifferent=Both vehicles must belong to the same third party
+ErrNoActivityType=Activity type is required
+ErrAlreadyInActivity=Vehicle is already in an activity during this period
+ErrInvalidFkVehicule=Vehicle is required
+ErrOperationNoProdId=Product/service is required
+ErrOperationInvalidProduct=Selected product/service is invalid
+ErrOperationNoCritera=A criteria (mileage or delay) is required

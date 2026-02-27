@@ -1,4 +1,0 @@
-ALTER TABLE llx_workshop_vehicule_rental_proposaldet ADD UNIQUE INDEX uk_workshop_vehicule_rental_proposal_fk_vehicule (fk_vehicule, fk_rental_proposal);
-
-ALTER TABLE llx_workshop_vehicule_rental_proposaldet ADD CONSTRAINT fk_workshop_vehicule_rental_proposal FOREIGN KEY (fk_rental_proposal) REFERENCES llx_workshop_vehicule_rental_proposal (rowid);
-ALTER TABLE llx_workshop_vehicule_rental_proposaldet ADD CONSTRAINT fk_workshop_vehicule FOREIGN KEY (fk_vehicule) REFERENCES llx_workshop_vehicule (rowid);
