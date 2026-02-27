@@ -7,6 +7,8 @@ CREATE TABLE llx_workshop_operationorder_jobs (
   description        longtext         DEFAULT NULL,
   fk_service_type    integer          DEFAULT NULL,
   fk_user_assign     integer          DEFAULT NULL,
+  qty_mo             double           DEFAULT 0,
+  prix_mo            double           DEFAULT 0,
   time_planned       integer          DEFAULT 0,
   time_spent         integer          DEFAULT 0,
   rang               integer          DEFAULT 0,
