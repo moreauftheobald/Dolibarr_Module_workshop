@@ -67,6 +67,12 @@ class Operationorder extends CommonObject
 	/**
 	 * @var array Array with all fields and their property.
 	 */
+	const STATUS_DRAFT     = 0;
+	const STATUS_OPEN      = 1;
+	const STATUS_DONE      = 2;
+	const STATUS_CLOSED    = 3;
+	const STATUS_CANCELLED = -1;
+
 	public $fields = array(
 		'rowid'          => array('type' => 'integer',      'label' => 'TechnicalID',    'enabled' => 1, 'position' => 1,   'notnull' => 1, 'visible' => 0),
 		'ref'            => array('type' => 'varchar(255)',  'label' => 'Ref',            'enabled' => 1, 'position' => 10,  'notnull' => 1, 'visible' => 1, 'default' => '(PROV)', 'index' => 1, 'searchall' => 1, 'showoncombobox' => 1, 'validate' => 1),
@@ -95,6 +101,16 @@ class Operationorder extends CommonObject
 		'date_creation'  => array('type' => 'datetime',      'label' => 'DateCreation',   'enabled' => 1, 'position' => 520, 'notnull' => 0, 'visible' => -2),
 		'tms'            => array('type' => 'timestamp',     'label' => 'DateModification', 'enabled' => 1, 'position' => 530, 'notnull' => 1, 'visible' => -2),
 		'import_key'     => array('type' => 'varchar(255)',   'label' => 'ImportId',       'enabled' => 1, 'position' => 900, 'notnull' => 0, 'visible' => 0),
+		'status'         => array('type' => 'integer',       'label' => 'Status',         'enabled' => 1, 'position' => 1000, 'notnull' => 1, 'visible' => 2, 'index' => 1,
+			'arrayofkeyval' => array(
+				self::STATUS_CANCELLED => 'ORStatusCancelled',
+				self::STATUS_DRAFT     => 'ORStatusDraft',
+				self::STATUS_OPEN      => 'ORStatusOpen',
+				self::STATUS_DONE      => 'ORStatusDone',
+				self::STATUS_CLOSED    => 'ORStatusClosed',
+			),
+			'csslist' => 'center',
+		),
 	);
 
 	public $rowid;
@@ -125,6 +141,7 @@ class Operationorder extends CommonObject
 	public $date_creation;
 	public $tms;
 	public $import_key;
+	public $status;
 
 	/**
 	 * @var Operationorder_jobs[] Array of job lines
@@ -138,6 +155,24 @@ class Operationorder extends CommonObject
 	 *
 	 * @param DoliDB $db Database handler
 	 */
+	/** @var array Label status mapping */
+	public $labelStatus = array(
+		self::STATUS_CANCELLED => 'Cancelled',
+		self::STATUS_DRAFT     => 'Draft',
+		self::STATUS_OPEN      => 'Open',
+		self::STATUS_DONE      => 'Done',
+		self::STATUS_CLOSED    => 'Closed',
+	);
+
+	/** @var array CSS badge type per status (dolGetStatus type) */
+	public $labelStatusShort = array(
+		self::STATUS_CANCELLED => 'status9',
+		self::STATUS_DRAFT     => 'status0',
+		self::STATUS_OPEN      => 'status4',
+		self::STATUS_DONE      => 'status6',
+		self::STATUS_CLOSED    => 'status6',
+	);
+
 	public function __construct(DoliDB $db)
 	{
 		global $langs;
@@ -521,6 +556,138 @@ class Operationorder extends CommonObject
 		}
 
 		return $datas;
+	}
+
+	/**
+	 * Set status to Open (validated)
+	 *
+	 * @param  User $user      User making the change
+	 * @param  int  $notrigger Disable triggers
+	 * @return int             <0 if KO, >0 if OK
+	 */
+	public function setOpen(User $user, $notrigger = 0)
+	{
+		return $this->setStatusCommon($user, self::STATUS_OPEN, $notrigger, 'OPERATIONORDER_OPEN');
+	}
+
+	/**
+	 * Set status to Done
+	 *
+	 * @param  User $user      User making the change
+	 * @param  int  $notrigger Disable triggers
+	 * @return int             <0 if KO, >0 if OK
+	 */
+	public function setDone(User $user, $notrigger = 0)
+	{
+		return $this->setStatusCommon($user, self::STATUS_DONE, $notrigger, 'OPERATIONORDER_DONE');
+	}
+
+	/**
+	 * Set status to Closed
+	 *
+	 * @param  User $user      User making the change
+	 * @param  int  $notrigger Disable triggers
+	 * @return int             <0 if KO, >0 if OK
+	 */
+	public function setClosed(User $user, $notrigger = 0)
+	{
+		return $this->setStatusCommon($user, self::STATUS_CLOSED, $notrigger, 'OPERATIONORDER_CLOSE');
+	}
+
+	/**
+	 * Set status back to Draft
+	 *
+	 * @param  User $user      User making the change
+	 * @param  int  $notrigger Disable triggers
+	 * @return int             <0 if KO, >0 if OK
+	 */
+	public function setDraft(User $user, $notrigger = 0)
+	{
+		return $this->setStatusCommon($user, self::STATUS_DRAFT, $notrigger, 'OPERATIONORDER_REOPEN');
+	}
+
+	/**
+	 * Set status to Cancelled
+	 *
+	 * @param  User $user      User making the change
+	 * @param  int  $notrigger Disable triggers
+	 * @return int             <0 if KO, >0 if OK
+	 */
+	public function cancel(User $user, $notrigger = 0)
+	{
+		return $this->setStatusCommon($user, self::STATUS_CANCELLED, $notrigger, 'OPERATIONORDER_CANCEL');
+	}
+
+	/**
+	 * Return label of status (short label)
+	 *
+	 * @param  int    $mode 0=long label, 1=short label, 2=Picto + short label, 3=Picto, 4=Picto + long label, 5=Short label + Picto, 6=Long label + Picto
+	 * @return string       Label
+	 */
+	public function getLibStatut($mode = 0)
+	{
+		return $this->LibStatut($this->status, $mode);
+	}
+
+	/**
+	 * Return label of a given status
+	 *
+	 * @param  int    $status Status integer code
+	 * @param  int    $mode   0=long label, 1=short label, 2=Picto + short label, 3=Picto, 4=Picto + long label, 5=Short label + Picto, 6=Long label + Picto
+	 * @return string         Label
+	 */
+	public function LibStatut($status, $mode = 0)
+	{
+		global $langs;
+
+		$langs->load('workshop@workshop');
+
+		if ($mode == 0) {
+			$label = $langs->transnoentitiesnoconv('ORStatus'.$this->labelStatus[$status]);
+			return dolGetStatus($label);
+		}
+
+		if ($mode == 1) {
+			$label = $langs->transnoentitiesnoconv('ORStatusShort'.$this->labelStatus[$status]);
+			return dolGetStatus($label);
+		}
+
+		if ($mode == 2) {
+			$label     = $langs->transnoentitiesnoconv('ORStatus'.$this->labelStatus[$status]);
+			$labelshort = $langs->transnoentitiesnoconv('ORStatusShort'.$this->labelStatus[$status]);
+			$statusType = $this->labelStatusShort[$status];
+			return dolGetStatus($label, $labelshort, '', $statusType, $mode);
+		}
+
+		if ($mode == 3) {
+			$label     = $langs->transnoentitiesnoconv('ORStatus'.$this->labelStatus[$status]);
+			$labelshort = $langs->transnoentitiesnoconv('ORStatusShort'.$this->labelStatus[$status]);
+			$statusType = $this->labelStatusShort[$status];
+			return dolGetStatus($label, $labelshort, '', $statusType, $mode);
+		}
+
+		if ($mode == 4) {
+			$label     = $langs->transnoentitiesnoconv('ORStatus'.$this->labelStatus[$status]);
+			$labelshort = $langs->transnoentitiesnoconv('ORStatusShort'.$this->labelStatus[$status]);
+			$statusType = $this->labelStatusShort[$status];
+			return dolGetStatus($label, $labelshort, '', $statusType, $mode);
+		}
+
+		if ($mode == 5) {
+			$label     = $langs->transnoentitiesnoconv('ORStatus'.$this->labelStatus[$status]);
+			$labelshort = $langs->transnoentitiesnoconv('ORStatusShort'.$this->labelStatus[$status]);
+			$statusType = $this->labelStatusShort[$status];
+			return dolGetStatus($label, $labelshort, '', $statusType, $mode);
+		}
+
+		if ($mode == 6) {
+			$label     = $langs->transnoentitiesnoconv('ORStatus'.$this->labelStatus[$status]);
+			$labelshort = $langs->transnoentitiesnoconv('ORStatusShort'.$this->labelStatus[$status]);
+			$statusType = $this->labelStatusShort[$status];
+			return dolGetStatus($label, $labelshort, '', $statusType, $mode);
+		}
+
+		return dolGetStatus($langs->transnoentitiesnoconv('ORStatus'.$this->labelStatus[$status]));
 	}
 
 	/**

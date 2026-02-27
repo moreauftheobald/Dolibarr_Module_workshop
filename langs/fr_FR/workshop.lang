@@ -76,13 +76,48 @@ MyWidgetDescription = My widget description
 #
 ModuleWorkshopVehicules=Véhicules
 OperationOrders=Ordres de réparations
+OperationOrder=Ordre de réparation
 NewOperationOrders=Nouvel Ordre de réparation
 Workshop=Atelier
 WorkshopPlanning=Planning Atelier
 MecanicsPlanning=Planning Pointages
+Param_Workshop=Paramètres
+Param_Service_Type=Types de service
 New_Vehicule=Nouveau Véhicule
 List_Vehicule=Liste des Véhicules
-Param_Vehicule=Parametres
+Param_Vehicule=Paramètres véhicules
+
+#
+# OR Card labels
+#
+ORCard=Ordre de réparation
+ShowOperationorder=Voir l'ordre de réparation
+DeleteOR=Supprimer l'ordre de réparation
+ConfirmDeleteOR=Êtes-vous sûr de vouloir supprimer cet ordre de réparation ?
+OpenOR=Ouvrir
+ConfirmOpenOR=Confirmer l'ouverture de l'ordre de réparation ?
+DoneOR=Terminer
+ConfirmDoneOR=Confirmer la clôture technique de l'ordre de réparation ?
+CloseOR=Clôturer
+ConfirmCloseOR=Confirmer la clôture administrative (facturation) de l'ordre de réparation ?
+ReOpenOR=Ré-ouvrir
+ConfirmReOpenOR=Remettre l'ordre de réparation en brouillon ?
+CancelOR=Annuler
+ConfirmCancelOR=Confirmer l'annulation de l'ordre de réparation ?
+
+#
+# OR Status labels
+#
+ORStatusDraft=Brouillon
+ORStatusOpen=En cours
+ORStatusDone=Terminé
+ORStatusClosed=Clôturé
+ORStatusCancelled=Annulé
+ORStatusShortDraft=Brouillon
+ORStatusShortOpen=En cours
+ORStatusShortDone=Terminé
+ORStatusShortClosed=Clôturé
+ORStatusShortCancelled=Annulé
 
 #
 # Vehicule Param pages

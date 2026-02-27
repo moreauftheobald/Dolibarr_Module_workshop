@@ -23,6 +23,47 @@ ModuleWorkshopName = Workshop
 ModuleWorkshopDesc = Workshop description
 
 #
+# Menu Items
+#
+OperationOrders=Repair orders
+OperationOrder=Repair order
+NewOperationOrders=New repair order
+Param_Workshop=Settings
+Param_Service_Type=Service types
+
+#
+# OR Card labels
+#
+ORCard=Repair order
+ShowOperationorder=Show repair order
+DeleteOR=Delete repair order
+ConfirmDeleteOR=Are you sure you want to delete this repair order?
+OpenOR=Open
+ConfirmOpenOR=Confirm opening of the repair order?
+DoneOR=Mark done
+ConfirmDoneOR=Confirm technical closure of the repair order?
+CloseOR=Close
+ConfirmCloseOR=Confirm administrative closure (invoicing) of the repair order?
+ReOpenOR=Re-open
+ConfirmReOpenOR=Reset the repair order to draft?
+CancelOR=Cancel
+ConfirmCancelOR=Confirm cancellation of the repair order?
+
+#
+# OR Status labels
+#
+ORStatusDraft=Draft
+ORStatusOpen=Open
+ORStatusDone=Done
+ORStatusClosed=Closed
+ORStatusCancelled=Cancelled
+ORStatusShortDraft=Draft
+ORStatusShortOpen=Open
+ORStatusShortDone=Done
+ORStatusShortClosed=Closed
+ORStatusShortCancelled=Cancelled
+
+#
 # Admin page
 #
 WorkshopSetup = Workshop setup
