@@ -1,1 +1,0 @@
-ALTER TABLE llx_workshoptasktime_extrafields ADD UNIQUE INDEX uk_workshoptasktime_extrafields_fk_object (fk_object);
