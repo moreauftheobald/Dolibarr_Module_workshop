@@ -219,6 +219,51 @@ abstract class dictionary extends CommonObject
 	}
 
 	/**
+	 * Load all objects from database
+	 *
+	 * @param  string $sortorder  Sort order ('ASC' or 'DESC')
+	 * @param  string $sortfield  Sort field
+	 * @param  int    $limit      Max number of records (0 = no limit)
+	 * @param  int    $offset     Offset for pagination
+	 * @param  array  $filter     Filter criteria (unused, kept for signature compat)
+	 * @param  string $filtermode Filter mode 'AND' or 'OR'
+	 * @return array|int          Array of objects indexed by rowid, or -1 on error
+	 */
+	public function fetchAll($sortorder = '', $sortfield = '', $limit = 0, $offset = 0, $filter = array(), $filtermode = 'AND')
+	{
+		$sql = 'SELECT rowid FROM '.$this->db->prefix().$this->table_element;
+		$sql .= ' WHERE entity IN ('.getEntity($this->module).')';
+
+		if (!empty($sortfield)) {
+			$sql .= ' ORDER BY '.$this->db->sanitize($sortfield);
+			if (!empty($sortorder)) {
+				$sql .= ' '.$this->db->sanitize($sortorder);
+			}
+		} else {
+			$sql .= ' ORDER BY label ASC';
+		}
+
+		if ($limit > 0) {
+			$sql .= $this->db->plimit((int) $limit, (int) $offset);
+		}
+
+		$resql = $this->db->query($sql);
+		if (!$resql) {
+			$this->error = $this->db->lasterror();
+			return -1;
+		}
+
+		$ret = array();
+		while ($obj = $this->db->fetch_object($resql)) {
+			$tmp = new static($this->db);
+			$tmp->fetch($obj->rowid);
+			$ret[$obj->rowid] = $tmp;
+		}
+
+		return $ret;
+	}
+
+	/**
 	 * Return the label (used by sellist/combobox rendering)
 	 *
 	 * @param  int    $withpicto Ignored
