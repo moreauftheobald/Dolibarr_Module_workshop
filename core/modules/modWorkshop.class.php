@@ -375,6 +375,7 @@ class modWorkshop extends DolibarrModules
 
 		/*
 		 * Atelier Menu section
+		 * Visible uniquement si WORKSHOP_USE_OR est activé
 		 */
 		$this->menu[$r++] = array(
 			'fk_menu'=>'', // '' if this is a top menu. For left menu, use 'fk_mainmenu=xxx' or 'fk_mainmenu=xxx,fk_leftmenu=yyy' where xxx is mainmenucode and yyy is a leftmenucode
@@ -386,8 +387,8 @@ class modWorkshop extends DolibarrModules
 			'url'=>'/workshop/workshopindex.php',
 			'langs'=>'workshop@workshop', // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
 			'position'=>1000 + $r,
-			'enabled'=>'isModEnabled("workshop")', // Define condition to show or hide menu entry. Use 'isModEnabled("workshop")' if entry must be visible if module is enabled.
-			'perms'=>'1', // Use 'perms'=>'$user->hasRight("workshop", "vehicule", "read")' if you want your menu with a permission rules
+			'enabled'=>'isModEnabled("workshop") && getDolGlobalInt("WORKSHOP_USE_OR")',
+			'perms'=>'1',
 			'target'=>'',
 			'user'=>2, // 0=Menu for internal users, 1=external users, 2=both
 		);
@@ -402,7 +403,7 @@ class modWorkshop extends DolibarrModules
 			'url'=>'/workshop/operationorder/or_card.php?action=create',
 			'langs'=>'workshop@workshop',	        // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
 			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")', // Define condition to show or hide menu entry. Use 'isModEnabled("workshop")' if entry must be visible if module is enabled.
+			'enabled'=>'isModEnabled("workshop") && getDolGlobalInt("WORKSHOP_USE_OR")',
 			'perms'=>'$user->hasRight("workshop", "operationorders", "write")',
 			'target'=>'',
 			'user'=>2,				                // 0=Menu for internal users, 1=external users, 2=both
@@ -419,7 +420,7 @@ class modWorkshop extends DolibarrModules
 			'url'=>'/workshop/or_list.php',
 			'langs'=>'workshop@workshop',	        // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
 			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")', // Define condition to show or hide menu entry. Use 'isModEnabled("workshop")' if entry must be visible if module is enabled.
+			'enabled'=>'isModEnabled("workshop") && getDolGlobalInt("WORKSHOP_USE_OR")',
 			'perms'=>'$user->hasRight("workshop", "operationorders", "read")',
 			'target'=>'',
 			'user'=>2,				                // 0=Menu for internal users, 1=external users, 2=both
@@ -436,7 +437,7 @@ class modWorkshop extends DolibarrModules
 			'url'=>'/workshop/workshop.php',
 			'langs'=>'workshop@workshop',	        // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
 			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")', // Define condition to show or hide menu entry. Use 'isModEnabled("workshop")' if entry must be visible if module is enabled.
+			'enabled'=>'isModEnabled("workshop") && getDolGlobalInt("WORKSHOP_USE_OR")',
 			'perms'=>1,
 			'target'=>'',
 			'user'=>2,				                // 0=Menu for internal users, 1=external users, 2=both
@@ -453,7 +454,7 @@ class modWorkshop extends DolibarrModules
 			'url'=>'/workshop/workshop_planning.php',
 			'langs'=>'workshop@workshop',	        // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
 			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")', // Define condition to show or hide menu entry. Use 'isModEnabled("workshop")' if entry must be visible if module is enabled.
+			'enabled'=>'isModEnabled("workshop") && getDolGlobalInt("WORKSHOP_USE_OR")',
 			'perms'=>'$user->hasRight("workshop", "workshopplanning", "read")',
 			'target'=>'',
 			'user'=>2,				                // 0=Menu for internal users, 1=external users, 2=both
@@ -470,7 +471,7 @@ class modWorkshop extends DolibarrModules
 			'url'=>'/workshop/workshop_mecanics_planning.php',
 			'langs'=>'workshop@workshop',	        // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
 			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")', // Define condition to show or hide menu entry. Use 'isModEnabled("workshop")' if entry must be visible if module is enabled.
+			'enabled'=>'isModEnabled("workshop") && getDolGlobalInt("WORKSHOP_USE_OR")',
 			'perms'=>'$user->hasRight("workshop", "workshopmecanicsplanning", "read")',
 			'target'=>'',
 			'user'=>2,				                // 0=Menu for internal users, 1=external users, 2=both
@@ -486,7 +487,7 @@ class modWorkshop extends DolibarrModules
 			'url'=>'/workshop/operationorder/param/operationorder_setup_service_type.php',
 			'langs'=>'workshop@workshop',
 			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")',
+			'enabled'=>'isModEnabled("workshop") && getDolGlobalInt("WORKSHOP_USE_OR")',
 			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
 			'target'=>'',
 			'user'=>2,
@@ -502,7 +503,7 @@ class modWorkshop extends DolibarrModules
 			'url'=>'/workshop/operationorder/param/operationorder_setup_service_type.php',
 			'langs'=>'workshop@workshop',
 			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")',
+			'enabled'=>'isModEnabled("workshop") && getDolGlobalInt("WORKSHOP_USE_OR")',
 			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
 			'target'=>'',
 			'user'=>2,
@@ -519,7 +520,7 @@ class modWorkshop extends DolibarrModules
 			'url'=>'/workshop/operationorder/or_status_list.php',
 			'langs'=>'workshop@workshop',
 			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")',
+			'enabled'=>'isModEnabled("workshop") && getDolGlobalInt("WORKSHOP_USE_OR")',
 			'perms'=>'$user->hasRight("workshop", "status", "read")',
 			'target'=>'',
 			'user'=>2,
