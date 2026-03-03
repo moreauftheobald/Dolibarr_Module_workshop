@@ -299,7 +299,7 @@ if (getDolGlobalInt('WORKSHOP_USE_OR')) {
 				continue;
 			}
 			while (($file = readdir($handle)) !== false) {
-				if (substr($file, 0, 16) !== 'mod_workshopor_' || substr($file, -4) !== '.php') {
+				if (substr($file, 0, 15) !== 'mod_workshopor_' || substr($file, -4) !== '.php') {
 					continue;
 				}
 				$file = substr($file, 0, -4);
