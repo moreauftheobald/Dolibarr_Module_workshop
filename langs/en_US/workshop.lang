@@ -74,6 +74,20 @@ WORKSHOP_MYPARAM1 = My param 1
 WORKSHOP_MYPARAM1Tooltip = My param 1 tooltip
 WORKSHOP_MYPARAM2=My param 2
 WORKSHOP_MYPARAM2Tooltip=My param 2 tooltip
+# Admin tabs
+WorkshopAdminTabVehicules=Vehicles
+WorkshopAdminTabOR=Repair orders
+WorkshopAdminTabDivers=Miscellaneous
+WorkshopAdminTabPartageEntites=Entity sharing
+# Vehicles tab - parameters
+WorkshopTractorVehicleTypes=Tractor vehicle type
+WorkshopTractorVehicleTypesHelp=Select vehicle types considered as motor vehicles (tractors). Hold Ctrl for multiple selection.
+WorkshopOperationSearchDelayMonths=Previous operations search delay (months)
+WorkshopOperationSearchDelayMonthsHelp=Delay in months used to search for previous operations when planning vehicle maintenance operations.
+# Repair orders tab
+WORKSHOP_USE_OR=Use repair orders
+WORKSHOP_USE_ORTooltip=Defines whether repair orders are used; if not, purchase orders will be used instead.
+WorkshopORSubTabGeneral=General
 
 
 #

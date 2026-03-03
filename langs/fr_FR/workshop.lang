@@ -50,8 +50,20 @@ WorkshopSetup = Paramétrage Atelier
 Settings = Paramétrage
 WorkshopSetupPage = Page de Paramétrage du module atelier
 NewSection=New section
+# Onglets de l'admin
+WorkshopAdminTabVehicules=Véhicules
+WorkshopAdminTabOR=Ordres de réparation
+WorkshopAdminTabDivers=Divers
+WorkshopAdminTabPartageEntites=Partage entre entités
+# Onglet Véhicules - paramètres
+WorkshopTractorVehicleTypes=Type de véhicule tracteur
+WorkshopTractorVehicleTypesHelp=Sélectionnez les types de véhicules considérés comme des véhicules moteur (tracteurs). Maintenez Ctrl pour une sélection multiple.
+WorkshopOperationSearchDelayMonths=Délai de recherche des opérations précédentes (mois)
+WorkshopOperationSearchDelayMonthsHelp=Délai en mois utilisé pour rechercher les opérations précédentes lors de la planification des opérations véhicules.
+# Onglet Ordres de réparation
 WORKSHOP_USE_OR=Utiliser les Ordres de réparation
 WORKSHOP_USE_ORTooltip=Définis si les ordres de réparations sont utilisés, si non, ce sont les bon de commandes qui ferons foi.
+WorkshopORSubTabGeneral=Général
 #
 # About page
 #
