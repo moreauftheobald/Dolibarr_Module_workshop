@@ -23,6 +23,18 @@ ModuleWorkshopName = Workshop
 ModuleWorkshopDesc = Workshop description
 
 #
+# Admin page - Entity sharing (multicompany)
+#
+Multicompany=Multicompany
+MulticompanyConfiguration=Multicompany configuration
+ShareWith=Share with
+WorkshopVehiculeSharing=Vehicle sharing
+WorkshopORSharing=Repair order sharing
+WorkshopActivateVehiculeSharing=Enable vehicle sharing between entities
+WorkshopActivateORSharing=Enable repair order sharing between entities
+WorkshopMulticompanySharingNotEnabled=The Multicompany module must be enabled with inter-entity sharing activated to use this feature.
+
+#
 # Menu Items
 #
 OperationOrders=Repair orders
