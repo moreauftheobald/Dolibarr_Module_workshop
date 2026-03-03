@@ -56,6 +56,9 @@ WorkshopAdminTabOR=Ordres de réparation
 WorkshopAdminTabDivers=Divers
 WorkshopAdminTabPartageEntites=Partage entre entités
 # Onglet Partage entre entités (multicompany)
+Multicompany=Multicompany
+MulticompanyConfiguration=Configuration Multicompany
+ShareWith=Partager avec
 WorkshopVehiculeSharing=Partage des véhicules
 WorkshopORSharing=Partage des ordres de réparation
 WorkshopActivateVehiculeSharing=Activer le partage des véhicules entre entités
