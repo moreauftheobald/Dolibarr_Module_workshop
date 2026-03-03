@@ -73,6 +73,8 @@ WorkshopOperationSearchDelayMonthsHelp=Délai en mois utilisé pour rechercher l
 WORKSHOP_USE_OR=Utiliser les Ordres de réparation
 WORKSHOP_USE_ORTooltip=Définis si les ordres de réparations sont utilisés, si non, ce sont les bon de commandes qui ferons foi.
 WorkshopORSubTabGeneral=Général
+WorkshopORNumberingModules=Modules de numérotation des OR
+WorkshopORDocumentModels=Modèles de documents (PDF) des OR
 #
 # About page
 #
