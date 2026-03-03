@@ -103,6 +103,21 @@ if (!$user->admin) {
 
 $formSetup->newItem('WORKSHOP_USE_OR')->setAsYesNo();
 
+// Mechanic group — users who can be assigned to an OR
+$itemGrp = $formSetup->newItem('WORKSHOP_MECHANIC_GROUP');
+$itemGrp->nameText = $langs->trans('WorkshopMechanicGroup');
+$itemGrp->helpText = $langs->trans('WorkshopMechanicGroupHelp');
+$sqlGrp = "SELECT rowid, nom FROM ".MAIN_DB_PREFIX."usergroup WHERE entity IN (0, ".((int) $conf->entity).") ORDER BY nom";
+$resGrp  = $db->query($sqlGrp);
+$grpOpts = '<option value="0">--- '.$langs->trans('None').' ---</option>';
+if ($resGrp) {
+	while ($objGrp = $db->fetch_object($resGrp)) {
+		$sel = (getDolGlobalInt('WORKSHOP_MECHANIC_GROUP') == $objGrp->rowid) ? ' selected="selected"' : '';
+		$grpOpts .= '<option value="'.$objGrp->rowid.'"'.$sel.'>'.dol_htmlentities($objGrp->nom).'</option>';
+	}
+}
+$itemGrp->fieldInputOverride = '<select name="WORKSHOP_MECHANIC_GROUP" id="WORKSHOP_MECHANIC_GROUP" class="flat">'.$grpOpts.'</select>';
+
 /*$item = $formSetup->newItem('WORKSHOP_MYPARAM1');
 $item->fieldOverride = (empty($_SERVER['HTTPS']) ? 'http://' : 'https://') . $_SERVER['HTTP_HOST'];
 $item->cssClass = 'minwidth500';

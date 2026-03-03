@@ -119,7 +119,6 @@ if ($reshook < 0) {
 if (empty($reshook)) {
 	// Create
 	if ($action == 'add' && $permissiontoadd) {
-		$object->ref         = GETPOST('ref', 'alpha');
 		$object->ref_client  = GETPOST('ref_client', 'alpha');
 		$object->fk_soc      = GETPOSTINT('fk_soc');
 		$object->fk_vehicule = GETPOSTINT('fk_vehicule');
@@ -251,8 +250,27 @@ if ($object->id > 0) {
 	$head = operationorderPrepareHead($object);
 }
 
+// Compute mechanic user filter from configured group (used in create and edit forms)
+$mechanicIncludeonly = '';
+$mechanicGroupId = getDolGlobalInt('WORKSHOP_MECHANIC_GROUP');
+if ($mechanicGroupId > 0) {
+	$sqlGrp = "SELECT fk_user FROM ".MAIN_DB_PREFIX."usergroup_user WHERE fk_usergroup = ".((int) $mechanicGroupId);
+	$sqlGrp .= " AND entity IN (0, ".((int) $conf->entity).")";
+	$resGrp  = $db->query($sqlGrp);
+	if ($resGrp) {
+		$grpUserIds = array();
+		while ($objGrp = $db->fetch_object($resGrp)) {
+			$grpUserIds[] = (int) $objGrp->fk_user;
+		}
+		if (!empty($grpUserIds)) {
+			$mechanicIncludeonly = $grpUserIds;
+		}
+	}
+}
+
 if ($action == 'create') {
 	// ========== CREATE FORM ==========
+
 	print load_fiche_titre($langs->trans('NewOperationOrders'), '', 'fa-tools');
 
 	print '<form action="'.$_SERVER['PHP_SELF'].'" method="POST">'."\n";
@@ -266,23 +284,18 @@ if ($action == 'create') {
 
 	print '<table class="border centpercent tableforfieldcreate">'."\n";
 
-	// Ref
-	print '<tr><td class="titlefieldcreate fieldrequired">'.$langs->trans('Ref').'</td>';
-	print '<td><input type="text" name="ref" class="flat maxwidth200" value="(PROV)"></td></tr>';
+	// Vehicle — first field; its selection auto-fills ThirdParty
+	print '<tr><td class="titlefieldcreate fieldrequired">'.$langs->trans('Vehicule').'</td><td>';
+	print $object->showInputField($object->fields['fk_vehicule'], 'fk_vehicule', GETPOSTINT('fk_vehicule'), '', '', '', 'maxwidth500');
+	print '</td></tr>';
 
 	// Ref client
 	print '<tr><td>'.$langs->trans('RefClient').'</td>';
 	print '<td><input type="text" name="ref_client" class="flat maxwidth200" value="'.dol_escape_htmltag(GETPOST('ref_client', 'alpha')).'"></td></tr>';
 
-	// Third party
+	// Third party — auto-filled by vehicle selection, remains editable
 	print '<tr><td class="fieldrequired">'.$langs->trans('ThirdParty').'</td><td>';
-	$formcompany = new FormCompany($db);
 	print $form->select_company(GETPOSTINT('fk_soc'), 'fk_soc', '', 1, 0, 0, array(), 0, 'maxwidth500 widthcentpercentminusxx');
-	print '</td></tr>';
-
-	// Vehicle
-	print '<tr><td class="fieldrequired">'.$langs->trans('Vehicule').'</td><td>';
-	print $object->showInputField($object->fields['fk_vehicule'], 'fk_vehicule', GETPOSTINT('fk_vehicule'), '', '', '', 'maxwidth500');
 	print '</td></tr>';
 
 	// Km
@@ -294,9 +307,9 @@ if ($action == 'create') {
 	print $form->selectDate('', 'date_planned', 1, 1, 0, '', 1, 1, 0, '', '', '', '', 1, '', '', 'auto');
 	print '</td></tr>';
 
-	// Assigned user
-	print '<tr><td>'.$langs->trans('AssignedTo').'</td><td>';
-	print $form->select_dolusers(GETPOSTINT('fk_user_assign'), 'fk_user_assign', 1, null, 0, '', '', '0', 0, 0, '', 0, '', 'maxwidth500');
+	// Mechanic
+	print '<tr><td>'.$langs->trans('Mechanic').'</td><td>';
+	print $form->select_dolusers(GETPOSTINT('fk_user_assign'), 'fk_user_assign', 1, null, 0, $mechanicIncludeonly, '', '0', 0, 0, '', 0, '', 'maxwidth500');
 	print '</td></tr>';
 
 	print '</table>'."\n";
@@ -305,6 +318,34 @@ if ($action == 'create') {
 
 	print $form->buttonsSaveCancel("Create");
 	print '</form>'."\n";
+
+	// JS: when a vehicle is selected, auto-fill the ThirdParty selector
+	print '<script>'."\n";
+	print '$(document).ready(function() {'."\n";
+	print '  $("select[name=\'fk_vehicule\']").on("change", function() {'."\n";
+	print '    var vehiculeId = parseInt($(this).val(), 10);'."\n";
+	print '    if (vehiculeId > 0) {'."\n";
+	print '      $.ajax({'."\n";
+	print '        url: "'.dol_buildpath('/workshop/ajax/get_vehicule_info.php', 1).'",'."\n";
+	print '        method: "POST",'."\n";
+	print '        data: { id: vehiculeId, token: "'.currentToken().'" },'."\n";
+	print '        dataType: "json",'."\n";
+	print '        success: function(data) {'."\n";
+	print '          if (data.fk_soc > 0) {'."\n";
+	print '            var $socSel = $("select[name=\'fk_soc\']");'."\n";
+	print '            if ($socSel.find("option[value=\'" + data.fk_soc + "\']").length === 0) {'."\n";
+	print '              $socSel.append(new Option(data.soc_name, data.fk_soc, true, true));'."\n";
+	print '            } else {'."\n";
+	print '              $socSel.val(data.fk_soc);'."\n";
+	print '            }'."\n";
+	print '            $socSel.trigger("change");'."\n";
+	print '          }'."\n";
+	print '        }'."\n";
+	print '      });'."\n";
+	print '    }'."\n";
+	print '  });'."\n";
+	print '});'."\n";
+	print '</script>'."\n";
 } elseif ($object->id > 0) {
 	// ========== VIEW / EDIT FORM ==========
 	print dol_get_fiche_head($head, 'card', $langs->trans('OperationOrder'), -1, 'fa-tools');
@@ -435,10 +476,10 @@ if ($action == 'create') {
 	}
 	print '</td></tr>';
 
-	// Assigned user
-	print '<tr><td>'.$langs->trans('AssignedTo').'</td><td>';
+	// Mechanic
+	print '<tr><td>'.$langs->trans('Mechanic').'</td><td>';
 	if ($action == 'edit') {
-		print $form->select_dolusers($object->fk_user_assign, 'fk_user_assign', 1, null, 0, '', '', '0', 0, 0, '', 0, '', 'maxwidth500');
+		print $form->select_dolusers($object->fk_user_assign, 'fk_user_assign', 1, null, 0, $mechanicIncludeonly, '', '0', 0, 0, '', 0, '', 'maxwidth500');
 	} else {
 		if ($object->fk_user_assign > 0) {
 			$userassign = new User($db);

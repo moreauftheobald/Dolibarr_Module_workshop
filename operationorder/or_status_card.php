@@ -26,12 +26,35 @@
  * - Les droits des groupes (read/edit/changeToThisStatus) sont définis par entité courante
  */
 
-$res = @include '../main.inc.php';
-if (!$res) {
-    $res = @include '../../main.inc.php';
+$res = 0;
+if (!$res && !empty($_SERVER["CONTEXT_DOCUMENT_ROOT"])) {
+    $res = @include $_SERVER["CONTEXT_DOCUMENT_ROOT"]."/main.inc.php";
+}
+$tmp = empty($_SERVER['SCRIPT_FILENAME']) ? '' : $_SERVER['SCRIPT_FILENAME'];
+$tmp2 = realpath(__FILE__);
+$i = strlen($tmp) - 1;
+$j = strlen($tmp2) - 1;
+while ($i > 0 && $j > 0 && isset($tmp[$i]) && isset($tmp2[$j]) && $tmp[$i] == $tmp2[$j]) {
+    $i--;
+    $j--;
+}
+if (!$res && $i > 0 && file_exists(substr($tmp, 0, ($i + 1))."/main.inc.php")) {
+    $res = @include substr($tmp, 0, ($i + 1))."/main.inc.php";
+}
+if (!$res && $i > 0 && file_exists(dirname(substr($tmp, 0, ($i + 1)))."/main.inc.php")) {
+    $res = @include dirname(substr($tmp, 0, ($i + 1)))."/main.inc.php";
+}
+if (!$res && file_exists("../../main.inc.php")) {
+    $res = @include "../../main.inc.php";
+}
+if (!$res && file_exists("../../../main.inc.php")) {
+    $res = @include "../../../main.inc.php";
+}
+if (!$res && file_exists("../../../../main.inc.php")) {
+    $res = @include "../../../../main.inc.php";
 }
 if (!$res) {
-    die('Include of main fails');
+    die("Include of main fails");
 }
 
 require_once DOL_DOCUMENT_ROOT . '/core/lib/functions.lib.php';
@@ -102,9 +125,17 @@ if (empty($reshook)) {
             $object->code    = GETPOST('code', 'alpha');
             $object->label   = GETPOST('label', 'alpha');
             $object->color   = GETPOST('color', 'alpha');
-            $object->rang    = GETPOST('rang', 'int');
-            $object->planable = GETPOST('planable', 'int');
-            $object->status  = GETPOST('status_obj', 'int'); // "status" de l'objet statut lui-même
+            $object->rang                 = GETPOST('rang', 'int');
+            $object->planable             = GETPOST('planable', 'int');
+            $object->clean_event          = GETPOST('clean_event', 'int');
+            $object->display_on_planning  = GETPOST('display_on_planning', 'int');
+            $object->check_virtual_stock  = GETPOST('check_virtual_stock', 'int');
+            $object->or_pointable         = GETPOST('or_pointable', 'int');
+            $object->save_date_cloture    = GETPOST('save_date_cloture', 'int');
+            $object->require_planned_date = GETPOST('require_planned_date', 'int');
+            $object->update_vehicule_info = GETPOST('update_vehicule_info', 'int');
+            $object->require_conf         = GETPOST('require_conf', 'int');
+            $object->status               = GETPOST('status_obj', 'int'); // "status" de l'objet statut lui-même
 
             // Droits des groupes par entité courante
             $object->TGroupCan = $TGroupCan;
@@ -276,9 +307,22 @@ if ($action === 'create') {
     print '<tr class="oddeven"><td>' . $langs->trans('Rank') . '</td>';
     print '<td>' . (int) $object->rang . '</td></tr>';
 
-    // Planifiable
-    print '<tr class="oddeven"><td>' . $langs->trans('Planable') . '</td>';
-    print '<td>' . ($object->planable ? yn(1) : yn(0)) . '</td></tr>';
+    // Champs booléens comportement
+    $boolViewFields = array(
+        'planable'            => 'Planable',
+        'clean_event'         => 'WorkshopCleanEvent',
+        'display_on_planning' => 'WorkshopDisplayOnPlanning',
+        'check_virtual_stock' => 'WorkshopCheckVirtualStock',
+        'or_pointable'        => 'WorkshopOrPointable',
+        'save_date_cloture'   => 'WorkshopSaveDateCloture',
+        'require_planned_date'=> 'WorkshopRequirePlannedDate',
+        'update_vehicule_info'=> 'WorkshopUpdateVehiculeInfo',
+        'require_conf'        => 'WorkshopRequireConf',
+    );
+    foreach ($boolViewFields as $fieldName => $labelKey) {
+        print '<tr class="oddeven"><td>' . $langs->trans($labelKey) . '</td>';
+        print '<td>' . yn(!empty($object->$fieldName) ? 1 : 0) . '</td></tr>';
+    }
 
     // Statut (actif/désactivé)
     print '<tr class="oddeven"><td>' . $langs->trans('Status') . '</td>';
@@ -378,10 +422,28 @@ function _printStatusFormFields($object, $form, $langs, $TGroupCan, $TStatusAllo
     print '<tr class="oddeven"><td>' . $langs->trans('Rank') . '</td>';
     print '<td><input type="number" name="rang" value="' . (int) $object->rang . '"></td></tr>';
 
-    // Planifiable
-    $checked = $object->planable ? ' checked' : '';
-    print '<tr class="oddeven"><td>' . $langs->trans('Planable') . '</td>';
-    print '<td><input type="checkbox" name="planable" value="1"' . $checked . '></td></tr>';
+    // Champs booléens comportement
+    $boolFields = array(
+        'planable'            => 'Planable',
+        'clean_event'         => 'WorkshopCleanEvent',
+        'display_on_planning' => 'WorkshopDisplayOnPlanning',
+        'check_virtual_stock' => 'WorkshopCheckVirtualStock',
+        'or_pointable'        => 'WorkshopOrPointable',
+        'save_date_cloture'   => 'WorkshopSaveDateCloture',
+        'require_planned_date'=> 'WorkshopRequirePlannedDate',
+        'update_vehicule_info'=> 'WorkshopUpdateVehiculeInfo',
+        'require_conf'        => 'WorkshopRequireConf',
+    );
+    foreach ($boolFields as $fieldName => $labelKey) {
+        $checked = !empty($object->$fieldName) ? ' checked' : '';
+        $help = isset($object->fields[$fieldName]['help']) ? $object->fields[$fieldName]['help'] : '';
+        print '<tr class="oddeven"><td>' . $langs->trans($labelKey);
+        if ($help) {
+            print ' ' . $form->textwithtooltip('', $langs->trans($help), 2, 1, img_help(1, ''));
+        }
+        print '</td>';
+        print '<td><input type="checkbox" name="' . $fieldName . '" value="1"' . $checked . '></td></tr>';
+    }
 
     // Statut actif/désactivé de l'objet statut lui-même
     print '<tr class="oddeven"><td>' . $langs->trans('Status') . '</td>';

@@ -122,6 +122,86 @@ class WorkshopOperationOrderStatus extends CommonObject
 			'default'  => 0,
 			'help'     => 'PlanableHelp',
 		),
+		'clean_event' => array(
+			'type'     => 'boolean',
+			'label'    => 'WorkshopCleanEvent',
+			'enabled'  => 1,
+			'position' => 55,
+			'visible'  => -1,
+			'required' => 0,
+			'default'  => 0,
+			'help'     => 'WorkshopCleanEventHelp',
+		),
+		'display_on_planning' => array(
+			'type'     => 'boolean',
+			'label'    => 'WorkshopDisplayOnPlanning',
+			'enabled'  => 1,
+			'position' => 60,
+			'visible'  => -1,
+			'required' => 0,
+			'default'  => 0,
+			'help'     => 'WorkshopDisplayOnPlanningHelp',
+		),
+		'check_virtual_stock' => array(
+			'type'     => 'boolean',
+			'label'    => 'WorkshopCheckVirtualStock',
+			'enabled'  => 1,
+			'position' => 65,
+			'visible'  => -1,
+			'required' => 0,
+			'default'  => 0,
+			'help'     => 'WorkshopCheckVirtualStockHelp',
+		),
+		'or_pointable' => array(
+			'type'     => 'boolean',
+			'label'    => 'WorkshopOrPointable',
+			'enabled'  => 1,
+			'position' => 70,
+			'visible'  => -1,
+			'required' => 0,
+			'default'  => 0,
+			'help'     => 'WorkshopOrPointableHelp',
+		),
+		'save_date_cloture' => array(
+			'type'     => 'boolean',
+			'label'    => 'WorkshopSaveDateCloture',
+			'enabled'  => 1,
+			'position' => 75,
+			'visible'  => -1,
+			'required' => 0,
+			'default'  => 0,
+			'help'     => 'WorkshopSaveDateClotureHelp',
+		),
+		'require_planned_date' => array(
+			'type'     => 'boolean',
+			'label'    => 'WorkshopRequirePlannedDate',
+			'enabled'  => 1,
+			'position' => 80,
+			'visible'  => -1,
+			'required' => 0,
+			'default'  => 0,
+			'help'     => 'WorkshopRequirePlannedDateHelp',
+		),
+		'update_vehicule_info' => array(
+			'type'     => 'boolean',
+			'label'    => 'WorkshopUpdateVehiculeInfo',
+			'enabled'  => 1,
+			'position' => 85,
+			'visible'  => -1,
+			'required' => 0,
+			'default'  => 0,
+			'help'     => 'WorkshopUpdateVehiculeInfoHelp',
+		),
+		'require_conf' => array(
+			'type'     => 'boolean',
+			'label'    => 'WorkshopRequireConf',
+			'enabled'  => 1,
+			'position' => 90,
+			'visible'  => -1,
+			'required' => 0,
+			'default'  => 1,
+			'help'     => 'WorkshopRequireConfHelp',
+		),
 		'status' => array(
 			'type'         => 'smallint',
 			'label'        => 'Status',
@@ -156,6 +236,22 @@ class WorkshopOperationOrderStatus extends CommonObject
 	public $rang;
 	/** @var int|bool Planifiable */
 	public $planable;
+	/** @var int|bool Supprimer l'événement agenda au passage à ce statut */
+	public $clean_event;
+	/** @var int|bool Afficher sur le planning */
+	public $display_on_planning;
+	/** @var int|bool Vérifier le stock virtuel */
+	public $check_virtual_stock;
+	/** @var int|bool Pointage possible sur les OR à ce statut */
+	public $or_pointable;
+	/** @var int|bool Enregistrer la date de clôture */
+	public $save_date_cloture;
+	/** @var int|bool Date planifiée obligatoire */
+	public $require_planned_date;
+	/** @var int|bool Mettre à jour les infos véhicule */
+	public $update_vehicule_info;
+	/** @var int|bool Ventilation (conf) requise */
+	public $require_conf;
 	/** @var int Statut actif/désactivé */
 	public $status;
 	/** @var string Clé d'import */
@@ -230,7 +326,10 @@ class WorkshopOperationOrderStatus extends CommonObject
 		$this->db->begin();
 
 		$sql  = 'INSERT INTO ' . $this->db->prefix() . $this->table_element;
-		$sql .= ' (date_creation, entity, code, label, color, rang, status, planable, import_key)';
+		$sql .= ' (date_creation, entity, code, label, color, rang, status,';
+		$sql .= '  planable, clean_event, display_on_planning, check_virtual_stock,';
+		$sql .= '  or_pointable, save_date_cloture, require_planned_date, update_vehicule_info, require_conf,';
+		$sql .= '  import_key)';
 		$sql .= ' VALUES (';
 		$sql .= ' \'' . $this->db->idate(dol_now()) . '\'';
 		$sql .= ', 0';
@@ -240,6 +339,14 @@ class WorkshopOperationOrderStatus extends CommonObject
 		$sql .= ', ' . (int) $this->rang;
 		$sql .= ', ' . (int) $this->status;
 		$sql .= ', ' . (empty($this->planable) ? 0 : 1);
+		$sql .= ', ' . (empty($this->clean_event) ? 0 : 1);
+		$sql .= ', ' . (empty($this->display_on_planning) ? 0 : 1);
+		$sql .= ', ' . (empty($this->check_virtual_stock) ? 0 : 1);
+		$sql .= ', ' . (empty($this->or_pointable) ? 0 : 1);
+		$sql .= ', ' . (empty($this->save_date_cloture) ? 0 : 1);
+		$sql .= ', ' . (empty($this->require_planned_date) ? 0 : 1);
+		$sql .= ', ' . (empty($this->update_vehicule_info) ? 0 : 1);
+		$sql .= ', ' . (isset($this->require_conf) ? (empty($this->require_conf) ? 0 : 1) : 1);
 		$sql .= ', ' . ($this->import_key ? '\'' . $this->db->escape($this->import_key) . '\'' : 'NULL');
 		$sql .= ')';
 
@@ -285,17 +392,25 @@ class WorkshopOperationOrderStatus extends CommonObject
 			return 0;
 		}
 
-		$this->id            = $obj->rowid;
-		$this->date_creation = $this->db->jdate($obj->date_creation);
-		$this->tms           = $this->db->jdate($obj->tms);
-		$this->entity        = $obj->entity;
-		$this->code          = $obj->code;
-		$this->label         = $obj->label;
-		$this->color         = $obj->color;
-		$this->rang          = $obj->rang;
-		$this->status        = $obj->status;
-		$this->planable      = $obj->planable;
-		$this->import_key    = $obj->import_key;
+		$this->id                   = $obj->rowid;
+		$this->date_creation        = $this->db->jdate($obj->date_creation);
+		$this->tms                  = $this->db->jdate($obj->tms);
+		$this->entity               = $obj->entity;
+		$this->code                 = $obj->code;
+		$this->label                = $obj->label;
+		$this->color                = $obj->color;
+		$this->rang                 = $obj->rang;
+		$this->status               = $obj->status;
+		$this->planable             = $obj->planable;
+		$this->clean_event          = $obj->clean_event;
+		$this->display_on_planning  = $obj->display_on_planning;
+		$this->check_virtual_stock  = $obj->check_virtual_stock;
+		$this->or_pointable         = $obj->or_pointable;
+		$this->save_date_cloture    = $obj->save_date_cloture;
+		$this->require_planned_date = $obj->require_planned_date;
+		$this->update_vehicule_info = $obj->update_vehicule_info;
+		$this->require_conf         = $obj->require_conf;
+		$this->import_key           = $obj->import_key;
 
 		if ($loadChild) {
 			$this->fetchGroupRights();
@@ -359,6 +474,14 @@ class WorkshopOperationOrderStatus extends CommonObject
 		$sql .= ', rang = ' . (int) $this->rang;
 		$sql .= ', status = ' . (int) $this->status;
 		$sql .= ', planable = ' . (empty($this->planable) ? 0 : 1);
+		$sql .= ', clean_event = ' . (empty($this->clean_event) ? 0 : 1);
+		$sql .= ', display_on_planning = ' . (empty($this->display_on_planning) ? 0 : 1);
+		$sql .= ', check_virtual_stock = ' . (empty($this->check_virtual_stock) ? 0 : 1);
+		$sql .= ', or_pointable = ' . (empty($this->or_pointable) ? 0 : 1);
+		$sql .= ', save_date_cloture = ' . (empty($this->save_date_cloture) ? 0 : 1);
+		$sql .= ', require_planned_date = ' . (empty($this->require_planned_date) ? 0 : 1);
+		$sql .= ', update_vehicule_info = ' . (empty($this->update_vehicule_info) ? 0 : 1);
+		$sql .= ', require_conf = ' . (isset($this->require_conf) ? (empty($this->require_conf) ? 0 : 1) : 1);
 		$sql .= ' WHERE rowid = ' . (int) $this->id;
 
 		$resql = $this->db->query($sql);
