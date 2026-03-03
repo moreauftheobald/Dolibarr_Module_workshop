@@ -55,6 +55,12 @@ WorkshopAdminTabVehicules=Véhicules
 WorkshopAdminTabOR=Ordres de réparation
 WorkshopAdminTabDivers=Divers
 WorkshopAdminTabPartageEntites=Partage entre entités
+# Onglet Partage entre entités (multicompany)
+WorkshopVehiculeSharing=Partage des véhicules
+WorkshopORSharing=Partage des ordres de réparation
+WorkshopActivateVehiculeSharing=Activer le partage des véhicules entre entités
+WorkshopActivateORSharing=Activer le partage des ordres de réparation entre entités
+WorkshopMulticompanySharingNotEnabled=Le module Multicompany doit être activé et le partage entre entités doit être activé pour utiliser cette fonctionnalité.
 # Onglet Véhicules - paramètres
 WorkshopTractorVehicleTypes=Type de véhicule tracteur
 WorkshopTractorVehicleTypesHelp=Sélectionnez les types de véhicules considérés comme des véhicules moteur (tracteurs). Maintenez Ctrl pour une sélection multiple.
