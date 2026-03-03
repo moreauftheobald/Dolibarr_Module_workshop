@@ -351,6 +351,18 @@ class modWorkshop extends DolibarrModules
 		$this->rights[$r][5] = 'delete';
 		$r++;
 
+		// Droits sur les statuts des ordres de réparation
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (5 * 10) + 0 + 1);
+		$this->rights[$r][1] = 'ReadWorkshopORStatus';
+		$this->rights[$r][4] = 'status';
+		$this->rights[$r][5] = 'read';
+		$r++;
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (5 * 10) + 1 + 1);
+		$this->rights[$r][1] = 'WriteWorkshopORStatus';
+		$this->rights[$r][4] = 'status';
+		$this->rights[$r][5] = 'write';
+		$r++;
+
 		/* END MODULEBUILDER PERMISSIONS */
 
 
@@ -495,6 +507,22 @@ class modWorkshop extends DolibarrModules
 			'target'=>'',
 			'user'=>2,
 			'object'=>'OperationOrder'
+		);
+
+		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=workshop,fk_leftmenu=workshop_param',
+			'type'=>'left',
+			'titre'=>'WorkshopORStatusList',
+			'prefix' => img_picto('', 'fa-traffic-light', 'class="pictofixedwidth valignmiddle paddingright"'),
+			'mainmenu'=>'workshop',
+			'leftmenu'=>'workshop_param_or_status',
+			'url'=>'/workshop/operationorder/or_status_list.php',
+			'langs'=>'workshop@workshop',
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop")',
+			'perms'=>'$user->hasRight("workshop", "status", "read")',
+			'target'=>'',
+			'user'=>2,
 		);
 
 		/*

@@ -22,6 +22,32 @@
  */
 
 /**
+ * Prepare array of tabs for WorkshopOperationOrderStatus card
+ *
+ * @param  WorkshopOperationOrderStatus $object Status object
+ * @return array                                Array of tabs
+ */
+function workshopOperationOrderStatusPrepareHead($object)
+{
+	global $langs, $conf;
+
+	$langs->load('workshop@workshop');
+
+	$h    = 0;
+	$head = array();
+
+	$head[$h][0] = dol_buildpath('/workshop/operationorder/or_status_card.php', 1) . '?id=' . $object->id;
+	$head[$h][1] = $langs->trans('WorkshopORStatus');
+	$head[$h][2] = 'card';
+	$h++;
+
+	complete_head_from_modules($conf, $langs, $object, $head, $h, 'workshopoperationorderstatus@workshop');
+	complete_head_from_modules($conf, $langs, $object, $head, $h, 'workshopoperationorderstatus@workshop', 'remove');
+
+	return $head;
+}
+
+/**
  * Prepare array of tabs for Operationorder card
  *
  * @param  Operationorder $object Operationorder object

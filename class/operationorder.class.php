@@ -22,6 +22,7 @@
  */
 
 require_once DOL_DOCUMENT_ROOT.'/core/class/commonobject.class.php';
+dol_include_once('/workshop/class/workshopoperationorderstatus.class.php');
 
 /**
  * Class for Operationorder (Ordre de Réparation)
@@ -102,13 +103,6 @@ class Operationorder extends CommonObject
 		'tms'            => array('type' => 'timestamp',     'label' => 'DateModification', 'enabled' => 1, 'position' => 530, 'notnull' => 1, 'visible' => -2),
 		'import_key'     => array('type' => 'varchar(255)',   'label' => 'ImportId',       'enabled' => 1, 'position' => 900, 'notnull' => 0, 'visible' => 0),
 		'status'         => array('type' => 'integer',       'label' => 'Status',         'enabled' => 1, 'position' => 1000, 'notnull' => 1, 'visible' => 2, 'index' => 1,
-			'arrayofkeyval' => array(
-				self::STATUS_CANCELLED => 'ORStatusCancelled',
-				self::STATUS_DRAFT     => 'ORStatusDraft',
-				self::STATUS_OPEN      => 'ORStatusOpen',
-				self::STATUS_DONE      => 'ORStatusDone',
-				self::STATUS_CLOSED    => 'ORStatusClosed',
-			),
 			'csslist' => 'center',
 		),
 	);
@@ -147,6 +141,13 @@ class Operationorder extends CommonObject
 	 * @var Operationorder_jobs[] Array of job lines
 	 */
 	public $lines = array();
+
+	/**
+	 * Objet statut dynamique chargé depuis llx_workshop_operationorder_status.
+	 * Utilisé pour les contrôles de droits et l'affichage.
+	 * @var WorkshopOperationOrderStatus|null
+	 */
+	public $objStatus = null;
 
 	// END MODULEBUILDER PROPERTIES
 
@@ -559,70 +560,112 @@ class Operationorder extends CommonObject
 	}
 
 	/**
-	 * Set status to Open (validated)
+	 * Charger l'objet statut dynamique depuis la base si ce n'est pas déjà fait,
+	 * ou si le statut a changé.
 	 *
-	 * @param  User $user      User making the change
-	 * @param  int  $notrigger Disable triggers
-	 * @return int             <0 if KO, >0 if OK
+	 * @param  bool $forceReload Forcer le rechargement même si déjà en cache
+	 * @return WorkshopOperationOrderStatus|null
 	 */
-	public function setOpen(User $user, $notrigger = 0)
+	public function loadStatus($forceReload = false)
 	{
-		return $this->setStatusCommon($user, self::STATUS_OPEN, $notrigger, 'OPERATIONORDER_OPEN');
+		if ($this->status <= 0) {
+			$this->objStatus = null;
+			return null;
+		}
+
+		if ($forceReload || $this->objStatus === null || (int) $this->objStatus->id !== (int) $this->status) {
+			$this->objStatus = new WorkshopOperationOrderStatus($this->db);
+			$res = $this->objStatus->fetch((int) $this->status);
+			if ($res <= 0) {
+				$this->objStatus = null;
+			}
+		}
+
+		return $this->objStatus;
 	}
 
 	/**
-	 * Set status to Done
+	 * Vérifier si l'utilisateur peut effectuer une action sur cet OR en fonction du statut courant.
 	 *
-	 * @param  User $user      User making the change
-	 * @param  int  $notrigger Disable triggers
-	 * @return int             <0 if KO, >0 if OK
+	 * @param  User   $user   Utilisateur
+	 * @param  string $action Action : 'read', 'edit', 'changeToThisStatus'
+	 * @return bool
 	 */
-	public function setDone(User $user, $notrigger = 0)
+	public function userCan(User $user, $action = 'edit')
 	{
-		return $this->setStatusCommon($user, self::STATUS_DONE, $notrigger, 'OPERATIONORDER_DONE');
+		$objStatus = $this->loadStatus();
+		if ($objStatus === null) {
+			return true; // Pas de statut défini : pas de restriction
+		}
+		return $objStatus->userCan($user, $action);
 	}
 
 	/**
-	 * Set status to Closed
+	 * Passer l'ordre de réparation à un nouveau statut dynamique.
 	 *
-	 * @param  User $user      User making the change
-	 * @param  int  $notrigger Disable triggers
-	 * @return int             <0 if KO, >0 if OK
+	 * Vérifie :
+	 * 1. Que la transition est autorisée (définie dans llx_workshop_operationorder_status_target)
+	 * 2. Que l'utilisateur a le droit "changeToThisStatus" pour le nouveau statut dans l'entité courante
+	 *
+	 * @param  User $user        Utilisateur
+	 * @param  int  $fk_status   Rowid du nouveau statut (WorkshopOperationOrderStatus)
+	 * @param  int  $notrigger   Désactiver les triggers
+	 * @return int               >0 si OK, <0 si KO
 	 */
-	public function setClosed(User $user, $notrigger = 0)
+	public function setStatus(User $user, $fk_status, $notrigger = 0)
 	{
-		return $this->setStatusCommon($user, self::STATUS_CLOSED, $notrigger, 'OPERATIONORDER_CLOSE');
+		$fk_status = (int) $fk_status;
+
+		if ($fk_status <= 0) {
+			$this->error = 'InvalidStatusId';
+			return -1;
+		}
+
+		if ((int) $this->status === $fk_status) {
+			return 1; // Déjà à ce statut
+		}
+
+		// Charger le nouveau statut et vérifier les droits
+		$newStatus = new WorkshopOperationOrderStatus($this->db);
+		$res       = $newStatus->fetch($fk_status);
+		if ($res <= 0) {
+			$this->error = 'WorkshopORStatusNotFound';
+			return -2;
+		}
+
+		if (!$newStatus->userCan($user, 'changeToThisStatus')) {
+			$this->error = 'WorkshopORStatusForbiddenChangeToThisStatus';
+			return -3;
+		}
+
+		// Vérifier que la transition est autorisée depuis le statut courant
+		$currentStatus = $this->loadStatus();
+		if ($currentStatus !== null && !$currentStatus->checkStatusTransition($user, $fk_status)) {
+			$this->error = 'WorkshopORStatusTransitionNotAllowed';
+			return -4;
+		}
+
+		// Enregistrer le nouveau statut
+		$sql  = 'UPDATE ' . $this->db->prefix() . $this->table_element;
+		$sql .= ' SET status = ' . $fk_status;
+		$sql .= ' WHERE rowid = ' . (int) $this->id;
+
+		if (!$this->db->query($sql)) {
+			$this->error = $this->db->lasterror();
+			return -5;
+		}
+
+		$this->status    = $fk_status;
+		$this->objStatus = $newStatus;
+
+		return 1;
 	}
 
 	/**
-	 * Set status back to Draft
+	 * Return label of the current status badge
 	 *
-	 * @param  User $user      User making the change
-	 * @param  int  $notrigger Disable triggers
-	 * @return int             <0 if KO, >0 if OK
-	 */
-	public function setDraft(User $user, $notrigger = 0)
-	{
-		return $this->setStatusCommon($user, self::STATUS_DRAFT, $notrigger, 'OPERATIONORDER_REOPEN');
-	}
-
-	/**
-	 * Set status to Cancelled
-	 *
-	 * @param  User $user      User making the change
-	 * @param  int  $notrigger Disable triggers
-	 * @return int             <0 if KO, >0 if OK
-	 */
-	public function cancel(User $user, $notrigger = 0)
-	{
-		return $this->setStatusCommon($user, self::STATUS_CANCELLED, $notrigger, 'OPERATIONORDER_CANCEL');
-	}
-
-	/**
-	 * Return label of status (short label)
-	 *
-	 * @param  int    $mode 0=long label, 1=short label, 2=Picto + short label, 3=Picto, 4=Picto + long label, 5=Short label + Picto, 6=Long label + Picto
-	 * @return string       Label
+	 * @param  int $mode 0=long label, 1=short label, 2=Picto + short label, 3=Picto, 4=Picto + long label, 5=Short label + Picto, 6=Long label + Picto
+	 * @return string
 	 */
 	public function getLibStatut($mode = 0)
 	{
@@ -630,64 +673,72 @@ class Operationorder extends CommonObject
 	}
 
 	/**
-	 * Return label of a given status
+	 * Return the badge HTML for a given status rowid.
+	 * Uses WorkshopOperationOrderStatus when status > 0.
 	 *
-	 * @param  int    $status Status integer code
-	 * @param  int    $mode   0=long label, 1=short label, 2=Picto + short label, 3=Picto, 4=Picto + long label, 5=Short label + Picto, 6=Long label + Picto
-	 * @return string         Label
+	 * @param  int $status Status rowid (llx_workshop_operationorder_status)
+	 * @param  int $mode   Display mode (used if status is 0 or unknown)
+	 * @return string
 	 */
 	public function LibStatut($status, $mode = 0)
 	{
+		if ($status > 0) {
+			$objStatus = new WorkshopOperationOrderStatus($this->db);
+			$res       = $objStatus->fetch((int) $status, false);
+			if ($res > 0) {
+				return $objStatus->getBadge($objStatus->getCardUrl());
+			}
+		}
+
+		// Fallback : statut non défini ou non trouvé
 		global $langs;
-
 		$langs->load('workshop@workshop');
+		return dolGetStatus($langs->trans('WorkshopORStatusUndefined'), '', '', 'status0', $mode);
+	}
 
-		if ($mode == 0) {
-			$label = $langs->transnoentitiesnoconv('ORStatus'.$this->labelStatus[$status]);
-			return dolGetStatus($label);
-		}
+	/**
+	 * Set status to Open (validated) — kept for backward compatibility with or_card.php
+	 * @deprecated Utiliser setStatus($user, $fk_status) avec un statut dynamique
+	 */
+	public function setOpen(User $user, $notrigger = 0)
+	{
+		return $this->setStatusCommon($user, self::STATUS_OPEN, $notrigger, 'OPERATIONORDER_OPEN');
+	}
 
-		if ($mode == 1) {
-			$label = $langs->transnoentitiesnoconv('ORStatusShort'.$this->labelStatus[$status]);
-			return dolGetStatus($label);
-		}
+	/**
+	 * Set status to Done — kept for backward compatibility with or_card.php
+	 * @deprecated Utiliser setStatus($user, $fk_status) avec un statut dynamique
+	 */
+	public function setDone(User $user, $notrigger = 0)
+	{
+		return $this->setStatusCommon($user, self::STATUS_DONE, $notrigger, 'OPERATIONORDER_DONE');
+	}
 
-		if ($mode == 2) {
-			$label     = $langs->transnoentitiesnoconv('ORStatus'.$this->labelStatus[$status]);
-			$labelshort = $langs->transnoentitiesnoconv('ORStatusShort'.$this->labelStatus[$status]);
-			$statusType = $this->labelStatusShort[$status];
-			return dolGetStatus($label, $labelshort, '', $statusType, $mode);
-		}
+	/**
+	 * Set status to Closed — kept for backward compatibility with or_card.php
+	 * @deprecated Utiliser setStatus($user, $fk_status) avec un statut dynamique
+	 */
+	public function setClosed(User $user, $notrigger = 0)
+	{
+		return $this->setStatusCommon($user, self::STATUS_CLOSED, $notrigger, 'OPERATIONORDER_CLOSE');
+	}
 
-		if ($mode == 3) {
-			$label     = $langs->transnoentitiesnoconv('ORStatus'.$this->labelStatus[$status]);
-			$labelshort = $langs->transnoentitiesnoconv('ORStatusShort'.$this->labelStatus[$status]);
-			$statusType = $this->labelStatusShort[$status];
-			return dolGetStatus($label, $labelshort, '', $statusType, $mode);
-		}
+	/**
+	 * Set status back to Draft — kept for backward compatibility with or_card.php
+	 * @deprecated Utiliser setStatus($user, $fk_status) avec un statut dynamique
+	 */
+	public function setDraft(User $user, $notrigger = 0)
+	{
+		return $this->setStatusCommon($user, self::STATUS_DRAFT, $notrigger, 'OPERATIONORDER_REOPEN');
+	}
 
-		if ($mode == 4) {
-			$label     = $langs->transnoentitiesnoconv('ORStatus'.$this->labelStatus[$status]);
-			$labelshort = $langs->transnoentitiesnoconv('ORStatusShort'.$this->labelStatus[$status]);
-			$statusType = $this->labelStatusShort[$status];
-			return dolGetStatus($label, $labelshort, '', $statusType, $mode);
-		}
-
-		if ($mode == 5) {
-			$label     = $langs->transnoentitiesnoconv('ORStatus'.$this->labelStatus[$status]);
-			$labelshort = $langs->transnoentitiesnoconv('ORStatusShort'.$this->labelStatus[$status]);
-			$statusType = $this->labelStatusShort[$status];
-			return dolGetStatus($label, $labelshort, '', $statusType, $mode);
-		}
-
-		if ($mode == 6) {
-			$label     = $langs->transnoentitiesnoconv('ORStatus'.$this->labelStatus[$status]);
-			$labelshort = $langs->transnoentitiesnoconv('ORStatusShort'.$this->labelStatus[$status]);
-			$statusType = $this->labelStatusShort[$status];
-			return dolGetStatus($label, $labelshort, '', $statusType, $mode);
-		}
-
-		return dolGetStatus($langs->transnoentitiesnoconv('ORStatus'.$this->labelStatus[$status]));
+	/**
+	 * Set status to Cancelled — kept for backward compatibility with or_card.php
+	 * @deprecated Utiliser setStatus($user, $fk_status) avec un statut dynamique
+	 */
+	public function cancel(User $user, $notrigger = 0)
+	{
+		return $this->setStatusCommon($user, self::STATUS_CANCELLED, $notrigger, 'OPERATIONORDER_CANCEL');
 	}
 
 	/**

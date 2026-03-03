@@ -177,3 +177,31 @@ ErrInvalidFkVehicule=Vehicle is required
 ErrOperationNoProdId=Product/service is required
 ErrOperationInvalidProduct=Selected product/service is invalid
 ErrOperationNoCritera=A criteria (mileage or delay) is required
+
+#
+# Operation order statuses (dynamic management)
+#
+WorkshopORStatus=OR Status
+WorkshopORStatusList=OR Statuses
+NewWorkshopORStatus=New OR status
+WorkshopORStatusActive=Active
+WorkshopORStatusDisabled=Disabled
+WorkshopORStatusUndefined=Status undefined
+WorkshopORStatusConfirmDelete=Confirm deletion
+WorkshopORStatusConfirmDeleteMessage=Are you sure you want to delete status "%s"?
+WorkshopORStatusDeleteError=Error while deleting status
+WorkshopTargetableStatus=Statuses reachable from this status
+WorkshopNoOtherStatusAvailable=No other status available
+WorkshopCouldRead=Groups allowed to read ORs at this status
+WorkshopCouldReadHelp=Select user groups allowed to view repair orders with this status, for the current entity.
+WorkshopCouldEdit=Groups allowed to edit ORs at this status
+WorkshopCouldEditHelp=Select user groups allowed to modify repair orders with this status, for the current entity.
+WorkshopCouldChangeToThisStatus=Groups allowed to move ORs to this status
+WorkshopCouldChangeToThisStatusHelp=Select user groups allowed to move a repair order to this status, for the current entity.
+WorkshopStatusGroupRightsPerEntity=Group rights are defined for the current entity (entity %s). Each entity can define its own allowed groups.
+WorkshopStatusTransitionsShared=Status transitions are shared across all entities (defined on entity 0).
+WorkshopORStatusForbiddenChangeToThisStatus=You are not allowed to move the OR to this status.
+WorkshopORStatusTransitionNotAllowed=This status transition is not allowed from the current status.
+WorkshopORStatusNotFound=Status not found.
+ReadWorkshopORStatus=Read repair order statuses
+WriteWorkshopORStatus=Create/modify repair order statuses

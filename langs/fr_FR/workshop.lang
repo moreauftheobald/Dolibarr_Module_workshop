@@ -285,3 +285,31 @@ ErrInvalidFkVehicule=Le véhicule est obligatoire
 ErrOperationNoProdId=Le produit/service est obligatoire
 ErrOperationInvalidProduct=Le produit/service sélectionné est invalide
 ErrOperationNoCritera=Un critère (km ou délai) est obligatoire
+
+#
+# Statuts des ordres de réparation (gestion dynamique)
+#
+WorkshopORStatus=Statut OR
+WorkshopORStatusList=Statuts des OR
+NewWorkshopORStatus=Nouveau statut OR
+WorkshopORStatusActive=Actif
+WorkshopORStatusDisabled=Désactivé
+WorkshopORStatusUndefined=Statut non défini
+WorkshopORStatusConfirmDelete=Confirmer la suppression
+WorkshopORStatusConfirmDeleteMessage=Êtes-vous sûr de vouloir supprimer le statut "%s" ?
+WorkshopORStatusDeleteError=Erreur lors de la suppression du statut
+WorkshopTargetableStatus=Statuts accessibles depuis ce statut
+WorkshopNoOtherStatusAvailable=Aucun autre statut disponible
+WorkshopCouldRead=Groupes pouvant lire les OR à ce statut
+WorkshopCouldReadHelp=Sélectionnez les groupes d'utilisateurs autorisés à consulter les ordres de réparation ayant ce statut, pour l'entité courante.
+WorkshopCouldEdit=Groupes pouvant modifier les OR à ce statut
+WorkshopCouldEditHelp=Sélectionnez les groupes d'utilisateurs autorisés à modifier les ordres de réparation ayant ce statut, pour l'entité courante.
+WorkshopCouldChangeToThisStatus=Groupes pouvant passer les OR à ce statut
+WorkshopCouldChangeToThisStatusHelp=Sélectionnez les groupes d'utilisateurs autorisés à faire passer un ordre de réparation à ce statut, pour l'entité courante.
+WorkshopStatusGroupRightsPerEntity=Les droits des groupes sont définis pour l'entité courante (entité %s). Chaque entité peut définir ses propres groupes autorisés.
+WorkshopStatusTransitionsShared=Les transitions entre statuts sont partagées par toutes les entités (définies sur l'entité 0).
+WorkshopORStatusForbiddenChangeToThisStatus=Vous n'êtes pas autorisé à passer l'OR à ce statut.
+WorkshopORStatusTransitionNotAllowed=Cette transition de statut n'est pas autorisée depuis le statut actuel.
+WorkshopORStatusNotFound=Statut introuvable.
+ReadWorkshopORStatus=Consulter les statuts des ordres de réparation
+WriteWorkshopORStatus=Créer/modifier les statuts des ordres de réparation
