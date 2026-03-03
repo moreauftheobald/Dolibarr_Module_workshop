@@ -50,7 +50,9 @@ if (!$res) {
 global $langs, $user;
 
 require_once DOL_DOCUMENT_ROOT."/core/lib/admin.lib.php";
+require_once DOL_DOCUMENT_ROOT."/core/lib/pdf.lib.php";
 require_once '../lib/workshop.lib.php';
+dol_include_once('/workshop/class/operationorder.class.php');
 
 $langs->loadLangs(array("admin", "workshop@workshop"));
 
@@ -59,6 +61,10 @@ $hookmanager->initHooks(array('workshopsetup', 'globalsetup'));
 $action     = GETPOST('action', 'aZ09');
 $backtopage = GETPOST('backtopage', 'alpha');
 $subtab     = GETPOST('subtab', 'aZ09') ?: 'general';
+$value      = GETPOST('value', 'alpha');
+$label      = GETPOST('label', 'alpha');
+$scandir    = GETPOST('scan_dir', 'alpha');
+$type       = 'workshopor';
 $error      = 0;
 
 if (!$user->admin) {
@@ -68,6 +74,70 @@ if (!$user->admin) {
 /*
  * Actions
  */
+
+// --- Actions numérotation & PDF (uniquement si OR actif) ---
+if (getDolGlobalInt('WORKSHOP_USE_OR')) {
+	if ($action == 'updateMask') {
+		$maskconstor = GETPOST('maskconstWorkshopOR', 'alpha');
+		$maskor      = GETPOST('maskWorkshopOR', 'alpha');
+		if ($maskconstor) {
+			$res = dolibarr_set_const($db, $maskconstor, $maskor, 'chaine', 0, '', $conf->entity);
+		}
+		if (!$res > 0) {
+			$error++;
+		}
+		if (!$error) {
+			setEventMessages($langs->trans("SetupSaved"), null, 'mesgs');
+		} else {
+			setEventMessages($langs->trans("Error"), null, 'errors');
+		}
+	} elseif ($action == 'specimen') {
+		$modele = GETPOST('module', 'alpha');
+		$workshopor = new Operationorder($db);
+		$workshopor->initAsSpecimen();
+		$file = ''; $classname = ''; $filefound = 0;
+		$dirmodels = array_merge(array('/'), (array) $conf->modules_parts['models']);
+		foreach ($dirmodels as $reldir) {
+			$file = dol_buildpath($reldir."core/modules/workshopor/doc/pdf_".$modele.".modules.php", 0);
+			if (file_exists($file)) {
+				$filefound = 1;
+				$classname = "pdf_".$modele;
+				break;
+			}
+		}
+		if ($filefound) {
+			require_once $file;
+			$module = new $classname($db);
+			if ($module->write_file($workshopor, $langs) > 0) {
+				header("Location: ".DOL_URL_ROOT."/document.php?modulepart=workshopor&file=SPECIMEN.pdf");
+				return;
+			} else {
+				setEventMessages($module->error, null, 'errors');
+				dol_syslog($module->error, LOG_ERR);
+			}
+		} else {
+			setEventMessages($langs->trans("ErrorModuleNotFound"), null, 'errors');
+			dol_syslog($langs->trans("ErrorModuleNotFound"), LOG_ERR);
+		}
+	} elseif ($action == 'set') {
+		addDocumentModel($value, $type, $label, $scandir);
+	} elseif ($action == 'del') {
+		$ret = delDocumentModel($value, $type);
+		if ($ret > 0 && getDolGlobalString('WORKSHOP_OR_ADDON_PDF') == $value) {
+			dolibarr_del_const($db, 'WORKSHOP_OR_ADDON_PDF', $conf->entity);
+		}
+	} elseif ($action == 'setdoc') {
+		if (dolibarr_set_const($db, 'WORKSHOP_OR_ADDON_PDF', $value, 'chaine', 0, '', $conf->entity)) {
+			$conf->global->WORKSHOP_OR_ADDON_PDF = $value;
+		}
+		$ret = delDocumentModel($value, $type);
+		if ($ret > 0) {
+			addDocumentModel($value, $type, $label, $scandir);
+		}
+	} elseif ($action == 'setmod') {
+		dolibarr_set_const($db, 'WORKSHOP_OR_ADDON', $value, 'chaine', 0, '', $conf->entity);
+	}
+}
 
 if ($action == 'update_use_or' && !empty($user->admin)) {
 	// Save WORKSHOP_USE_OR
@@ -203,6 +273,194 @@ if (getDolGlobalInt('WORKSHOP_USE_OR')) {
 		print '</div>';
 
 		print '</form>';
+
+		// --- Section : modèles de numérotation ---
+		$dirmodels = array_merge(array('/'), (array) $conf->modules_parts['models']);
+
+		print load_fiche_titre($langs->trans("WorkshopORNumberingModules"), '', '');
+
+		print '<table class="noborder centpercent">';
+		print '<tr class="liste_titre">';
+		print '<td>'.$langs->trans("Name").'</td>';
+		print '<td>'.$langs->trans("Description").'</td>';
+		print '<td class="nowrap">'.$langs->trans("Example").'</td>';
+		print '<td class="center" width="60">'.$langs->trans("Status").'</td>';
+		print '<td class="center" width="16">'.$langs->trans("ShortInfo").'</td>';
+		print '</tr>'."\n";
+
+		clearstatcache();
+		foreach ($dirmodels as $reldir) {
+			$dir = dol_buildpath($reldir."core/modules/workshopor/");
+			if (!is_dir($dir)) {
+				continue;
+			}
+			$handle = opendir($dir);
+			if (!is_resource($handle)) {
+				continue;
+			}
+			while (($file = readdir($handle)) !== false) {
+				if (substr($file, 0, 16) !== 'mod_workshopor_' || substr($file, -4) !== '.php') {
+					continue;
+				}
+				$file = substr($file, 0, -4);
+				require_once $dir.$file.'.php';
+				$module = new $file($db);
+				if ($module->version == 'development'  && getDolGlobalInt('MAIN_FEATURES_LEVEL') < 2) {
+					continue;
+				}
+				if ($module->version == 'experimental' && getDolGlobalInt('MAIN_FEATURES_LEVEL') < 1) {
+					continue;
+				}
+				if (!$module->isEnabled()) {
+					continue;
+				}
+				print '<tr class="oddeven"><td>'.$module->name."</td><td>\n";
+				print $module->info($langs);
+				print '</td>';
+				print '<td class="nowrap">';
+				$tmp = $module->getExample();
+				if (preg_match('/^Error/', $tmp)) {
+					print '<div class="error">'.$langs->trans($tmp).'</div>';
+				} elseif ($tmp == 'NotConfigured') {
+					print $langs->trans($tmp);
+				} else {
+					print $tmp;
+				}
+				print '</td>'."\n";
+				print '<td class="center">';
+				if (getDolGlobalString('WORKSHOP_OR_ADDON') == $file) {
+					print img_picto($langs->trans("Activated"), 'switch_on');
+				} else {
+					print '<a href="'.$_SERVER["PHP_SELF"].'?action=setmod&subtab=general&value='.urlencode($file).'&token='.newToken().'">';
+					print img_picto($langs->trans("Disabled"), 'switch_off');
+					print '</a>';
+				}
+				print '</td>';
+				// Info tooltip
+				$workshopor = new Operationorder($db);
+				$workshopor->initAsSpecimen();
+				$htmltooltip  = $langs->trans("Version").': <b>'.$module->getVersion().'</b><br>';
+				$nextval = $module->getNextValue($workshopor);
+				if ("$nextval" != $langs->trans("NotAvailable")) {
+					$htmltooltip .= $langs->trans("NextValue").': ';
+					$htmltooltip .= (preg_match('/^Error/', $nextval) || $nextval == 'NotConfigured') ? $langs->trans($nextval) : $nextval;
+					$htmltooltip .= '<br>';
+				}
+				print '<td class="center">';
+				print $form->textwithpicto('', $htmltooltip, 1, 0);
+				print '</td>';
+				print "</tr>\n";
+			}
+			closedir($handle);
+		}
+		print "</table><br>\n";
+
+		// --- Section : modèles de documents PDF ---
+		print load_fiche_titre($langs->trans("WorkshopORDocumentModels"), '', '');
+
+		$def = array();
+		$sqldef  = "SELECT nom FROM ".$db->prefix()."document_model";
+		$sqldef .= " WHERE type = 'workshopor' AND entity = ".$conf->entity;
+		$resdef = $db->query($sqldef);
+		if ($resdef) {
+			while ($rowdef = $db->fetch_array($resdef)) {
+				$def[] = $rowdef[0];
+			}
+		}
+
+		print '<table class="noborder centpercent">';
+		print '<tr class="liste_titre">';
+		print '<td>'.$langs->trans("Name").'</td>';
+		print '<td>'.$langs->trans("Description").'</td>';
+		print '<td class="center" width="60">'.$langs->trans("Status").'</td>';
+		print '<td class="center" width="60">'.$langs->trans("Default").'</td>';
+		print '<td class="center" width="32">'.$langs->trans("ShortInfo").'</td>';
+		print '<td class="center" width="32">'.$langs->trans("Preview").'</td>';
+		print "</tr>\n";
+
+		clearstatcache();
+		foreach ($dirmodels as $reldir) {
+			foreach (array('', '/doc') as $valdir) {
+				$dir = dol_buildpath($reldir."core/modules/workshopor".$valdir);
+				if (!is_dir($dir)) {
+					continue;
+				}
+				$handle = opendir($dir);
+				if (!is_resource($handle)) {
+					continue;
+				}
+				$filelist = array();
+				while (($file = readdir($handle)) !== false) {
+					$filelist[] = $file;
+				}
+				closedir($handle);
+				arsort($filelist);
+				foreach ($filelist as $file) {
+					if (!preg_match('/\.modules\.php$/i', $file) || !preg_match('/^(pdf_|doc_)/', $file)) {
+						continue;
+					}
+					if (!file_exists($dir.'/'.$file)) {
+						continue;
+					}
+					$name      = substr($file, 4, dol_strlen($file) - 16);
+					$classname = substr($file, 0, dol_strlen($file) - 12);
+					require_once $dir.'/'.$file;
+					$module = new $classname($db);
+					if ($module->version == 'development'  && getDolGlobalInt('MAIN_FEATURES_LEVEL') < 2) {
+						continue;
+					}
+					if ($module->version == 'experimental' && getDolGlobalInt('MAIN_FEATURES_LEVEL') < 1) {
+						continue;
+					}
+					print '<tr class="oddeven"><td width="100">';
+					print (empty($module->name) ? $name : $module->name);
+					print "</td><td>\n";
+					print method_exists($module, 'info') ? $module->info($langs) : $module->description;
+					print '</td>';
+					// Active
+					if (in_array($name, $def)) {
+						print '<td class="center"><a href="'.$_SERVER["PHP_SELF"].'?action=del&subtab=general&value='.urlencode($name).'&token='.newToken().'">';
+						print img_picto($langs->trans("Enabled"), 'switch_on');
+						print '</a></td>';
+					} else {
+						print '<td class="center"><a href="'.$_SERVER["PHP_SELF"].'?action=set&subtab=general&value='.urlencode($name).'&scan_dir='.urlencode($module->scandir).'&label='.urlencode($module->name).'&token='.newToken().'">';
+						print img_picto($langs->trans("Disabled"), 'switch_off');
+						print '</a></td>';
+					}
+					// Default
+					print '<td class="center">';
+					if (getDolGlobalString('WORKSHOP_OR_ADDON_PDF') == $name) {
+						print img_picto($langs->trans("Default"), 'on');
+					} else {
+						print '<a href="'.$_SERVER["PHP_SELF"].'?action=setdoc&subtab=general&value='.urlencode($name).'&scan_dir='.urlencode($module->scandir).'&label='.urlencode($module->name).'&token='.newToken().'">';
+						print img_picto($langs->trans("SetAsDefault"), 'off');
+						print '</a>';
+					}
+					print '</td>';
+					// Info tooltip
+					$htmltooltip  = $langs->trans("Name").': '.$module->name;
+					$htmltooltip .= '<br>'.$langs->trans("Type").': '.($module->type ?: $langs->trans("Unknown"));
+					if ($module->type == 'pdf') {
+						$htmltooltip .= '<br>'.$langs->trans("Width").'/'.$langs->trans("Height").': '.$module->page_largeur.'/'.$module->page_hauteur;
+					}
+					$htmltooltip .= '<br><br><u>'.$langs->trans("FeaturesSupported").':</u>';
+					$htmltooltip .= '<br>'.$langs->trans("Logo").': '.yn($module->option_logo, 1, 1);
+					$htmltooltip .= '<br>'.$langs->trans("MultiLanguage").': '.yn($module->option_multilang, 1, 1);
+					$htmltooltip .= '<br>'.$langs->trans("WatermarkOnDraftInvoices").': '.yn($module->option_draft_watermark, 1, 1);
+					print '<td class="center">'.$form->textwithpicto('', $htmltooltip, 1, 0).'</td>';
+					// Preview
+					print '<td class="center">';
+					if ($module->type == 'pdf') {
+						print '<a href="'.$_SERVER["PHP_SELF"].'?action=specimen&subtab=general&module='.urlencode($name).'">'.img_object($langs->trans("Preview"), 'bill').'</a>';
+					} else {
+						print img_object($langs->trans("PreviewNotAvailable"), 'generic');
+					}
+					print '</td>';
+					print "</tr>\n";
+				}
+			}
+		}
+		print '</table><br>';
 	}
 
 	print dol_get_fiche_end();
