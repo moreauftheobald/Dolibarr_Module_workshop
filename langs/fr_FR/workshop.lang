@@ -78,6 +78,7 @@ WorkshopORSubTabStatuts=Statuts
 WorkshopORSubTabCommandes=Commandes
 WorkshopORSubTabFacturation=Facturation
 WorkshopORSubTabComptabilite=Comptabilité
+WorkshopORSubTabExtrafields=Attributs supplémentaires
 WorkshopORPlanningGroups=Groupes utilisateurs à prendre en compte dans le planning Atelier
 WorkshopORPlanningGroupsHelp=Sélectionnez les groupes d'utilisateurs dont les membres seront affichés dans le planning de l'atelier.
 WorkshopNoGroupDefined=Aucun groupe défini

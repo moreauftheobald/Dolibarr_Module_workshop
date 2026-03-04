@@ -105,6 +105,7 @@ WorkshopORSubTabStatuts=Statuses
 WorkshopORSubTabCommandes=Orders
 WorkshopORSubTabFacturation=Billing
 WorkshopORSubTabComptabilite=Accounting
+WorkshopORSubTabExtrafields=Extra attributes
 WorkshopORPlanningGroups=User groups for workshop planning
 WorkshopORPlanningGroupsHelp=Select the user groups whose members will be displayed in the workshop planning.
 WorkshopNoGroupDefined=No group defined
