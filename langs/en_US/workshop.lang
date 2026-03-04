@@ -326,3 +326,27 @@ WorkshopUpdateVehiculeInfo=Update vehicle info
 WorkshopUpdateVehiculeInfoHelp=Updates vehicle mileage and other info when switching to this status.
 WorkshopRequireConf=Breakdown required
 WorkshopRequireConfHelp=Switching to this status requires the cost breakdown (conf) to be completed on the OR.
+
+#
+# Planning setup screen
+#
+WorkshopAdminTabPlanning=Planning
+WorkshopPlanningSetup=Workshop Planning
+WorkshopPlanningSetupDesc=Enter weekly working schedules for the workshop, user groups and technicians.
+WorkshopPlanningTabAtelier=Workshop Planning
+WorkshopPlanningTabGroup=Group
+WorkshopPlanningPeriod=Period
+WorkshopPlanningMorningStart=Morning start
+WorkshopPlanningMorningEnd=Morning end
+WorkshopPlanningAfternoonStart=Afternoon start
+WorkshopPlanningAfternoonEnd=Afternoon end
+WorkshopPlanningActivate=Activate this planning
+WorkshopPlanningDeactivate=Deactivate this planning
+WorkshopPlanningInactive=This planning is currently inactive.
+Monday=Monday
+Tuesday=Tuesday
+Wednesday=Wednesday
+Thursday=Thursday
+Friday=Friday
+Saturday=Saturday
+Sunday=Sunday
