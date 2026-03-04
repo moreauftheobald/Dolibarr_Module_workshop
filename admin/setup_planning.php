@@ -47,9 +47,7 @@ if (!$res) {
 	die("Include of main fails");
 }
 
-require_once DOL_DOCUMENT_ROOT . '/core/lib/usergroups.lib.php';
 require_once DOL_DOCUMENT_ROOT . '/user/class/usergroup.class.php';
-require_once DOL_DOCUMENT_ROOT . '/user/class/user.class.php';
 require_once '../lib/workshop.lib.php';
 dol_include_once('/workshop/class/workshopplanning.class.php');
 
@@ -83,16 +81,9 @@ if ($fk_group > 0 && $fk_user > 0) {
 	$objectid    = 0;
 }
 
-// Load the groups configured in WORKSHOP_OR_PLANNING_GROUPS (stored as JSON array of IDs)
+// Load the groups configured in WORKSHOP_OR_PLANNING_GROUPS (stored as comma-separated string "1,2,3")
 $planning_groups    = array();
-$planning_group_ids = array();
-$conf_groups        = getDolGlobalString('WORKSHOP_OR_PLANNING_GROUPS');
-if ($conf_groups) {
-	$decoded = json_decode($conf_groups, true);
-	if (is_array($decoded)) {
-		$planning_group_ids = $decoded;
-	}
-}
+$planning_group_ids = array_filter(explode(',', getDolGlobalString('WORKSHOP_OR_PLANNING_GROUPS')));
 foreach ($planning_group_ids as $gid) {
 	$grp = new Usergroup($db);
 	if ($grp->fetch((int) $gid) > 0) {
@@ -100,18 +91,20 @@ foreach ($planning_group_ids as $gid) {
 	}
 }
 
-// Load users for the active group (only for group/user context)
+// Load users for the active group via direct SQL (current entity only, active users)
 $group_users = array();
-if ($fk_group > 0 && isset($planning_groups[$fk_group])) {
-	$activeGroup = $planning_groups[$fk_group];
-	// getListUsersForGroup returns array of User objects
-	$list = $activeGroup->listUsersForGroup('', 1);
-	if (is_array($list)) {
-		foreach ($list as $usr) {
-			// Filter users belonging to current entity
-			if ($usr->entity == $conf->entity || $usr->entity == 0) {
-				$group_users[$usr->id] = $usr;
-			}
+if ($fk_group > 0) {
+	$sqlUsers  = 'SELECT u.rowid, u.firstname, u.lastname, u.login';
+	$sqlUsers .= ' FROM ' . MAIN_DB_PREFIX . 'user u';
+	$sqlUsers .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'usergroup_user ugu ON ugu.fk_user = u.rowid';
+	$sqlUsers .= ' WHERE ugu.fk_usergroup = ' . ((int) $fk_group);
+	$sqlUsers .= ' AND ugu.entity IN (0, ' . ((int) $conf->entity) . ')';
+	$sqlUsers .= ' AND u.statut = 1';
+	$sqlUsers .= ' ORDER BY u.lastname ASC, u.firstname ASC';
+	$resUsers = $db->query($sqlUsers);
+	if ($resUsers) {
+		while ($objU = $db->fetch_object($resUsers)) {
+			$group_users[(int) $objU->rowid] = $objU;
 		}
 	}
 }
@@ -215,18 +208,12 @@ print dol_get_fiche_head($head1, $activeTab1, '', -1, 'fa-calendar-alt');
 
 // -----------------------------------------------------------------------
 // ROW 2 of tabs: only visible when a group is selected
-// "Groupe" sub-tab + one sub-tab per user in the group
+// One sub-tab per user in the group
 // -----------------------------------------------------------------------
 
-if ($fk_group > 0) {
+if ($fk_group > 0 && !empty($group_users)) {
 	$head2 = array();
 	$h2    = 0;
-
-	// Sub-tab "Groupe" (group-level planning)
-	$head2[$h2][0] = $baseUrl . '?fk_group=' . $fk_group;
-	$head2[$h2][1] = $langs->trans('WorkshopPlanningTabGroup');
-	$head2[$h2][2] = 'group';
-	$h2++;
 
 	// Sub-tabs: one per user in the group (belonging to current entity)
 	foreach ($group_users as $uid => $usr) {
@@ -236,7 +223,7 @@ if ($fk_group > 0) {
 		$h2++;
 	}
 
-	$activeTab2 = ($fk_user > 0 ? 'user_' . $fk_user : 'group');
+	$activeTab2 = ($fk_user > 0 ? 'user_' . $fk_user : '');
 
 	print dol_get_fiche_head($head2, $activeTab2, '', -1, 'user');
 }
@@ -313,7 +300,7 @@ if ($canWrite) {
 print '</form>';
 
 // Close row-2 tabs if open
-if ($fk_group > 0) {
+if ($fk_group > 0 && !empty($group_users)) {
 	print dol_get_fiche_end();
 }
 
