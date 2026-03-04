@@ -368,37 +368,7 @@ print '</form>';
 
 // --- Section 2: sous-onglets (uniquement si WORKSHOP_USE_OR est actif) ---
 if (getDolGlobalInt('WORKSHOP_USE_OR')) {
-	// Build sub-tabs
-	$subhead = array();
-	$sh = 0;
-	$subhead[$sh][0] = $_SERVER["PHP_SELF"].'?subtab=general';
-	$subhead[$sh][1] = $langs->trans('WorkshopORSubTabGeneral');
-	$subhead[$sh][2] = 'general';
-	$sh++;
-	$subhead[$sh][0] = $_SERVER["PHP_SELF"].'?subtab=planning';
-	$subhead[$sh][1] = $langs->trans('WorkshopORSubTabPlanning');
-	$subhead[$sh][2] = 'planning';
-	$sh++;
-	$subhead[$sh][0] = $_SERVER["PHP_SELF"].'?subtab=statuts';
-	$subhead[$sh][1] = $langs->trans('WorkshopORSubTabStatuts');
-	$subhead[$sh][2] = 'statuts';
-	$sh++;
-	$subhead[$sh][0] = $_SERVER["PHP_SELF"].'?subtab=commandes';
-	$subhead[$sh][1] = $langs->trans('WorkshopORSubTabCommandes');
-	$subhead[$sh][2] = 'commandes';
-	$sh++;
-	$subhead[$sh][0] = $_SERVER["PHP_SELF"].'?subtab=facturation';
-	$subhead[$sh][1] = $langs->trans('WorkshopORSubTabFacturation');
-	$subhead[$sh][2] = 'facturation';
-	$sh++;
-	$subhead[$sh][0] = $_SERVER["PHP_SELF"].'?subtab=comptabilite';
-	$subhead[$sh][1] = $langs->trans('WorkshopORSubTabComptabilite');
-	$subhead[$sh][2] = 'comptabilite';
-	$sh++;
-	$subhead[$sh][0] = dol_buildpath('/workshop/admin/operationorder_extrafields.php', 1);
-	$subhead[$sh][1] = $langs->trans('WorkshopORSubTabExtrafields');
-	$subhead[$sh][2] = 'extrafields';
-	$sh++;
+	$subhead = workshopORAdminPrepareHead();
 
 	print dol_get_fiche_head($subhead, $subtab, '', -1, '');
 

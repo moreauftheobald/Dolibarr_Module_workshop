@@ -94,8 +94,13 @@ $head = workshopAdminPrepareHead();
 
 print dol_get_fiche_head($head, 'ordres_reparation', $langs->trans($page_name), -1, 'workshop@workshop');
 
+$subhead = workshopORAdminPrepareHead();
+
+print dol_get_fiche_head($subhead, 'extrafields', '', -1, '');
+
 require DOL_DOCUMENT_ROOT.'/core/tpl/admin_extrafields_view.tpl.php';
 
+print dol_get_fiche_end();
 print dol_get_fiche_end();
 
 
