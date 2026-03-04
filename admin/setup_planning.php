@@ -208,18 +208,12 @@ print dol_get_fiche_head($head1, $activeTab1, '', -1, 'fa-calendar-alt');
 
 // -----------------------------------------------------------------------
 // ROW 2 of tabs: only visible when a group is selected
-// "Groupe" sub-tab + one sub-tab per user in the group
+// One sub-tab per user in the group
 // -----------------------------------------------------------------------
 
-if ($fk_group > 0) {
+if ($fk_group > 0 && !empty($group_users)) {
 	$head2 = array();
 	$h2    = 0;
-
-	// Sub-tab "Groupe" (group-level planning)
-	$head2[$h2][0] = $baseUrl . '?fk_group=' . $fk_group;
-	$head2[$h2][1] = $langs->trans('WorkshopPlanningTabGroup');
-	$head2[$h2][2] = 'group';
-	$h2++;
 
 	// Sub-tabs: one per user in the group (belonging to current entity)
 	foreach ($group_users as $uid => $usr) {
@@ -229,7 +223,7 @@ if ($fk_group > 0) {
 		$h2++;
 	}
 
-	$activeTab2 = ($fk_user > 0 ? 'user_' . $fk_user : 'group');
+	$activeTab2 = ($fk_user > 0 ? 'user_' . $fk_user : '');
 
 	print dol_get_fiche_head($head2, $activeTab2, '', -1, 'user');
 }
@@ -306,7 +300,7 @@ if ($canWrite) {
 print '</form>';
 
 // Close row-2 tabs if open
-if ($fk_group > 0) {
+if ($fk_group > 0 && !empty($group_users)) {
 	print dol_get_fiche_end();
 }
 
