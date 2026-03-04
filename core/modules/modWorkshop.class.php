@@ -526,6 +526,22 @@ class modWorkshop extends DolibarrModules
 			'user'=>2,
 		);
 
+		$this->menu[$r++]=array(
+			'fk_menu'=>'fk_mainmenu=workshop,fk_leftmenu=workshop_param',
+			'type'=>'left',
+			'titre'=>'WorkshopPlanningSetup',
+			'prefix' => img_picto('', 'fa-calendar-alt', 'class="pictofixedwidth valignmiddle paddingright"'),
+			'mainmenu'=>'workshop',
+			'leftmenu'=>'workshop_param_planning',
+			'url'=>'/workshop/admin/setup_planning.php',
+			'langs'=>'workshop@workshop',
+			'position'=>1000+$r,
+			'enabled'=>'isModEnabled("workshop") && getDolGlobalInt("WORKSHOP_USE_OR")',
+			'perms'=>'$user->hasRight("workshop", "workshopplanning", "read")',
+			'target'=>'',
+			'user'=>2,
+		);
+
 		/*
 		 * Vehicules Menu Section
 		 */

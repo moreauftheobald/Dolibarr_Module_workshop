@@ -429,3 +429,27 @@ WorkshopUpdateVehiculeInfo=Mettre à jour les infos véhicule
 WorkshopUpdateVehiculeInfoHelp=Met à jour le kilométrage et autres informations du véhicule lors du passage à ce statut.
 WorkshopRequireConf=Ventilation requise
 WorkshopRequireConfHelp=Le passage à ce statut requiert que la ventilation (conf) soit complétée sur l'OR.
+
+#
+# Planning setup screen
+#
+WorkshopAdminTabPlanning=Planning
+WorkshopPlanningSetup=Planning Atelier
+WorkshopPlanningSetupDesc=Saisie des horaires de travail hebdomadaires pour l'atelier, les groupes et les techniciens.
+WorkshopPlanningTabAtelier=Planning Atelier
+WorkshopPlanningTabGroup=Groupe
+WorkshopPlanningPeriod=Période
+WorkshopPlanningMorningStart=Début matin
+WorkshopPlanningMorningEnd=Fin matin
+WorkshopPlanningAfternoonStart=Début après-midi
+WorkshopPlanningAfternoonEnd=Fin après-midi
+WorkshopPlanningActivate=Activer ce planning
+WorkshopPlanningDeactivate=Désactiver ce planning
+WorkshopPlanningInactive=Ce planning est actuellement inactif.
+Monday=Lundi
+Tuesday=Mardi
+Wednesday=Mercredi
+Thursday=Jeudi
+Friday=Vendredi
+Saturday=Samedi
+Sunday=Dimanche
