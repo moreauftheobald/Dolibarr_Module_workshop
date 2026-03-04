@@ -55,6 +55,11 @@ function workshopAdminPrepareHead()
 	$head[$h][2] = 'partage_entites';
 	$h++;
 
+	$head[$h][0] = dol_buildpath("/workshop/admin/setup_planning.php", 1);
+	$head[$h][1] = $langs->trans("WorkshopAdminTabPlanning");
+	$head[$h][2] = 'planning';
+	$h++;
+
 	$head[$h][0] = dol_buildpath("/workshop/admin/about.php", 1);
 	$head[$h][1] = $langs->trans("About");
 	$head[$h][2] = 'about';
