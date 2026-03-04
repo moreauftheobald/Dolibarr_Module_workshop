@@ -16,7 +16,7 @@
  */
 
 /**
- * \file    workshop/admin/setup_planning.php
+ * \file    workshop/operationorder/operationorder_planning.php
  * \ingroup workshop
  * \brief   Workshop planning setup - weekly schedule per workshop, group and user.
  */
@@ -66,20 +66,7 @@ $action   = GETPOST('action', 'aZ09');
 $fk_group = GETPOST('fk_group', 'int');
 $fk_user  = GETPOST('fk_user', 'int');
 
-// Determine context: 'atelier' | 'group' | 'user'
-if ($fk_group > 0 && $fk_user > 0) {
-	$context     = 'user';
-	$objecttype  = 'user';
-	$objectid    = $fk_user;
-} elseif ($fk_group > 0) {
-	$context     = 'group';
-	$objecttype  = 'usergroup';
-	$objectid    = $fk_group;
-} else {
-	$context     = 'atelier';
-	$objecttype  = 'workshop';
-	$objectid    = 0;
-}
+$baseUrl = dol_buildpath('/workshop/operationorder/operationorder_planning.php', 1);
 
 // Load the groups configured in WORKSHOP_OR_PLANNING_GROUPS (stored as comma-separated string "1,2,3")
 $planning_groups    = array();
@@ -107,6 +94,29 @@ if ($fk_group > 0) {
 			$group_users[(int) $objU->rowid] = $objU;
 		}
 	}
+
+	// Auto-select first user when none is specified
+	if ($fk_user == 0 && !empty($group_users)) {
+		reset($group_users);
+		$firstUid = key($group_users);
+		header('Location: ' . $baseUrl . '?fk_group=' . ((int) $fk_group) . '&fk_user=' . $firstUid);
+		exit;
+	}
+}
+
+// Determine context: 'atelier' | 'group' | 'user'
+if ($fk_group > 0 && $fk_user > 0) {
+	$context     = 'user';
+	$objecttype  = 'user';
+	$objectid    = $fk_user;
+} elseif ($fk_group > 0) {
+	$context     = 'group';
+	$objecttype  = 'usergroup';
+	$objectid    = $fk_group;
+} else {
+	$context     = 'atelier';
+	$objecttype  = 'workshop';
+	$objectid    = 0;
 }
 
 // Days and slots definition
@@ -154,16 +164,16 @@ if ($action == 'save' && $canWrite) {
 		setEventMessages($langs->trans('Error') . ': ' . $planning->error, null, 'errors');
 	}
 	// Redirect to avoid form resubmission
-	$redirect = $_SERVER['PHP_SELF'] . '?fk_group=' . ((int) $fk_group) . '&fk_user=' . ((int) $fk_user);
+	$redirect = $baseUrl . '?fk_group=' . ((int) $fk_group) . '&fk_user=' . ((int) $fk_user);
 	header('Location: ' . $redirect);
 	exit;
 } elseif ($action == 'activate' && $canWrite) {
 	$planning->setActive($user, 1);
-	header('Location: ' . $_SERVER['PHP_SELF'] . '?fk_group=' . ((int) $fk_group) . '&fk_user=' . ((int) $fk_user));
+	header('Location: ' . $baseUrl . '?fk_group=' . ((int) $fk_group) . '&fk_user=' . ((int) $fk_user));
 	exit;
 } elseif ($action == 'disable' && $canWrite) {
 	$planning->setActive($user, 0);
-	header('Location: ' . $_SERVER['PHP_SELF'] . '?fk_group=' . ((int) $fk_group) . '&fk_user=' . ((int) $fk_user));
+	header('Location: ' . $baseUrl . '?fk_group=' . ((int) $fk_group) . '&fk_user=' . ((int) $fk_user));
 	exit;
 }
 
@@ -183,9 +193,8 @@ print load_fiche_titre($title, $linkback, 'fa-calendar-alt');
 // ROW 1 of tabs: "Planning Atelier" + one tab per group
 // -----------------------------------------------------------------------
 
-$head1    = array();
-$h        = 0;
-$baseUrl  = dol_buildpath('/workshop/admin/setup_planning.php', 1);
+$head1 = array();
+$h     = 0;
 
 // Tab "Planning Atelier" (global)
 $head1[$h][0] = $baseUrl;
@@ -215,7 +224,6 @@ if ($fk_group > 0 && !empty($group_users)) {
 	$head2 = array();
 	$h2    = 0;
 
-	// Sub-tabs: one per user in the group (belonging to current entity)
 	foreach ($group_users as $uid => $usr) {
 		$head2[$h2][0] = $baseUrl . '?fk_group=' . $fk_group . '&fk_user=' . $uid;
 		$head2[$h2][1] = dolGetFirstLastname($usr->firstname, $usr->lastname);
@@ -236,47 +244,46 @@ if ($fk_group > 0 && !empty($group_users)) {
 if ($context !== 'atelier' && $canWrite) {
 	print '<div class="tabsAction">';
 	if ($planning->active) {
-		print '<a class="butActionDelete" href="' . $_SERVER['PHP_SELF'] . '?fk_group=' . ((int) $fk_group) . '&fk_user=' . ((int) $fk_user) . '&action=disable&token=' . newToken() . '">';
+		print '<a class="butActionDelete" href="' . $baseUrl . '?fk_group=' . ((int) $fk_group) . '&fk_user=' . ((int) $fk_user) . '&action=disable&token=' . newToken() . '">';
 		print $langs->trans('WorkshopPlanningDeactivate') . '</a>';
 	} else {
 		print '<div class="info">' . $langs->trans('WorkshopPlanningInactive') . '</div>';
-		print '<a class="butAction" href="' . $_SERVER['PHP_SELF'] . '?fk_group=' . ((int) $fk_group) . '&fk_user=' . ((int) $fk_user) . '&action=activate&token=' . newToken() . '">';
+		print '<a class="butAction" href="' . $baseUrl . '?fk_group=' . ((int) $fk_group) . '&fk_user=' . ((int) $fk_user) . '&action=activate&token=' . newToken() . '">';
 		print $langs->trans('WorkshopPlanningActivate') . '</a>';
 	}
 	print '</div>';
 }
 
-print '<form action="' . $_SERVER['PHP_SELF'] . '" method="POST">';
+print '<form action="' . $baseUrl . '" method="POST">';
 print '<input type="hidden" name="token" value="' . newToken() . '">';
 print '<input type="hidden" name="action" value="save">';
 print '<input type="hidden" name="fk_group" value="' . ((int) $fk_group) . '">';
 print '<input type="hidden" name="fk_user" value="' . ((int) $fk_user) . '">';
 
-// Planning title based on context
-print '<div class="div-table-responsive">';
-print '<table class="noborder centpercent">';
-
-// Header row: label column + one column per day
-print '<tr class="liste_titre">';
-print '<th class="minwidth100">' . $langs->trans('WorkshopPlanningPeriod') . '</th>';
-foreach ($days as $dayKey => $dayLabel) {
-	print '<th class="center">' . $langs->trans($dayLabel) . '</th>';
-}
-print '</tr>';
-
-// Rows: Matin debut, Matin fin, AM debut, AM fin
-$rowDefs = array(
+// Slot column headers
+$slotLabels = array(
 	'heuredam' => 'WorkshopPlanningMorningStart',
 	'heurefam' => 'WorkshopPlanningMorningEnd',
 	'heuredpm' => 'WorkshopPlanningAfternoonStart',
 	'heurefpm' => 'WorkshopPlanningAfternoonEnd',
 );
 
-$rowClass = 0;
-foreach ($rowDefs as $slot => $labelKey) {
-	print '<tr class="' . ($rowClass % 2 == 0 ? 'oddeven' : 'oddeven') . '">';
-	print '<td class="titlefieldcreate">' . $langs->trans($labelKey) . '</td>';
-	foreach ($days as $dayKey => $dayLabel) {
+print '<div class="div-table-responsive">';
+print '<table class="noborder centpercent">';
+
+// Header row: Day column + one column per slot
+print '<tr class="liste_titre">';
+print '<th class="minwidth100">' . $langs->trans('WorkshopPlanningDay') . '</th>';
+foreach ($slotLabels as $slot => $labelKey) {
+	print '<th class="center">' . $langs->trans($labelKey) . '</th>';
+}
+print '</tr>';
+
+// One row per day
+foreach ($days as $dayKey => $dayLabel) {
+	print '<tr class="oddeven">';
+	print '<td class="titlefieldcreate">' . $langs->trans($dayLabel) . '</td>';
+	foreach ($slotLabels as $slot => $labelKey) {
 		$field    = $dayKey . '_' . $slot;
 		$val      = $planning->$field;
 		$readOnly = $canWrite ? '' : ' readonly';
@@ -285,7 +292,6 @@ foreach ($rowDefs as $slot => $labelKey) {
 		print '</td>';
 	}
 	print '</tr>';
-	$rowClass++;
 }
 
 print '</table>';
