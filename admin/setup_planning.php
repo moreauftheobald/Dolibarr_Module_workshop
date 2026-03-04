@@ -47,9 +47,7 @@ if (!$res) {
 	die("Include of main fails");
 }
 
-require_once DOL_DOCUMENT_ROOT . '/core/lib/usergroups.lib.php';
 require_once DOL_DOCUMENT_ROOT . '/user/class/usergroup.class.php';
-require_once DOL_DOCUMENT_ROOT . '/user/class/user.class.php';
 require_once '../lib/workshop.lib.php';
 dol_include_once('/workshop/class/workshopplanning.class.php');
 
@@ -93,18 +91,20 @@ foreach ($planning_group_ids as $gid) {
 	}
 }
 
-// Load users for the active group (only for group/user context)
+// Load users for the active group via direct SQL (current entity only, active users)
 $group_users = array();
-if ($fk_group > 0 && isset($planning_groups[$fk_group])) {
-	$activeGroup = $planning_groups[$fk_group];
-	// getListUsersForGroup returns array of User objects
-	$list = $activeGroup->listUsersForGroup('', 1);
-	if (is_array($list)) {
-		foreach ($list as $usr) {
-			// Filter users belonging to current entity
-			if ($usr->entity == $conf->entity || $usr->entity == 0) {
-				$group_users[$usr->id] = $usr;
-			}
+if ($fk_group > 0) {
+	$sqlUsers  = 'SELECT u.rowid, u.firstname, u.lastname, u.login';
+	$sqlUsers .= ' FROM ' . MAIN_DB_PREFIX . 'user u';
+	$sqlUsers .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'usergroup_user ugu ON ugu.fk_user = u.rowid';
+	$sqlUsers .= ' WHERE ugu.fk_usergroup = ' . ((int) $fk_group);
+	$sqlUsers .= ' AND ugu.entity IN (0, ' . ((int) $conf->entity) . ')';
+	$sqlUsers .= ' AND u.statut = 1';
+	$sqlUsers .= ' ORDER BY u.lastname ASC, u.firstname ASC';
+	$resUsers = $db->query($sqlUsers);
+	if ($resUsers) {
+		while ($objU = $db->fetch_object($resUsers)) {
+			$group_users[(int) $objU->rowid] = $objU;
 		}
 	}
 }
