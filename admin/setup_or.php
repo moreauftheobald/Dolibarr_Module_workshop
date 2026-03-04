@@ -94,7 +94,7 @@ if (getDolGlobalInt('WORKSHOP_USE_OR')) {
 	} elseif ($action == 'specimen') {
 		$modele = GETPOST('module', 'alpha');
 		$workshopor = new Operationorder($db);
-		$workshopor->initAsSpecimen();
+		$workshopor->initAsSpecimenCommon();
 		$file = ''; $classname = ''; $filefound = 0;
 		$dirmodels = array_merge(array('/'), (array) $conf->modules_parts['models']);
 		foreach ($dirmodels as $reldir) {
@@ -338,7 +338,7 @@ if (getDolGlobalInt('WORKSHOP_USE_OR')) {
 				print '</td>';
 				// Info tooltip
 				$workshopor = new Operationorder($db);
-				$workshopor->initAsSpecimen();
+				$workshopor->initAsSpecimenCommon();
 				$htmltooltip  = $langs->trans("Version").': <b>'.$module->getVersion().'</b><br>';
 				$nextval = $module->getNextValue($workshopor);
 				if ("$nextval" != $langs->trans("NotAvailable")) {
