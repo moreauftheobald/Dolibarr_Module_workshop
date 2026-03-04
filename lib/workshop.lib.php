@@ -68,6 +68,59 @@ function workshopAdminPrepareHead()
 
 
 /**
+ * Prepare sub-tabs header for the OR admin page (setup_or.php and related pages)
+ *
+ * @return array
+ */
+function workshopORAdminPrepareHead(): array
+{
+	global $langs;
+
+	$langs->load("workshop@workshop");
+
+	$h = 0;
+	$head = array();
+
+	$head[$h][0] = dol_buildpath("/workshop/admin/setup_or.php", 1).'?subtab=general';
+	$head[$h][1] = $langs->trans('WorkshopORSubTabGeneral');
+	$head[$h][2] = 'general';
+	$h++;
+
+	$head[$h][0] = dol_buildpath("/workshop/admin/setup_or.php", 1).'?subtab=planning';
+	$head[$h][1] = $langs->trans('WorkshopORSubTabPlanning');
+	$head[$h][2] = 'planning';
+	$h++;
+
+	$head[$h][0] = dol_buildpath("/workshop/admin/setup_or.php", 1).'?subtab=statuts';
+	$head[$h][1] = $langs->trans('WorkshopORSubTabStatuts');
+	$head[$h][2] = 'statuts';
+	$h++;
+
+	$head[$h][0] = dol_buildpath("/workshop/admin/setup_or.php", 1).'?subtab=commandes';
+	$head[$h][1] = $langs->trans('WorkshopORSubTabCommandes');
+	$head[$h][2] = 'commandes';
+	$h++;
+
+	$head[$h][0] = dol_buildpath("/workshop/admin/setup_or.php", 1).'?subtab=facturation';
+	$head[$h][1] = $langs->trans('WorkshopORSubTabFacturation');
+	$head[$h][2] = 'facturation';
+	$h++;
+
+	$head[$h][0] = dol_buildpath("/workshop/admin/setup_or.php", 1).'?subtab=comptabilite';
+	$head[$h][1] = $langs->trans('WorkshopORSubTabComptabilite');
+	$head[$h][2] = 'comptabilite';
+	$h++;
+
+	$head[$h][0] = dol_buildpath("/workshop/admin/operationorder_extrafields.php", 1);
+	$head[$h][1] = $langs->trans('WorkshopORSubTabExtrafields');
+	$head[$h][2] = 'extrafields';
+	$h++;
+
+	return $head;
+}
+
+
+/**
  * Prepare array of tabs for Vehicule Setup screen
  * @return    array                    Array of tabs
  */

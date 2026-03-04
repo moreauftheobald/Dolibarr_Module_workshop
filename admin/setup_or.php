@@ -51,7 +51,6 @@ global $langs, $user;
 
 require_once DOL_DOCUMENT_ROOT."/core/lib/admin.lib.php";
 require_once DOL_DOCUMENT_ROOT."/core/lib/pdf.lib.php";
-require_once DOL_DOCUMENT_ROOT."/core/class/extrafields.class.php";
 require_once '../lib/workshop.lib.php';
 dol_include_once('/workshop/class/operationorder.class.php');
 
@@ -151,88 +150,6 @@ if ($action == 'update_use_or' && !empty($user->admin)) {
 		setEventMessages($langs->trans("SetupSaved"), null, 'mesgs');
 	} else {
 		setEventMessages($langs->trans("Error"), null, 'errors');
-	}
-}
-
-// Extrafields management actions for OR
-if ($subtab == 'extrafields' && !empty($user->admin)) {
-	$elementtype = 'workshop_operationorder';
-	$extrafields = new ExtraFields($db);
-	$attrname = GETPOST('attrname', 'aZ09');
-
-	if ($action == 'add_extrafield') {
-		$result = $extrafields->addExtraField(
-			$attrname,
-			GETPOST('label'),
-			GETPOST('type', 'alpha'),
-			GETPOSTINT('pos'),
-			GETPOST('size'),
-			$elementtype,
-			GETPOSTINT('fieldunique'),
-			GETPOSTINT('fieldrequired'),
-			GETPOST('default_value'),
-			GETPOST('param'),
-			GETPOSTINT('alwayseditable'),
-			GETPOST('perms', 'alpha'),
-			GETPOST('list', 'alpha'),
-			GETPOST('help'),
-			GETPOST('default_value'),
-			GETPOST('computed'),
-			GETPOST('entity_in_restriction'),
-			GETPOST('enabled'),
-			GETPOST('langfile'),
-			GETPOST('css'),
-			GETPOST('cssview'),
-			GETPOST('csslist')
-		);
-		if ($result > 0) {
-			setEventMessages($langs->trans('FieldCreatedSuccess'), null, 'mesgs');
-		} else {
-			setEventMessages($extrafields->error, $extrafields->errors, 'errors');
-		}
-		header('Location: '.$_SERVER["PHP_SELF"].'?subtab=extrafields');
-		exit();
-	} elseif ($action == 'update_extrafield') {
-		$result = $extrafields->update(
-			$attrname,
-			GETPOST('label'),
-			GETPOST('type', 'alpha'),
-			GETPOSTINT('pos'),
-			GETPOST('size'),
-			$elementtype,
-			GETPOSTINT('fieldunique'),
-			GETPOSTINT('fieldrequired'),
-			GETPOST('default_value'),
-			GETPOST('param'),
-			GETPOSTINT('alwayseditable'),
-			GETPOST('perms', 'alpha'),
-			GETPOST('list', 'alpha'),
-			GETPOST('help'),
-			GETPOST('default_value'),
-			GETPOST('computed'),
-			GETPOST('entity_in_restriction'),
-			GETPOST('enabled'),
-			GETPOST('langfile'),
-			GETPOST('css'),
-			GETPOST('cssview'),
-			GETPOST('csslist')
-		);
-		if ($result > 0) {
-			setEventMessages($langs->trans('RecordSaved'), null, 'mesgs');
-		} else {
-			setEventMessages($extrafields->error, $extrafields->errors, 'errors');
-		}
-		header('Location: '.$_SERVER["PHP_SELF"].'?subtab=extrafields');
-		exit();
-	} elseif ($action == 'delete_extrafield') {
-		$result = $extrafields->delete($attrname, $elementtype);
-		if ($result > 0) {
-			setEventMessages($langs->trans('RecordDeleted'), null, 'mesgs');
-		} else {
-			setEventMessages($extrafields->error, $extrafields->errors, 'errors');
-		}
-		header('Location: '.$_SERVER["PHP_SELF"].'?subtab=extrafields');
-		exit();
 	}
 }
 
@@ -451,37 +368,7 @@ print '</form>';
 
 // --- Section 2: sous-onglets (uniquement si WORKSHOP_USE_OR est actif) ---
 if (getDolGlobalInt('WORKSHOP_USE_OR')) {
-	// Build sub-tabs
-	$subhead = array();
-	$sh = 0;
-	$subhead[$sh][0] = $_SERVER["PHP_SELF"].'?subtab=general';
-	$subhead[$sh][1] = $langs->trans('WorkshopORSubTabGeneral');
-	$subhead[$sh][2] = 'general';
-	$sh++;
-	$subhead[$sh][0] = $_SERVER["PHP_SELF"].'?subtab=planning';
-	$subhead[$sh][1] = $langs->trans('WorkshopORSubTabPlanning');
-	$subhead[$sh][2] = 'planning';
-	$sh++;
-	$subhead[$sh][0] = $_SERVER["PHP_SELF"].'?subtab=statuts';
-	$subhead[$sh][1] = $langs->trans('WorkshopORSubTabStatuts');
-	$subhead[$sh][2] = 'statuts';
-	$sh++;
-	$subhead[$sh][0] = $_SERVER["PHP_SELF"].'?subtab=commandes';
-	$subhead[$sh][1] = $langs->trans('WorkshopORSubTabCommandes');
-	$subhead[$sh][2] = 'commandes';
-	$sh++;
-	$subhead[$sh][0] = $_SERVER["PHP_SELF"].'?subtab=facturation';
-	$subhead[$sh][1] = $langs->trans('WorkshopORSubTabFacturation');
-	$subhead[$sh][2] = 'facturation';
-	$sh++;
-	$subhead[$sh][0] = $_SERVER["PHP_SELF"].'?subtab=comptabilite';
-	$subhead[$sh][1] = $langs->trans('WorkshopORSubTabComptabilite');
-	$subhead[$sh][2] = 'comptabilite';
-	$sh++;
-	$subhead[$sh][0] = $_SERVER["PHP_SELF"].'?subtab=extrafields';
-	$subhead[$sh][1] = $langs->trans('WorkshopORSubTabExtrafields');
-	$subhead[$sh][2] = 'extrafields';
-	$sh++;
+	$subhead = workshopORAdminPrepareHead();
 
 	print dol_get_fiche_head($subhead, $subtab, '', -1, '');
 
@@ -1172,18 +1059,6 @@ if (getDolGlobalInt('WORKSHOP_USE_OR')) {
 		print '</div>';
 
 		print '</form>';
-	}
-
-	if ($subtab == 'extrafields') {
-		$elementtype = 'workshop_operationorder';
-		$extrafields = new ExtraFields($db);
-		$extrafields->fetch_name_optionals_label($elementtype);
-
-		require_once DOL_DOCUMENT_ROOT.'/core/class/html.formextrafields.class.php';
-		$formextra = new FormExtrafields($db);
-		$object = new Operationorder($db);
-
-		include DOL_DOCUMENT_ROOT.'/core/tpl/extrafields_edit.tpl.php';
 	}
 
 	print dol_get_fiche_end();
