@@ -47,6 +47,7 @@ if (!$res) {
 	die("Include of main fails");
 }
 
+require_once DOL_DOCUMENT_ROOT."/core/lib/admin.lib.php";
 require_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
 require_once '../lib/workshop.lib.php';
 
@@ -71,10 +72,23 @@ if (!$user->admin) {
 /*
  * Actions
  */
+if (getDolGlobalInt('WORKSHOP_USE_OR')) {
+	require DOL_DOCUMENT_ROOT . '/core/actions_extrafields.inc.php';
+}
 
-require DOL_DOCUMENT_ROOT.'/core/actions_extrafields.inc.php';
-
-
+if ($action == 'update_use_or' && !empty($user->admin)) {
+	// Save WORKSHOP_USE_OR
+	$useOR = GETPOSTINT('WORKSHOP_USE_OR');
+	$res = dolibarr_set_const($db, 'WORKSHOP_USE_OR', $useOR, 'chaine', 0, '', $conf->entity);
+	if (!($res > 0)) {
+		$error++;
+	}
+	if (!$error) {
+		setEventMessages($langs->trans("SetupSaved"), null, 'mesgs');
+	} else {
+		setEventMessages($langs->trans("Error"), null, 'errors');
+	}
+}
 
 /*
  * View
@@ -92,47 +106,81 @@ print load_fiche_titre($langs->trans($page_name), $linkback, 'title_setup');
 
 $head = workshopAdminPrepareHead();
 
-print dol_get_fiche_head($head, 'ordres_reparation', $langs->trans($page_name), -1, 'workshop@workshop');
+print dol_get_fiche_head($head, 'ordres_reparation', $langs->trans($title), -1, "workshop@workshop");
 
-$subhead = workshopORAdminPrepareHead();
+// --- Section 1: activation des Ordres de réparation (toujours visible) ---
+print '<form method="POST" action="'.$_SERVER["PHP_SELF"].'">';
+print '<input type="hidden" name="token" value="'.newToken().'">';
+print '<input type="hidden" name="action" value="update_use_or">';
+print '<input type="hidden" name="subtab" value="'.dol_escape_htmltag($subtab).'">';
 
-print dol_get_fiche_head($subhead, 'extrafields', '', -1, '');
+print '<table class="noborder centpercent">';
+print '<tr class="liste_titre">';
+print '<td>'.$langs->trans("Parameter").'</td>';
+print '<td>'.$langs->trans("Value").'</td>';
+print '</tr>';
 
-require DOL_DOCUMENT_ROOT.'/core/tpl/admin_extrafields_view.tpl.php';
+print '<tr class="oddeven">';
+print '<td>';
+print $form->textwithpicto(
+	$langs->trans('WORKSHOP_USE_OR'),
+	$langs->trans('WORKSHOP_USE_ORTooltip')
+);
+print '</td>';
+print '<td>';
+$useOR = getDolGlobalInt('WORKSHOP_USE_OR');
+print $form->selectyesno('WORKSHOP_USE_OR', $useOR, 1);
+print '</td>';
+print '</tr>';
 
-print dol_get_fiche_end();
-print dol_get_fiche_end();
+print '</table>';
 
+print '<div class="tabsAction">';
+print '<input type="submit" class="butAction" value="'.$langs->trans("Save").'">';
+print '</div>';
+
+print '</form>';
+if (getDolGlobalInt('WORKSHOP_USE_OR')) {
+	$subhead = workshopORAdminPrepareHead();
+
+	print dol_get_fiche_head($subhead, 'extrafields', '', -1, '');
+
+	require DOL_DOCUMENT_ROOT . '/core/tpl/admin_extrafields_view.tpl.php';
 
 // Buttons
-if ((float) DOL_VERSION < 17) {	// On v17+, the "New Attribute" button is included into tpl.
-	if ($action != 'create' && $action != 'edit') {
-		print '<div class="tabsAction">';
-		print '<a class="butAction reposition" href="'.$_SERVER["PHP_SELF"].'?action=create">'.$langs->trans("NewAttribute").'</a>';
-		print "</div>";
+	if ((float)DOL_VERSION < 17) {    // On v17+, the "New Attribute" button is included into tpl.
+		if ($action != 'create' && $action != 'edit') {
+			print '<div class="tabsAction">';
+			print '<a class="butAction reposition" href="' . $_SERVER["PHP_SELF"] . '?action=create">' . $langs->trans("NewAttribute") . '</a>';
+			print "</div>";
+		}
 	}
+
+
+	/*
+	 * Creation of an optional field
+	 */
+	if ($action == 'create') {
+		print '<br><div id="newattrib"></div>';
+		print load_fiche_titre($langs->trans('NewAttribute'));
+
+		require DOL_DOCUMENT_ROOT . '/core/tpl/admin_extrafields_add.tpl.php';
+	}
+
+	/*
+	 * Edition of an optional field
+	 */
+	if ($action == 'edit' && !empty($attrname)) {
+		print "<br>";
+		print load_fiche_titre($langs->trans("FieldEdition", $attrname));
+
+		require DOL_DOCUMENT_ROOT . '/core/tpl/admin_extrafields_edit.tpl.php';
+	}
+
+	print dol_get_fiche_end();
 }
+print dol_get_fiche_end();
 
-
-/*
- * Creation of an optional field
- */
-if ($action == 'create') {
-	print '<br><div id="newattrib"></div>';
-	print load_fiche_titre($langs->trans('NewAttribute'));
-
-	require DOL_DOCUMENT_ROOT.'/core/tpl/admin_extrafields_add.tpl.php';
-}
-
-/*
- * Edition of an optional field
- */
-if ($action == 'edit' && !empty($attrname)) {
-	print "<br>";
-	print load_fiche_titre($langs->trans("FieldEdition", $attrname));
-
-	require DOL_DOCUMENT_ROOT.'/core/tpl/admin_extrafields_edit.tpl.php';
-}
 
 // End of page
 llxFooter();
