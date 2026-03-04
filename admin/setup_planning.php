@@ -83,16 +83,9 @@ if ($fk_group > 0 && $fk_user > 0) {
 	$objectid    = 0;
 }
 
-// Load the groups configured in WORKSHOP_OR_PLANNING_GROUPS (stored as JSON array of IDs)
+// Load the groups configured in WORKSHOP_OR_PLANNING_GROUPS (stored as comma-separated string "1,2,3")
 $planning_groups    = array();
-$planning_group_ids = array();
-$conf_groups        = getDolGlobalString('WORKSHOP_OR_PLANNING_GROUPS');
-if ($conf_groups) {
-	$decoded = json_decode($conf_groups, true);
-	if (is_array($decoded)) {
-		$planning_group_ids = $decoded;
-	}
-}
+$planning_group_ids = array_filter(explode(',', getDolGlobalString('WORKSHOP_OR_PLANNING_GROUPS')));
 foreach ($planning_group_ids as $gid) {
 	$grp = new Usergroup($db);
 	if ($grp->fetch((int) $gid) > 0) {
