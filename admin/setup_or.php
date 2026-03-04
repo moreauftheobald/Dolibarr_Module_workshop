@@ -155,85 +155,13 @@ if ($action == 'update_use_or' && !empty($user->admin)) {
 }
 
 // Extrafields management actions for OR
-if ($subtab == 'extrafields' && !empty($user->admin)) {
+if ($subtab == 'extrafields') {
 	$elementtype = 'workshop_operationorder';
+	$attrname = GETPOST('attrname', 'alpha');
 	$extrafields = new ExtraFields($db);
-	$attrname = GETPOST('attrname', 'aZ09');
+	$type2label = ExtraFields::getListOfTypesLabels();
 
-	if ($action == 'add_extrafield') {
-		$result = $extrafields->addExtraField(
-			$attrname,
-			GETPOST('label'),
-			GETPOST('type', 'alpha'),
-			GETPOSTINT('pos'),
-			GETPOST('size'),
-			$elementtype,
-			GETPOSTINT('fieldunique'),
-			GETPOSTINT('fieldrequired'),
-			GETPOST('default_value'),
-			GETPOST('param'),
-			GETPOSTINT('alwayseditable'),
-			GETPOST('perms', 'alpha'),
-			GETPOST('list', 'alpha'),
-			GETPOST('help'),
-			GETPOST('default_value'),
-			GETPOST('computed'),
-			GETPOST('entity_in_restriction'),
-			GETPOST('enabled'),
-			GETPOST('langfile'),
-			GETPOST('css'),
-			GETPOST('cssview'),
-			GETPOST('csslist')
-		);
-		if ($result > 0) {
-			setEventMessages($langs->trans('FieldCreatedSuccess'), null, 'mesgs');
-		} else {
-			setEventMessages($extrafields->error, $extrafields->errors, 'errors');
-		}
-		header('Location: '.$_SERVER["PHP_SELF"].'?subtab=extrafields');
-		exit();
-	} elseif ($action == 'update_extrafield') {
-		$result = $extrafields->update(
-			$attrname,
-			GETPOST('label'),
-			GETPOST('type', 'alpha'),
-			GETPOSTINT('pos'),
-			GETPOST('size'),
-			$elementtype,
-			GETPOSTINT('fieldunique'),
-			GETPOSTINT('fieldrequired'),
-			GETPOST('default_value'),
-			GETPOST('param'),
-			GETPOSTINT('alwayseditable'),
-			GETPOST('perms', 'alpha'),
-			GETPOST('list', 'alpha'),
-			GETPOST('help'),
-			GETPOST('default_value'),
-			GETPOST('computed'),
-			GETPOST('entity_in_restriction'),
-			GETPOST('enabled'),
-			GETPOST('langfile'),
-			GETPOST('css'),
-			GETPOST('cssview'),
-			GETPOST('csslist')
-		);
-		if ($result > 0) {
-			setEventMessages($langs->trans('RecordSaved'), null, 'mesgs');
-		} else {
-			setEventMessages($extrafields->error, $extrafields->errors, 'errors');
-		}
-		header('Location: '.$_SERVER["PHP_SELF"].'?subtab=extrafields');
-		exit();
-	} elseif ($action == 'delete_extrafield') {
-		$result = $extrafields->delete($attrname, $elementtype);
-		if ($result > 0) {
-			setEventMessages($langs->trans('RecordDeleted'), null, 'mesgs');
-		} else {
-			setEventMessages($extrafields->error, $extrafields->errors, 'errors');
-		}
-		header('Location: '.$_SERVER["PHP_SELF"].'?subtab=extrafields');
-		exit();
-	}
+	require DOL_DOCUMENT_ROOT.'/core/actions_extrafields.inc.php';
 }
 
 if ($action == 'update_subtab' && !empty($user->admin)) {
@@ -1175,15 +1103,34 @@ if (getDolGlobalInt('WORKSHOP_USE_OR')) {
 	}
 
 	if ($subtab == 'extrafields') {
-		$elementtype = 'workshop_operationorder';
-		$extrafields = new ExtraFields($db);
-		$extrafields->fetch_name_optionals_label($elementtype);
+		$textobject = $langs->transnoentitiesnoconv("OperationOrder");
 
-		require_once DOL_DOCUMENT_ROOT.'/core/class/html.formextrafields.class.php';
-		$formextra = new FormExtrafields($db);
-		$object = new Operationorder($db);
+		require DOL_DOCUMENT_ROOT.'/core/tpl/admin_extrafields_view.tpl.php';
 
-		include DOL_DOCUMENT_ROOT.'/core/tpl/extrafields_edit.tpl.php';
+		// Buttons (on v17+, the "New Attribute" button is included into the tpl)
+		if ((float) DOL_VERSION < 17) {
+			if ($action != 'create' && $action != 'edit') {
+				print '<div class="tabsAction">';
+				print '<a class="butAction reposition" href="'.$_SERVER["PHP_SELF"].'?subtab=extrafields&action=create">'.$langs->trans("NewAttribute").'</a>';
+				print "</div>";
+			}
+		}
+
+		// Creation of an optional field
+		if ($action == 'create') {
+			print '<br><div id="newattrib"></div>';
+			print load_fiche_titre($langs->trans('NewAttribute'));
+
+			require DOL_DOCUMENT_ROOT.'/core/tpl/admin_extrafields_add.tpl.php';
+		}
+
+		// Edition of an optional field
+		if ($action == 'edit' && !empty($attrname)) {
+			print "<br>";
+			print load_fiche_titre($langs->trans("FieldEdition", $attrname));
+
+			require DOL_DOCUMENT_ROOT.'/core/tpl/admin_extrafields_edit.tpl.php';
+		}
 	}
 
 	print dol_get_fiche_end();
