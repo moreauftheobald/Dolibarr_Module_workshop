@@ -51,7 +51,6 @@ global $langs, $user;
 
 require_once DOL_DOCUMENT_ROOT."/core/lib/admin.lib.php";
 require_once DOL_DOCUMENT_ROOT."/core/lib/pdf.lib.php";
-require_once DOL_DOCUMENT_ROOT."/core/class/extrafields.class.php";
 require_once '../lib/workshop.lib.php';
 dol_include_once('/workshop/class/operationorder.class.php');
 
@@ -152,16 +151,6 @@ if ($action == 'update_use_or' && !empty($user->admin)) {
 	} else {
 		setEventMessages($langs->trans("Error"), null, 'errors');
 	}
-}
-
-// Extrafields management actions for OR
-if ($subtab == 'extrafields') {
-	$elementtype = 'workshop_operationorder';
-	$attrname = GETPOST('attrname', 'alpha');
-	$extrafields = new ExtraFields($db);
-	$type2label = ExtraFields::getListOfTypesLabels();
-
-	require DOL_DOCUMENT_ROOT.'/core/actions_extrafields.inc.php';
 }
 
 if ($action == 'update_subtab' && !empty($user->admin)) {
@@ -406,7 +395,7 @@ if (getDolGlobalInt('WORKSHOP_USE_OR')) {
 	$subhead[$sh][1] = $langs->trans('WorkshopORSubTabComptabilite');
 	$subhead[$sh][2] = 'comptabilite';
 	$sh++;
-	$subhead[$sh][0] = $_SERVER["PHP_SELF"].'?subtab=extrafields';
+	$subhead[$sh][0] = dol_buildpath('/workshop/admin/operationorder_extrafields.php', 1);
 	$subhead[$sh][1] = $langs->trans('WorkshopORSubTabExtrafields');
 	$subhead[$sh][2] = 'extrafields';
 	$sh++;
@@ -1100,37 +1089,6 @@ if (getDolGlobalInt('WORKSHOP_USE_OR')) {
 		print '</div>';
 
 		print '</form>';
-	}
-
-	if ($subtab == 'extrafields') {
-		$textobject = $langs->transnoentitiesnoconv("OperationOrder");
-
-		require DOL_DOCUMENT_ROOT.'/core/tpl/admin_extrafields_view.tpl.php';
-
-		// Buttons (on v17+, the "New Attribute" button is included into the tpl)
-		if ((float) DOL_VERSION < 17) {
-			if ($action != 'create' && $action != 'edit') {
-				print '<div class="tabsAction">';
-				print '<a class="butAction reposition" href="'.$_SERVER["PHP_SELF"].'?subtab=extrafields&action=create">'.$langs->trans("NewAttribute").'</a>';
-				print "</div>";
-			}
-		}
-
-		// Creation of an optional field
-		if ($action == 'create') {
-			print '<br><div id="newattrib"></div>';
-			print load_fiche_titre($langs->trans('NewAttribute'));
-
-			require DOL_DOCUMENT_ROOT.'/core/tpl/admin_extrafields_add.tpl.php';
-		}
-
-		// Edition of an optional field
-		if ($action == 'edit' && !empty($attrname)) {
-			print "<br>";
-			print load_fiche_titre($langs->trans("FieldEdition", $attrname));
-
-			require DOL_DOCUMENT_ROOT.'/core/tpl/admin_extrafields_edit.tpl.php';
-		}
 	}
 
 	print dol_get_fiche_end();
