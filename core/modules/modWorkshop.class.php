@@ -533,7 +533,7 @@ class modWorkshop extends DolibarrModules
 			'prefix' => img_picto('', 'fa-calendar-alt', 'class="pictofixedwidth valignmiddle paddingright"'),
 			'mainmenu'=>'workshop',
 			'leftmenu'=>'workshop_param_planning',
-			'url'=>'/workshop/admin/setup_planning.php',
+			'url'=>'/workshop/operationorder/operationorder_planning.php',
 			'langs'=>'workshop@workshop',
 			'position'=>1000+$r,
 			'enabled'=>'isModEnabled("workshop") && getDolGlobalInt("WORKSHOP_USE_OR")',
