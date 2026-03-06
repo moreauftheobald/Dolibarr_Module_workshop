@@ -542,6 +542,23 @@ class modWorkshop extends DolibarrModules
 			'user'=>2,
 		);
 
+		// Unified parameter form for the atelier context
+		$this->menu[$r++] = array(
+			'fk_menu'  => 'fk_mainmenu=workshop,fk_leftmenu=workshop_param',
+			'type'     => 'left',
+			'titre'    => 'WorkshopUnifiedParam',
+			'prefix'   => img_picto('', 'fa-list', 'class="pictofixedwidth valignmiddle paddingright"'),
+			'mainmenu' => 'workshop',
+			'leftmenu' => 'workshop_param_unified',
+			'url'      => '/workshop/param/workshop_param_unified.php?context=atelier',
+			'langs'    => 'workshop@workshop',
+			'position' => 1000 + $r,
+			'enabled'  => 'isModEnabled("workshop") && getDolGlobalInt("WORKSHOP_USE_OR")',
+			'perms'    => '$user->hasRight("workshop", "vehicule", "write")',
+			'target'   => '',
+			'user'     => 2,
+		);
+
 		/*
 		 * Vehicules Menu Section
 		 */
@@ -600,84 +617,21 @@ class modWorkshop extends DolibarrModules
 			'object'=>'Vehicule'
 		);
 
-		$this->menu[$r++]=array(
-			'fk_menu'=>'fk_mainmenu=vehicules',
-			'type'=>'left',
-			'titre'=>'Param_Vehicule',
-			'mainmenu'=>'vehicules',
-			'leftmenu'=>'vehicules_param',
-			'url'=>'/workshop/vehicule/param/vh_setup_marque.php',
-			'langs'=>'workshop@workshop',
-			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")',
-			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
-			'target'=>'',
-			'user'=>2,
-			'object'=>'Vehicule'
-		);
-
-		$this->menu[$r++]=array(
-			'fk_menu'=>'fk_mainmenu=vehicules,fk_leftmenu=vehicules_param',
-			'type'=>'left',
-			'titre'=>'Param_Vehicule_mark',
-			'mainmenu'=>'vehicules',
-			'leftmenu'=>'vehicules_param_mark',
-			'url'=>'/workshop/vehicule/param/vh_setup_marque.php',
-			'langs'=>'workshop@workshop',
-			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")',
-			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
-			'target'=>'',
-			'user'=>2,
-			'object'=>'Vehicule'
-		);
-
-		$this->menu[$r++]=array(
-			'fk_menu'=>'fk_mainmenu=vehicules,fk_leftmenu=vehicules_param',
-			'type'=>'left',
-			'titre'=>'Param_Vehicule_type',
-			'mainmenu'=>'vehicules',
-			'leftmenu'=>'vehicules_param_type',
-			'url'=>'/workshop/vehicule/param/vh_setup_type.php',
-			'langs'=>'workshop@workshop',
-			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")',
-			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
-			'target'=>'',
-			'user'=>2,
-			'object'=>'Vehicule'
-		);
-
-		$this->menu[$r++]=array(
-			'fk_menu'=>'fk_mainmenu=vehicules,fk_leftmenu=vehicules_param',
-			'type'=>'left',
-			'titre'=>'Param_Vehicule_typect',
-			'mainmenu'=>'vehicules',
-			'leftmenu'=>'vehicules_param_typect',
-			'url'=>'/workshop/vehicule/param/vh_setup_typect.php',
-			'langs'=>'workshop@workshop',
-			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")',
-			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
-			'target'=>'',
-			'user'=>2,
-			'object'=>'Vehicule'
-		);
-
-		$this->menu[$r++]=array(
-			'fk_menu'=>'fk_mainmenu=vehicules,fk_leftmenu=vehicules_param',
-			'type'=>'left',
-			'titre'=>'Param_Vehicule_pneu',
-			'mainmenu'=>'vehicules',
-			'leftmenu'=>'vehicules_param_pneu',
-			'url'=>'/workshop/vehicule/param/vh_setup_pneu.php',
-			'langs'=>'workshop@workshop',
-			'position'=>1000+$r,
-			'enabled'=>'isModEnabled("workshop")',
-			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
-			'target'=>'',
-			'user'=>2,
-			'object'=>'Vehicule'
+		// Unified parameter form for the vehicule context (one tab per registered object)
+		$this->menu[$r++] = array(
+			'fk_menu'  => 'fk_mainmenu=vehicules',
+			'type'     => 'left',
+			'titre'    => 'Param_Vehicule',
+			'mainmenu' => 'vehicules',
+			'leftmenu' => 'vehicules_param',
+			'url'      => '/workshop/param/workshop_param_unified.php?context=vehicule',
+			'langs'    => 'workshop@workshop',
+			'position' => 1000 + $r,
+			'enabled'  => 'isModEnabled("workshop")',
+			'perms'    => '$user->hasRight("workshop", "vehicule", "write")',
+			'target'   => '',
+			'user'     => 2,
+			'object'   => 'Vehicule',
 		);
 		// Exports profiles provided by this module
 		$r = 1;
