@@ -350,3 +350,52 @@ Thursday=Thursday
 Friday=Friday
 Saturday=Saturday
 Sunday=Sunday
+
+#
+# Menu Items
+#
+ModuleWorkshopVehicules=Vehicles
+New_Vehicule=New vehicle
+List_Vehicule=Vehicle list
+Param_Vehicule=Vehicle parameters
+Param_Vehicule_mark=Brands
+Param_Vehicule_type=Vehicle types
+Param_Vehicule_typect=Contract types
+Param_Vehicule_pneu=Tyre types
+
+#
+# Unified parameter form
+#
+WorkshopUnifiedParamTitle=Parameters
+WorkshopUnifiedParam=Auxiliary objects (workshop)
+WorkshopNoObjectsForContext=No objects defined for context "%s"
+
+#
+# Vehicule param pages
+#
+VhSetupMarque=Brands
+VhSetupType=Vehicle types
+VhSetupTypeCt=Contract types
+VhSetupPneu=Tyre dimensions
+WorkshopSetupMarque=Brand setup
+WorkshopSetupType=Vehicle type setup
+WorkshopSetupTypeCt=Contract type setup
+WorkshopSetupPneu=Tyre dimension setup
+AllMarks=All brands
+VehiculeMarkId=Associated brand
+code=Code
+label=Label
+active=Active
+action=Actions
+marquelabel=Brand name
+typelabel=Vehicle type name
+typectlabel=Contract type name
+pneulabel=Tyre type name
+CreateErrors=Creation error
+UpdateErrors=Update error
+DeleteErrors=Deletion error
+CreateSucces=Created successfully
+UpdateSucces=Updated successfully
+DeleteSucces=Deleted successfully
+MissingCode=Missing code
+Missinglabel=Missing label

@@ -172,6 +172,225 @@ function workshopORAdminPrepareHead(): array
 
 
 /**
+ * Get registry of all workshop parameter objects.
+ *
+ * This is the single place to register parameter dictionary objects.
+ * To add a new object, simply add an entry to the returned array.
+ *
+ * Each object entry supports:
+ *   - class_file:     (string) Path for dol_include_once
+ *   - class_name:     (string) PHP class name to instantiate
+ *   - context:        (string) 'vehicule', 'atelier', or 'both'
+ *   - tab_label:      (string) Translation key for the tab title
+ *   - fields:         (array)  Field definitions (see below)
+ *
+ * Field definition keys:
+ *   - type:           'text' | 'select' | 'related_select'
+ *   - label:          (string) Translation key for the field label
+ *   - required:       (bool)   Field is required (default false)
+ *   - values:         (array)  For 'select': static key => label array
+ *   - related_class:  (string) For 'related_select': class name to load options from
+ *   - related_file:   (string) For 'related_select': path to class file
+ *   - allow_null:     (bool)   For 'related_select': allow null/0 choice
+ *   - null_label:     (string) For 'related_select': translation key for null option
+ *   - default:        (mixed)  Default value (for selects)
+ *
+ * @return array
+ */
+function getWorkshopParamObjects(): array
+{
+	return array(
+		'marque' => array(
+			'class_file' => '/workshop/class/vehiculemark.class.php',
+			'class_name' => 'VehiculeMark',
+			'context'    => 'vehicule',
+			'tab_label'  => 'VhSetupMarque',
+			'fields'     => array(
+				'code'   => array('type' => 'text',   'label' => 'code',   'required' => true),
+				'label'  => array('type' => 'text',   'label' => 'label',  'required' => true),
+				'active' => array('type' => 'select', 'label' => 'active', 'values' => array('0' => 'Non', '1' => 'Oui'), 'default' => '1'),
+			),
+		),
+		'type' => array(
+			'class_file' => '/workshop/class/vehiculetype.class.php',
+			'class_name' => 'VehiculeType',
+			'context'    => 'vehicule',
+			'tab_label'  => 'VhSetupType',
+			'fields'     => array(
+				'code'   => array('type' => 'text',   'label' => 'code',   'required' => true),
+				'label'  => array('type' => 'text',   'label' => 'label',  'required' => true),
+				'active' => array('type' => 'select', 'label' => 'active', 'values' => array('0' => 'Non', '1' => 'Oui'), 'default' => '1'),
+			),
+		),
+		'typect' => array(
+			'class_file' => '/workshop/class/vehiculecontracttype.class.php',
+			'class_name' => 'VehiculeContractType',
+			'context'    => 'vehicule',
+			'tab_label'  => 'VhSetupTypeCt',
+			'fields'     => array(
+				'code'             => array('type' => 'text',           'label' => 'code',          'required' => true),
+				'label'            => array('type' => 'text',           'label' => 'label',         'required' => true),
+				'fk_vehicule_mark' => array(
+					'type'          => 'related_select',
+					'label'         => 'VehiculeMarkId',
+					'related_class' => 'VehiculeMark',
+					'related_file'  => '/workshop/class/vehiculemark.class.php',
+					'allow_null'    => true,
+					'null_label'    => 'AllMarks',
+				),
+				'active'           => array('type' => 'select', 'label' => 'active', 'values' => array('0' => 'Non', '1' => 'Oui'), 'default' => '1'),
+			),
+		),
+		'pneu' => array(
+			'class_file' => '/workshop/class/vehiculedimpneu.class.php',
+			'class_name' => 'VehiculeDimPneu',
+			'context'    => 'vehicule',
+			'tab_label'  => 'VhSetupPneu',
+			'fields'     => array(
+				'code'   => array('type' => 'text',   'label' => 'code',   'required' => true),
+				'label'  => array('type' => 'text',   'label' => 'label',  'required' => true),
+				'active' => array('type' => 'select', 'label' => 'active', 'values' => array('0' => 'Non', '1' => 'Oui'), 'default' => '1'),
+			),
+		),
+	);
+}
+
+
+/**
+ * Prepare array of tabs for the unified parameter page.
+ *
+ * @param  string $context Filter: 'vehicule', 'atelier', or '' for all
+ * @return array
+ */
+function workshopUnifiedParamPrepareHead(string $context = ''): array
+{
+	global $langs, $conf;
+
+	$langs->load("workshop@workshop");
+
+	$h       = 0;
+	$head    = array();
+	$objects = getWorkshopParamObjects();
+
+	foreach ($objects as $key => $config) {
+		if (!empty($context) && $config['context'] !== 'both' && $config['context'] !== $context) {
+			continue;
+		}
+		$url = dol_buildpath("/workshop/param/workshop_param_unified.php", 1).'?tab='.$key;
+		if (!empty($context)) {
+			$url .= '&context='.urlencode($context);
+		}
+		$head[$h][0] = $url;
+		$head[$h][1] = $langs->trans($config['tab_label']);
+		$head[$h][2] = $key;
+		$h++;
+	}
+
+	complete_head_from_modules($conf, $langs, null, $head, $h, 'workshopunifiedparam@workshop');
+	complete_head_from_modules($conf, $langs, null, $head, $h, 'workshopunifiedparam@workshop', 'remove');
+
+	return $head;
+}
+
+
+/**
+ * Build a formconfirm question entry for a single field.
+ *
+ * @param  string      $fieldName   Field name (key in $objConfig['fields'])
+ * @param  array       $fieldConfig Field configuration array
+ * @param  object|null $dataEdit    Existing object for edit mode (null = new)
+ * @param  DoliDB      $db          Database handler
+ * @param  Translate   $langs       Translation object
+ * @return array                    Array element ready for formconfirm $formquestion
+ */
+function workshopBuildParamFormQuestion(string $fieldName, array $fieldConfig, $dataEdit, $db, $langs): array
+{
+	$value = ($dataEdit !== null && isset($dataEdit->$fieldName)) ? $dataEdit->$fieldName : '';
+
+	if ($fieldConfig['type'] === 'text') {
+		return array(
+			'type'  => 'text',
+			'label' => $langs->trans($fieldConfig['label']),
+			'name'  => $fieldName,
+			'value' => $value,
+		);
+	}
+
+	if ($fieldConfig['type'] === 'select') {
+		$default = ($dataEdit !== null) ? $value : (isset($fieldConfig['default']) ? $fieldConfig['default'] : '0');
+		return array(
+			'type'    => 'select',
+			'label'   => $langs->trans($fieldConfig['label']),
+			'name'    => $fieldName,
+			'values'  => $fieldConfig['values'],
+			'default' => $default,
+		);
+	}
+
+	if ($fieldConfig['type'] === 'related_select') {
+		dol_include_once($fieldConfig['related_file']);
+		$relObj  = new $fieldConfig['related_class']($db);
+		$options = $relObj->getAllActiveArray('label');
+		if (!is_array($options)) {
+			$options = array();
+		}
+		if (!empty($fieldConfig['allow_null'])) {
+			$nullLabel = !empty($fieldConfig['null_label']) ? $langs->trans($fieldConfig['null_label']) : '-';
+			$options   = array('0' => $nullLabel) + $options;
+		}
+		$default = ($dataEdit !== null) ? (int) $value : 0;
+		return array(
+			'type'    => 'select',
+			'label'   => $langs->trans($fieldConfig['label']),
+			'name'    => $fieldName,
+			'values'  => $options,
+			'default' => $default,
+		);
+	}
+
+	return array();
+}
+
+
+/**
+ * Render a field value as HTML for display in a list row.
+ *
+ * @param  string    $fieldName   Field name
+ * @param  array     $fieldConfig Field configuration array
+ * @param  object    $data        Object instance with populated properties
+ * @param  DoliDB    $db          Database handler
+ * @param  Translate $langs       Translation object
+ * @return string                 HTML string
+ */
+function workshopRenderParamFieldValue(string $fieldName, array $fieldConfig, $data, $db, $langs): string
+{
+	$value = isset($data->$fieldName) ? $data->$fieldName : '';
+
+	if ($fieldConfig['type'] === 'text') {
+		return dol_escape_htmltag($value);
+	}
+
+	if ($fieldConfig['type'] === 'select') {
+		if ($fieldName === 'active') {
+			return '<span>'.img_picto($langs->trans('off'), $value == 1 ? 'switch_on' : 'switch_off').'</span>';
+		}
+		return isset($fieldConfig['values'][$value]) ? dol_escape_htmltag($fieldConfig['values'][$value]) : dol_escape_htmltag($value);
+	}
+
+	if ($fieldConfig['type'] === 'related_select') {
+		if (empty($value)) {
+			return !empty($fieldConfig['null_label']) ? $langs->trans($fieldConfig['null_label']) : '-';
+		}
+		dol_include_once($fieldConfig['related_file']);
+		$relObj = new $fieldConfig['related_class']($db);
+		return dol_escape_htmltag($relObj->getValueFromId((int) $value, 'label'));
+	}
+
+	return dol_escape_htmltag($value);
+}
+
+
+/**
  * Prepare array of tabs for Vehicule Setup screen
  * @return    array                    Array of tabs
  */
