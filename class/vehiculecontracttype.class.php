@@ -33,4 +33,72 @@ class VehiculeContractType extends dictionary
 
 	/** @var string $picto Picto */
 	public $picto = 'fa-file-contract';
+
+	/** @var int|null $fk_vehicule_mark Foreign key to vehicle brand (0 = all brands) */
+	public $fk_vehicule_mark;
+
+	public $fields = array(
+		'rowid' => array(
+			'type'     => 'integer',
+			'label'    => 'TechnicalID',
+			'enabled'  => 1,
+			'visible'  => 0,
+			'notnull'  => 1,
+			'position' => 1,
+			'index'    => 1,
+		),
+		'code' => array(
+			'type'     => 'varchar(20)',
+			'length'   => 20,
+			'label'    => 'Code',
+			'enabled'  => 1,
+			'visible'  => 1,
+			'notnull'  => 1,
+			'index'    => 1,
+			'position' => 10,
+		),
+		'entity' => array(
+			'type'     => 'integer',
+			'label'    => 'Entity',
+			'enabled'  => 1,
+			'visible'  => 0,
+			'default'  => 1,
+			'notnull'  => 1,
+			'index'    => 1,
+			'position' => 20,
+		),
+		'active' => array(
+			'type'          => 'integer',
+			'label'         => 'Active',
+			'enabled'       => 1,
+			'visible'       => 0,
+			'notnull'       => 1,
+			'default'       => 0,
+			'index'         => 1,
+			'position'      => 30,
+			'arrayofkeyval' => array(
+				0 => 'Disabled',
+				1 => 'Active',
+			),
+		),
+		'fk_vehicule_mark' => array(
+			'type'     => 'integer:VehiculeMark:workshop/class/vehiculemark.class.php',
+			'label'    => 'VehiculeMark',
+			'enabled'  => 1,
+			'visible'  => 1,
+			'notnull'  => 0,
+			'index'    => 1,
+			'position' => 35,
+		),
+		'label' => array(
+			'type'           => 'varchar(255)',
+			'label'          => 'Label',
+			'enabled'        => 1,
+			'visible'        => 1,
+			'position'       => 40,
+			'searchall'      => 1,
+			'css'            => 'minwidth200',
+			'showoncombobox' => 1,
+		),
+	);
 }

@@ -55,6 +55,11 @@ function workshopAdminPrepareHead()
 	$head[$h][2] = 'partage_entites';
 	$h++;
 
+	$head[$h][0] = dol_buildpath("/workshop/admin/setup_objets_annexes.php", 1);
+	$head[$h][1] = $langs->trans("WorkshopAdminTabObjetsAnnexes");
+	$head[$h][2] = 'objets_annexes';
+	$h++;
+
 	$head[$h][0] = dol_buildpath("/workshop/admin/about.php", 1);
 	$head[$h][1] = $langs->trans("About");
 	$head[$h][2] = 'about';
@@ -62,6 +67,52 @@ function workshopAdminPrepareHead()
 
 	complete_head_from_modules($conf, $langs, null, $head, $h, 'workshop@workshop');
 	complete_head_from_modules($conf, $langs, null, $head, $h, 'workshop@workshop', 'remove');
+
+	return $head;
+}
+
+
+/**
+ * Prepare sub-tabs header for the Objets Annexes admin page
+ *
+ * @return array
+ */
+function workshopObjetsAnnexesPrepareHead(): array
+{
+	global $langs, $conf;
+
+	$langs->load("workshop@workshop");
+
+	$h = 0;
+	$head = array();
+
+	$head[$h][0] = dol_buildpath("/workshop/vehicule/param/vh_setup_marque.php", 1);
+	$head[$h][1] = $langs->trans("VhSetupMarque");
+	$head[$h][2] = 'marque';
+	$h++;
+
+	$head[$h][0] = dol_buildpath("/workshop/vehicule/param/vh_setup_type.php", 1);
+	$head[$h][1] = $langs->trans("VhSetupType");
+	$head[$h][2] = 'type';
+	$h++;
+
+	$head[$h][0] = dol_buildpath("/workshop/vehicule/param/vh_setup_typect.php", 1);
+	$head[$h][1] = $langs->trans("VhSetupTypeCt");
+	$head[$h][2] = 'typect';
+	$h++;
+
+	$head[$h][0] = dol_buildpath("/workshop/vehicule/param/vh_setup_pneu.php", 1);
+	$head[$h][1] = $langs->trans("VhSetupPneu");
+	$head[$h][2] = 'pneu';
+	$h++;
+
+	$head[$h][0] = dol_buildpath("/workshop/operationorder/param/operationorder_setup_service_type.php", 1);
+	$head[$h][1] = $langs->trans("WorkshopSetupServiceType");
+	$head[$h][2] = 'service_type';
+	$h++;
+
+	complete_head_from_modules($conf, $langs, null, $head, $h, 'workshopobjetsannexes@workshop');
+	complete_head_from_modules($conf, $langs, null, $head, $h, 'workshopobjetsannexes@workshop', 'remove');
 
 	return $head;
 }

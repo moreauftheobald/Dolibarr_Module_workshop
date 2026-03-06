@@ -55,6 +55,7 @@ WorkshopAdminTabVehicules=Véhicules
 WorkshopAdminTabOR=Ordres de réparation
 WorkshopAdminTabDivers=Divers
 WorkshopAdminTabPartageEntites=Partage entre entités
+WorkshopAdminTabObjetsAnnexes=Objets Annexes
 # Onglet Partage entre entités (multicompany)
 Multicompany=Multicompany
 MulticompanyConfiguration=Configuration Multicompany

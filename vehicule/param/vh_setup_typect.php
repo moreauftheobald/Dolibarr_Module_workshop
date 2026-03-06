@@ -60,6 +60,7 @@ if (!$res) {
 	die("Include of main fails");
 }
 
+dol_include_once('/workshop/lib/workshop.lib.php');
 dol_include_once('/workshop/lib/workshop_vehicule.lib.php');
 dol_include_once('/workshop/class/vehiculecontracttype.class.php');
 dol_include_once('/workshop/class/vehiculemark.class.php');
@@ -256,8 +257,8 @@ $title = $langs->trans('WorkshopSetupTypeCt');
 $help_url = '';
 llxHeader('', $title, $help_url);
 
-$head = VhSetupPrepareHead();
-print dol_get_fiche_head($head, 'typect', $langs->Trans("WorkshopSetupTypeCt"), -1, "fontawesome_fa-tools");
+$head = workshopObjetsAnnexesPrepareHead();
+print dol_get_fiche_head($head, 'typect', $langs->trans("WorkshopAdminTabObjetsAnnexes"), -1, "fontawesome_fa-tools");
 // Part to show record
 
 $formconfirm = '';

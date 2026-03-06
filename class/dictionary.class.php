@@ -187,7 +187,9 @@ abstract class dictionary extends CommonObject
 		}
 		$sql .= ' FROM '.$this->db->prefix().$this->table_element;
 		$sql .= ' WHERE active = 1';
-		$sql .= ' AND entity IN ('.getEntity('workshop').')';
+		if ($this->ismultientitymanaged) {
+			$sql .= ' AND entity IN ('.getEntity('workshop').')';
+		}
 
 		$resql = $this->db->query($sql);
 		if ($resql) {
@@ -232,7 +234,11 @@ abstract class dictionary extends CommonObject
 	public function fetchAll($sortorder = '', $sortfield = '', $limit = 0, $offset = 0, $filter = array(), $filtermode = 'AND')
 	{
 		$sql = 'SELECT rowid FROM '.$this->db->prefix().$this->table_element;
-		$sql .= ' WHERE entity IN ('.getEntity($this->module).')';
+		if ($this->ismultientitymanaged) {
+			$sql .= ' WHERE entity IN ('.getEntity($this->module).')';
+		} else {
+			$sql .= ' WHERE 1=1';
+		}
 
 		if (!empty($sortfield)) {
 			$sql .= ' ORDER BY '.$this->db->sanitize($sortfield);
