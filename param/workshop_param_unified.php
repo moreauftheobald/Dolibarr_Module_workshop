@@ -232,7 +232,7 @@ if (($page * $limit) > $nbtotalofrecords) {
 	$offset = 0;
 }
 
-$objectslist = $object->fetchAll('label', 'ASC', $limit + 1, $offset);
+$objectslist = $object->fetchAll('ASC', 'label', $limit + 1, $offset);
 if (!is_array($objectslist)) {
 	$objectslist = array();
 }
