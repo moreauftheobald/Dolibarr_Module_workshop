@@ -436,6 +436,19 @@ WorkshopRequireConf=Ventilation requise
 WorkshopRequireConfHelp=Le passage à ce statut requiert que la ventilation (conf) soit complétée sur l'OR.
 
 #
+# Planning view screen (workshop_planning.php)
+#
+WorkshopPlanningView=Planning Atelier
+WorkshopPlanningModeAtelier=Mode Atelier
+WorkshopPlanningModePointages=Mode Pointages
+WorkshopPlanningModeJournee=Mode Journée
+WorkshopPlanningFilterUser=Utilisateur
+WorkshopPlanningWeekOf=Semaine du
+WorkshopPlanningDayOf=Journée du
+WorkshopPlanningNoUsers=Aucun utilisateur dans les groupes configurés
+WorkshopPlanningNoTimeSlots=Aucun créneau horaire disponible (planning non configuré)
+
+#
 # Planning setup screen
 #
 WorkshopAdminTabPlanning=Planning

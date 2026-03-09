@@ -328,6 +328,19 @@ WorkshopRequireConf=Breakdown required
 WorkshopRequireConfHelp=Switching to this status requires the cost breakdown (conf) to be completed on the OR.
 
 #
+# Planning view screen (workshop_planning.php)
+#
+WorkshopPlanningView=Workshop Planning
+WorkshopPlanningModeAtelier=Workshop Mode
+WorkshopPlanningModePointages=Timesheets Mode
+WorkshopPlanningModeJournee=Day Mode
+WorkshopPlanningFilterUser=User
+WorkshopPlanningWeekOf=Week of
+WorkshopPlanningDayOf=Day of
+WorkshopPlanningNoUsers=No users in the configured groups
+WorkshopPlanningNoTimeSlots=No time slots available (planning not configured)
+
+#
 # Planning setup screen
 #
 WorkshopAdminTabPlanning=Planning
