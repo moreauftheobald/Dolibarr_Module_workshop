@@ -365,6 +365,34 @@ Saturday=Saturday
 Sunday=Sunday
 
 #
+# Driver (Conducteur)
+#
+ConducteurList=Drivers
+NewConducteur=New driver
+ShowConducteur=Show driver
+ConducteurNom=Last name
+ConducteurPrenom=First name
+ConducteurSociete=Associated company
+ErrConducteurNomRequired=Driver last name is required
+ErrConducteurPrenomRequired=Driver first name is required
+ReadConducteurs=Read drivers
+WriteConducteurs=Create/edit drivers
+DeleteConducteurs=Delete drivers
+
+#
+# Tag (repair order categorisation)
+#
+TagList=OR Tags
+NewTag=New tag
+ShowTag=Show tag
+TagCode=Code
+TagLibelle=Label
+TagCouleur=Color
+ReadWorkshopTags=Read repair order tags
+WriteWorkshopTags=Create/edit repair order tags
+DeleteWorkshopTags=Delete repair order tags
+
+#
 # Menu Items
 #
 ModuleWorkshopVehicules=Vehicles

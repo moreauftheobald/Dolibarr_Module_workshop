@@ -363,6 +363,40 @@ class modWorkshop extends DolibarrModules
 		$this->rights[$r][5] = 'write';
 		$r++;
 
+		// Droits sur les conducteurs
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (6 * 10) + 0 + 1);
+		$this->rights[$r][1] = 'ReadConducteurs';
+		$this->rights[$r][4] = 'conducteur';
+		$this->rights[$r][5] = 'read';
+		$r++;
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (6 * 10) + 1 + 1);
+		$this->rights[$r][1] = 'WriteConducteurs';
+		$this->rights[$r][4] = 'conducteur';
+		$this->rights[$r][5] = 'write';
+		$r++;
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (6 * 10) + 2 + 1);
+		$this->rights[$r][1] = 'DeleteConducteurs';
+		$this->rights[$r][4] = 'conducteur';
+		$this->rights[$r][5] = 'delete';
+		$r++;
+
+		// Droits sur les tags OR
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (7 * 10) + 0 + 1);
+		$this->rights[$r][1] = 'ReadWorkshopTags';
+		$this->rights[$r][4] = 'tag';
+		$this->rights[$r][5] = 'read';
+		$r++;
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (7 * 10) + 1 + 1);
+		$this->rights[$r][1] = 'WriteWorkshopTags';
+		$this->rights[$r][4] = 'tag';
+		$this->rights[$r][5] = 'write';
+		$r++;
+		$this->rights[$r][0] = $this->numero . sprintf('%02d', (7 * 10) + 2 + 1);
+		$this->rights[$r][1] = 'DeleteWorkshopTags';
+		$this->rights[$r][4] = 'tag';
+		$this->rights[$r][5] = 'delete';
+		$r++;
+
 		/* END MODULEBUILDER PERMISSIONS */
 
 
@@ -526,6 +560,22 @@ class modWorkshop extends DolibarrModules
 			'user'=>2,
 		);
 
+		$this->menu[$r++] = array(
+			'fk_menu'  => 'fk_mainmenu=workshop,fk_leftmenu=workshop_param',
+			'type'     => 'left',
+			'titre'    => 'TagList',
+			'prefix'   => img_picto('', 'fa-tag', 'class="pictofixedwidth valignmiddle paddingright"'),
+			'mainmenu' => 'workshop',
+			'leftmenu' => 'workshop_param_tag',
+			'url'      => '/workshop/tag/tag_list.php',
+			'langs'    => 'workshop@workshop',
+			'position' => 1000 + $r,
+			'enabled'  => 'isModEnabled("workshop") && getDolGlobalInt("WORKSHOP_USE_OR")',
+			'perms'    => '$user->hasRight("workshop", "tag", "read")',
+			'target'   => '',
+			'user'     => 2,
+		);
+
 		$this->menu[$r++]=array(
 			'fk_menu'=>'fk_mainmenu=workshop,fk_leftmenu=workshop_param',
 			'type'=>'left',
@@ -615,6 +665,40 @@ class modWorkshop extends DolibarrModules
 			'target'=>'',
 			'user'=>2,
 			'object'=>'Vehicule'
+		);
+
+		$this->menu[$r++] = array(
+			'fk_menu'  => 'fk_mainmenu=vehicules',
+			'type'     => 'left',
+			'titre'    => 'ConducteurList',
+			'prefix'   => img_picto('', 'fa-id-card', 'class="pictofixedwidth valignmiddle paddingright"'),
+			'mainmenu' => 'vehicules',
+			'leftmenu' => 'vehicule_conducteur_list',
+			'url'      => '/workshop/conducteur/conducteur_list.php',
+			'langs'    => 'workshop@workshop',
+			'position' => 1000 + $r,
+			'enabled'  => 'isModEnabled("workshop")',
+			'perms'    => '$user->hasRight("workshop", "conducteur", "read")',
+			'target'   => '',
+			'user'     => 2,
+			'object'   => 'Conducteur',
+		);
+
+		$this->menu[$r++] = array(
+			'fk_menu'  => 'fk_mainmenu=vehicules',
+			'type'     => 'left',
+			'titre'    => 'NewConducteur',
+			'prefix'   => img_picto('', 'fa-plus', 'class="pictofixedwidth valignmiddle paddingright"'),
+			'mainmenu' => 'vehicules',
+			'leftmenu' => 'vehicule_conducteur_new',
+			'url'      => '/workshop/conducteur/conducteur_card.php?action=create',
+			'langs'    => 'workshop@workshop',
+			'position' => 1000 + $r,
+			'enabled'  => 'isModEnabled("workshop")',
+			'perms'    => '$user->hasRight("workshop", "conducteur", "write")',
+			'target'   => '',
+			'user'     => 2,
+			'object'   => 'Conducteur',
 		);
 
 		// Unified parameter form for the vehicule context (one tab per registered object)

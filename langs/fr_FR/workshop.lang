@@ -471,3 +471,31 @@ Thursday=Jeudi
 Friday=Vendredi
 Saturday=Samedi
 Sunday=Dimanche
+
+#
+# Conducteur
+#
+ConducteurList=Conducteurs
+NewConducteur=Nouveau conducteur
+ShowConducteur=Voir le conducteur
+ConducteurNom=Nom
+ConducteurPrenom=Prénom
+ConducteurSociete=Société de rattachement
+ErrConducteurNomRequired=Le nom du conducteur est obligatoire
+ErrConducteurPrenomRequired=Le prénom du conducteur est obligatoire
+ReadConducteurs=Consulter les conducteurs
+WriteConducteurs=Créer/modifier les conducteurs
+DeleteConducteurs=Supprimer les conducteurs
+
+#
+# Tag (catégorisation des OR)
+#
+TagList=Tags OR
+NewTag=Nouveau tag
+ShowTag=Voir le tag
+TagCode=Code
+TagLibelle=Libellé
+TagCouleur=Couleur
+ReadWorkshopTags=Consulter les tags des ordres de réparation
+WriteWorkshopTags=Créer/modifier les tags des ordres de réparation
+DeleteWorkshopTags=Supprimer les tags des ordres de réparation
