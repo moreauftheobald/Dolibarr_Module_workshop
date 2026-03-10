@@ -80,6 +80,7 @@ class Operationorder extends CommonObject
 		'ref_client'     => array('type' => 'varchar(255)',  'label' => 'RefClient',      'enabled' => 1, 'position' => 20,  'notnull' => 0, 'visible' => 1, 'searchall' => 1),
 		'fk_soc'         => array('type' => 'integer:Societe:societe/class/societe.class.php', 'label' => 'ThirdParty', 'picto' => 'company', 'enabled' => 1, 'position' => 30, 'notnull' => 1, 'visible' => 1, 'css' => 'maxwidth500 widthcentpercentminusxx', 'csslist' => 'tdoverflowmax150', 'showoncombobox' => 1),
 		'fk_vehicule'    => array('type' => 'integer:Vehicule:workshop/class/Vehicule.class.php', 'label' => 'Vehicule', 'picto' => 'fa-truck', 'enabled' => 1, 'position' => 40, 'notnull' => 1, 'visible' => 1, 'css' => 'maxwidth500 widthcentpercentminusxx', 'csslist' => 'tdoverflowmax150'),
+		'fk_conducteur'  => array('type' => 'integer:Conducteur:workshop/class/Conducteur.class.php', 'label' => 'Conducteur', 'picto' => 'fa-id-card', 'enabled' => 1, 'position' => 45, 'notnull' => 0, 'visible' => 1, 'css' => 'maxwidth500 widthcentpercentminusxx', 'csslist' => 'tdoverflowmax150'),
 		'km'             => array('type' => 'double',        'label' => 'Km',             'enabled' => 1, 'position' => 50,  'notnull' => 0, 'visible' => 1),
 		'date_planned'   => array('type' => 'datetime',      'label' => 'DatePlanned',    'enabled' => 1, 'position' => 60,  'notnull' => 0, 'visible' => 1),
 		'date_valid'     => array('type' => 'datetime',      'label' => 'DateValidation', 'enabled' => 1, 'position' => 70,  'notnull' => 0, 'visible' => -1),
@@ -113,6 +114,7 @@ class Operationorder extends CommonObject
 	public $entity;
 	public $fk_soc;
 	public $fk_vehicule;
+	public $fk_conducteur;
 	public $km;
 	public $date_planned;
 	public $date_valid;

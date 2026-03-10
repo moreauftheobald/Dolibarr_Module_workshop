@@ -18,7 +18,7 @@
 /**
  * \file       operationorder/or_card.php
  * \ingroup    workshop
- * \brief      Page to create/edit/view an Operation Order (Ordre de Réparation)
+ * \brief      Création d'un Ordre de Réparation (OR)
  */
 
 // Load Dolibarr environment
@@ -54,9 +54,10 @@ if (!$res) {
 }
 
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.form.class.php';
-require_once DOL_DOCUMENT_ROOT.'/core/class/html.formcompany.class.php';
-require_once DOL_DOCUMENT_ROOT.'/core/lib/date.lib.php';
 dol_include_once('/workshop/class/operationorder.class.php');
+dol_include_once('/workshop/class/Conducteur.class.php');
+dol_include_once('/workshop/class/Tag.class.php');
+dol_include_once('/workshop/class/OperationorderTag.class.php');
 dol_include_once('/workshop/lib/workshop_operationorder.lib.php');
 
 if (!isModEnabled('workshop')) {
@@ -71,9 +72,6 @@ $langs->loadLangs(array('workshop@workshop'));
 $action      = GETPOST('action', 'aZ09');
 $confirm     = GETPOST('confirm', 'alpha');
 $cancel      = GETPOST('cancel', 'alpha');
-$id          = GETPOSTINT('id');
-$ref         = GETPOST('ref', 'alpha');
-$contextpage = GETPOST('contextpage', 'aZ') ? GETPOST('contextpage', 'aZ') : 'orcard';
 $backtopage  = GETPOST('backtopage', 'alpha');
 $backtopageforcancel = GETPOST('backtopageforcancel', 'alpha');
 
@@ -84,15 +82,87 @@ $form        = new Form($db);
 $extrafields->fetch_name_optionals_label($object->table_element);
 $hookmanager->initHooks(array('orcard', 'globalcard'));
 
-if ($id > 0 || !empty($ref)) {
-	$object->fetch($id, $ref);
+$permissiontoadd = $user->hasRight('workshop', 'operationorders', 'write');
+
+
+/*
+ * Helpers — encode/decode form state through the creation sub-dialogs
+ *
+ * State: fk_vehicule (int), km (string), fk_conducteur (int), fk_tags (comma-separated ints)
+ */
+
+/**
+ * Build the query-string fragment that preserves the current OR-form state.
+ * Values are read from GETPOST so they survive successive GET redirects.
+ *
+ * @return string  URL-encoded fragment, starts with '&'
+ */
+function orCardStateQueryString()
+{
+	$fk_vehicule   = GETPOSTINT('fk_vehicule');
+	$km            = GETPOST('km', 'alpha');
+	$fk_conducteur = GETPOSTINT('fk_conducteur');
+	$fk_tags       = array_filter(array_map('intval', (array) GETPOST('fk_tags', 'array:int')));
+
+	$qs = '&fk_vehicule='.((int) $fk_vehicule);
+	$qs .= '&km='.urlencode($km);
+	$qs .= '&fk_conducteur='.((int) $fk_conducteur);
+	foreach ($fk_tags as $t) {
+		$qs .= '&fk_tags[]='.((int) $t);
+	}
+	return $qs;
 }
 
-// Permissions
-$permissiontoread    = $user->hasRight('workshop', 'operationorders', 'read');
-$permissiontoadd     = $user->hasRight('workshop', 'operationorders', 'write');
-$permissiontodelete  = $user->hasRight('workshop', 'operationorders', 'delete');
-$permissiontovalidate = $user->hasRight('workshop', 'operationorders', 'write');
+/**
+ * Build the hidden-field list for a formconfirm dialog so the state
+ * survives the POST + redirect cycle.
+ *
+ * @param  array $extra  Optional extra fields to add to the list
+ * @return array         $formquestion array fragment
+ */
+function orCardStateHiddenFields($extra = array())
+{
+	$fk_vehicule   = GETPOSTINT('fk_vehicule');
+	$km            = GETPOST('km', 'alpha');
+	$fk_conducteur = GETPOSTINT('fk_conducteur');
+	$fk_tags       = array_filter(array_map('intval', (array) GETPOST('fk_tags', 'array:int')));
+
+	$fields   = array();
+	$fields[] = array('type' => 'hidden', 'name' => 'fk_vehicule',   'value' => (int) $fk_vehicule);
+	$fields[] = array('type' => 'hidden', 'name' => 'km',            'value' => dol_escape_htmltag($km));
+	$fields[] = array('type' => 'hidden', 'name' => 'fk_conducteur', 'value' => (int) $fk_conducteur);
+	$fields[] = array('type' => 'hidden', 'name' => 'tags_state',    'value' => implode(',', $fk_tags));
+
+	return array_merge($fields, $extra);
+}
+
+/**
+ * Build the redirect URL that restores the OR-form state after a sub-dialog.
+ *
+ * @param  string $self       Value of $_SERVER['PHP_SELF']
+ * @param  array  $overrides  Associative array of values to override (e.g. fk_conducteur => newId)
+ * @return string
+ */
+function orCardRestoreUrl($self, $overrides = array())
+{
+	$fk_vehicule   = isset($overrides['fk_vehicule'])   ? (int) $overrides['fk_vehicule']   : GETPOSTINT('fk_vehicule');
+	$km            = isset($overrides['km'])             ? $overrides['km']                  : GETPOST('km', 'alpha');
+	$fk_conducteur = isset($overrides['fk_conducteur']) ? (int) $overrides['fk_conducteur'] : GETPOSTINT('fk_conducteur');
+
+	// Tags: merge state string + overrides
+	$tags_state = GETPOST('tags_state', 'alpha');
+	$fk_tags    = isset($overrides['fk_tags'])
+		? $overrides['fk_tags']
+		: array_filter(array_map('intval', explode(',', (string) $tags_state)));
+
+	$url  = $self.'?fk_vehicule='.$fk_vehicule;
+	$url .= '&km='.urlencode((string) $km);
+	$url .= '&fk_conducteur='.$fk_conducteur;
+	foreach ($fk_tags as $t) {
+		$url .= '&fk_tags[]='.((int) $t);
+	}
+	return $url;
+}
 
 
 /*
@@ -107,7 +177,8 @@ if ($cancel) {
 		header("Location: ".$backtopage);
 		exit;
 	}
-	$action = '';
+	header("Location: ".$_SERVER['PHP_SELF']);
+	exit;
 }
 
 $parameters = array();
@@ -117,122 +188,125 @@ if ($reshook < 0) {
 }
 
 if (empty($reshook)) {
-	// Create
+
+	// ── Création d'un conducteur à la volée ─────────────────────────────────
+	if ($action == 'confirm_new_conducteur' && $confirm == 'yes' && $permissiontoadd) {
+		$error = 0;
+
+		$conducteur         = new Conducteur($db);
+		$conducteur->nom    = GETPOST('conducteur_nom', 'alphanohtml');
+		$conducteur->prenom = GETPOST('conducteur_prenom', 'alphanohtml');
+
+		if (empty(trim((string) $conducteur->nom))) {
+			setEventMessages($langs->trans('ErrConducteurNomRequired'), null, 'errors');
+			$error++;
+		}
+		if (empty(trim((string) $conducteur->prenom))) {
+			setEventMessages($langs->trans('ErrConducteurPrenomRequired'), null, 'errors');
+			$error++;
+		}
+
+		if (!$error) {
+			$newId = $conducteur->create($user);
+			if ($newId > 0) {
+				setEventMessage($langs->trans('ConducteurCreated'));
+				header('Location: '.orCardRestoreUrl($_SERVER['PHP_SELF'], array('fk_conducteur' => $newId)));
+				exit;
+			} else {
+				setEventMessages($conducteur->error, $conducteur->errors, 'errors');
+			}
+		}
+		$action = 'new_conducteur';
+	}
+
+	// ── Création d'un tag à la volée ────────────────────────────────────────
+	if ($action == 'confirm_new_tag' && $confirm == 'yes' && $permissiontoadd) {
+		$error = 0;
+
+		$tag         = new Tag($db);
+		$tag->code   = GETPOST('tag_code', 'alphanohtml');
+		$tag->label  = GETPOST('tag_label', 'alphanohtml');
+		$tag->color  = GETPOST('tag_color', 'alphanohtml');
+		$tag->active = 1;
+
+		if (empty(trim((string) $tag->code))) {
+			setEventMessages($langs->trans('MissingCode'), null, 'errors');
+			$error++;
+		}
+		if (empty(trim((string) $tag->label))) {
+			setEventMessages($langs->trans('MissingLabel'), null, 'errors');
+			$error++;
+		}
+
+		if (!$error) {
+			$newId = $tag->create($user);
+			if ($newId > 0) {
+				setEventMessage($langs->trans('TagCreated'));
+				// Add the new tag to the current selection
+				$tags_state = GETPOST('tags_state', 'alpha');
+				$fk_tags    = array_filter(array_map('intval', explode(',', (string) $tags_state)));
+				$fk_tags[]  = $newId;
+				header('Location: '.orCardRestoreUrl($_SERVER['PHP_SELF'], array('fk_tags' => $fk_tags)));
+				exit;
+			} else {
+				setEventMessages($tag->error, $tag->errors, 'errors');
+			}
+		}
+		$action = 'new_tag';
+	}
+
+	// ── Création de l'OR ────────────────────────────────────────────────────
 	if ($action == 'add' && $permissiontoadd) {
-		$object->ref_client  = GETPOST('ref_client', 'alpha');
-		$object->fk_soc      = GETPOSTINT('fk_soc');
-		$object->fk_vehicule = GETPOSTINT('fk_vehicule');
-		$object->km          = GETPOST('km', 'alpha');
-		$object->date_planned = dol_mktime(GETPOSTINT('date_plannedhour'), GETPOSTINT('date_plannedmin'), 0, GETPOSTINT('date_plannedmonth'), GETPOSTINT('date_plannedday'), GETPOSTINT('date_plannedyear'));
-		$object->fk_user_assign = GETPOSTINT('fk_user_assign');
-		$object->note_public  = GETPOST('note_public', 'restricthtml');
-		$object->note_private = GETPOST('note_private', 'restricthtml');
-		$object->status       = Operationorder::STATUS_DRAFT;
+		$error = 0;
+
+		$object->fk_vehicule   = GETPOSTINT('fk_vehicule');
+		$object->km            = GETPOST('km', 'alpha');
+		$object->fk_conducteur = GETPOSTINT('fk_conducteur');
+		$object->status        = Operationorder::STATUS_DRAFT;
 		$object->fk_user_creat = $user->id;
 
-		// Fill array_options with extra fields
+		// Dériver le tiers depuis le véhicule sélectionné
+		if ($object->fk_vehicule > 0) {
+			dol_include_once('/workshop/class/Vehicule.class.php');
+			$vehicule = new Vehicule($db);
+			if ($vehicule->fetch($object->fk_vehicule) > 0) {
+				$object->fk_soc = (int) $vehicule->fk_soc;
+			}
+		}
+
+		if (empty($object->fk_vehicule)) {
+			setEventMessages($langs->trans('ErrInvalidFkVehicule'), null, 'errors');
+			$error++;
+		}
+		if (empty($object->fk_soc)) {
+			setEventMessages($langs->trans('ErrInvalidSocid'), null, 'errors');
+			$error++;
+		}
+
 		$ret = $extrafields->setOptionalsFromPost(null, $object, '@GETPOSTISSET');
 		if ($ret < 0) {
 			$error++;
 		}
 
-		if (empty($object->fk_soc)) {
-			setEventMessages($langs->trans('ErrInvalidSocid'), null, 'errors');
-			$action = 'create';
-		} elseif (empty($object->fk_vehicule)) {
-			setEventMessages($langs->trans('ErrInvalidFkVehicule'), null, 'errors');
-			$action = 'create';
-		} else {
+		if (!$error) {
 			$id = $object->create($user);
 			if ($id > 0) {
+				$tagIds = GETPOST('fk_tags', 'array:int');
+				if (!empty($tagIds)) {
+					$orTag = new OperationorderTag($db);
+					foreach ($tagIds as $tagId) {
+						$orTag->addTag($id, (int) $tagId, $user);
+					}
+				}
 				header("Location: ".$_SERVER['PHP_SELF'].'?id='.$id);
 				exit;
 			} else {
 				setEventMessages($object->error, $object->errors, 'errors');
 				$action = 'create';
 			}
-		}
-	}
-
-	// Edit/Save
-	if ($action == 'update' && $permissiontoadd) {
-		$object->ref_client     = GETPOST('ref_client', 'alpha');
-		$object->fk_soc         = GETPOSTINT('fk_soc');
-		$object->fk_vehicule    = GETPOSTINT('fk_vehicule');
-		$object->km             = GETPOST('km', 'alpha');
-		$object->date_planned   = dol_mktime(GETPOSTINT('date_plannedhour'), GETPOSTINT('date_plannedmin'), 0, GETPOSTINT('date_plannedmonth'), GETPOSTINT('date_plannedday'), GETPOSTINT('date_plannedyear'));
-		$object->date_start     = dol_mktime(GETPOSTINT('date_starthour'), GETPOSTINT('date_startmin'), 0, GETPOSTINT('date_startmonth'), GETPOSTINT('date_startday'), GETPOSTINT('date_startyear'));
-		$object->date_end       = dol_mktime(GETPOSTINT('date_endhour'), GETPOSTINT('date_endmin'), 0, GETPOSTINT('date_endmonth'), GETPOSTINT('date_endday'), GETPOSTINT('date_endyear'));
-		$object->fk_user_assign = GETPOSTINT('fk_user_assign');
-		$object->note_public    = GETPOST('note_public', 'restricthtml');
-		$object->note_private   = GETPOST('note_private', 'restricthtml');
-
-		$ret = $extrafields->setOptionalsFromPost(null, $object, '@GETPOSTISSET');
-		if ($ret < 0) {
-			$error++;
-		}
-
-		$result = $object->update($user);
-		if ($result > 0) {
-			setEventMessages($langs->trans('RecordSaved'), null, 'mesgs');
-			$action = 'view';
 		} else {
-			setEventMessages($object->error, $object->errors, 'errors');
-			$action = 'edit';
+			$action = 'create';
 		}
-	}
-
-	// Delete
-	if ($action == 'confirm_delete' && $confirm == 'yes' && $permissiontodelete) {
-		$result = $object->delete($user);
-		if ($result > 0) {
-			header("Location: ".dol_buildpath('/workshop/or_list.php', 1));
-			exit;
-		} else {
-			setEventMessages($object->error, $object->errors, 'errors');
-		}
-	}
-
-	// Status transitions
-	if ($action == 'confirm_open' && $confirm == 'yes' && $permissiontovalidate) {
-		$result = $object->setOpen($user);
-		if ($result >= 0) {
-			header("Location: ".$_SERVER['PHP_SELF'].'?id='.$object->id);
-			exit;
-		}
-		setEventMessages($object->error, $object->errors, 'errors');
-	}
-	if ($action == 'confirm_done' && $confirm == 'yes' && $permissiontoadd) {
-		$result = $object->setDone($user);
-		if ($result >= 0) {
-			header("Location: ".$_SERVER['PHP_SELF'].'?id='.$object->id);
-			exit;
-		}
-		setEventMessages($object->error, $object->errors, 'errors');
-	}
-	if ($action == 'confirm_close' && $confirm == 'yes' && $permissiontoadd) {
-		$result = $object->setClosed($user);
-		if ($result >= 0) {
-			header("Location: ".$_SERVER['PHP_SELF'].'?id='.$object->id);
-			exit;
-		}
-		setEventMessages($object->error, $object->errors, 'errors');
-	}
-	if ($action == 'confirm_reopen' && $confirm == 'yes' && $permissiontoadd) {
-		$result = $object->setDraft($user);
-		if ($result >= 0) {
-			header("Location: ".$_SERVER['PHP_SELF'].'?id='.$object->id);
-			exit;
-		}
-		setEventMessages($object->error, $object->errors, 'errors');
-	}
-	if ($action == 'confirm_cancel' && $confirm == 'yes' && $permissiontoadd) {
-		$result = $object->cancel($user);
-		if ($result >= 0) {
-			header("Location: ".$_SERVER['PHP_SELF'].'?id='.$object->id);
-			exit;
-		}
-		setEventMessages($object->error, $object->errors, 'errors');
 	}
 }
 
@@ -241,377 +315,203 @@ if (empty($reshook)) {
  * View
  */
 
-$title = ($action == 'create') ? $langs->trans('NewOperationOrders') : $langs->trans('OperationOrder').' '.$object->ref;
+llxHeader('', $langs->trans('NewOperationOrders'), '', '', 0, 0, array(), array(), '', 'mod-workshop page-orcard');
 
-llxHeader('', $title, '', '', 0, 0, array(), array(), '', 'mod-workshop page-orcard');
+print load_fiche_titre($langs->trans('NewOperationOrders'), '', 'fa-tools');
 
-$head = array();
-if ($object->id > 0) {
-	$head = operationorderPrepareHead($object);
+// ── Dialogs formconfirm (hors du formulaire principal) ──────────────────────
+
+// Dialog : Nouveau conducteur
+if ($action == 'new_conducteur' || $action == 'confirm_new_conducteur') {
+	$fq = orCardStateHiddenFields(array(
+		array(
+			'type'  => 'text',
+			'label' => $langs->trans('ConducteurNom').' <span class="fieldrequired">*</span>',
+			'name'  => 'conducteur_nom',
+			'value' => GETPOST('conducteur_nom', 'alphanohtml'),
+		),
+		array(
+			'type'  => 'text',
+			'label' => $langs->trans('ConducteurPrenom').' <span class="fieldrequired">*</span>',
+			'name'  => 'conducteur_prenom',
+			'value' => GETPOST('conducteur_prenom', 'alphanohtml'),
+		),
+	));
+	print $form->formconfirm(
+		$_SERVER['PHP_SELF'],
+		$langs->trans('NewConducteur'),
+		'',
+		'confirm_new_conducteur',
+		$fq,
+		'yes',
+		1,
+		250,
+		500,
+		0,
+		$langs->trans('Create'),
+		$langs->trans('Cancel')
+	);
 }
 
-// Compute mechanic user filter from configured group (used in create and edit forms)
-$mechanicIncludeonly = '';
-$mechanicGroupId = getDolGlobalInt('WORKSHOP_MECHANIC_GROUP');
-if ($mechanicGroupId > 0) {
-	$sqlGrp = "SELECT fk_user FROM ".MAIN_DB_PREFIX."usergroup_user WHERE fk_usergroup = ".((int) $mechanicGroupId);
-	$sqlGrp .= " AND entity IN (0, ".((int) $conf->entity).")";
-	$resGrp  = $db->query($sqlGrp);
-	if ($resGrp) {
-		$grpUserIds = array();
-		while ($objGrp = $db->fetch_object($resGrp)) {
-			$grpUserIds[] = (int) $objGrp->fk_user;
-		}
-		if (!empty($grpUserIds)) {
-			$mechanicIncludeonly = $grpUserIds;
-		}
-	}
+// Dialog : Nouveau tag
+if ($action == 'new_tag' || $action == 'confirm_new_tag') {
+	$fq = orCardStateHiddenFields(array(
+		array(
+			'type'  => 'text',
+			'label' => $langs->trans('Code').' <span class="fieldrequired">*</span>',
+			'name'  => 'tag_code',
+			'value' => GETPOST('tag_code', 'alphanohtml'),
+		),
+		array(
+			'type'  => 'text',
+			'label' => $langs->trans('TagLibelle').' <span class="fieldrequired">*</span>',
+			'name'  => 'tag_label',
+			'value' => GETPOST('tag_label', 'alphanohtml'),
+		),
+		array(
+			'type'  => 'other',
+			'label' => $langs->trans('TagCouleur'),
+			'value' => '<input type="color" name="tag_color" value="'.dol_escape_htmltag(GETPOST('tag_color', 'alphanohtml') ?: '#3c7dd4').'" style="height:28px;width:60px;cursor:pointer;">',
+		),
+	));
+	print $form->formconfirm(
+		$_SERVER['PHP_SELF'],
+		$langs->trans('NewTag'),
+		'',
+		'confirm_new_tag',
+		$fq,
+		'yes',
+		1,
+		220,
+		480,
+		0,
+		$langs->trans('Create'),
+		$langs->trans('Cancel')
+	);
 }
 
-if ($action == 'create') {
-	// ========== CREATE FORM ==========
+// ── Formulaire principal de création ────────────────────────────────────────
 
-	print load_fiche_titre($langs->trans('NewOperationOrders'), '', 'fa-tools');
-
-	print '<form action="'.$_SERVER['PHP_SELF'].'" method="POST">'."\n";
-	print '<input type="hidden" name="token" value="'.newToken().'">'."\n";
-	print '<input type="hidden" name="action" value="add">'."\n";
-	if ($backtopage) {
-		print '<input type="hidden" name="backtopage" value="'.dol_escape_htmltag($backtopage).'">'."\n";
-	}
-
-	print dol_get_fiche_head($head, 'card', $langs->trans('OperationOrder'), -1, 'fa-tools');
-
-	print '<table class="border centpercent tableforfieldcreate">'."\n";
-
-	// Vehicle — first field; its selection auto-fills ThirdParty
-	print '<tr><td class="titlefieldcreate fieldrequired">'.$langs->trans('Vehicule').'</td><td>';
-	print $object->showInputField($object->fields['fk_vehicule'], 'fk_vehicule', GETPOSTINT('fk_vehicule'), '', '', '', 'maxwidth500');
-	print '</td></tr>';
-
-	// Ref client
-	print '<tr><td>'.$langs->trans('RefClient').'</td>';
-	print '<td><input type="text" name="ref_client" class="flat maxwidth200" value="'.dol_escape_htmltag(GETPOST('ref_client', 'alpha')).'"></td></tr>';
-
-	// Third party — auto-filled by vehicle selection, remains editable
-	print '<tr><td class="fieldrequired">'.$langs->trans('ThirdParty').'</td><td>';
-	print $form->select_company(GETPOSTINT('fk_soc'), 'fk_soc', '', 1, 0, 0, array(), 0, 'maxwidth500 widthcentpercentminusxx');
-	print '</td></tr>';
-
-	// Km
-	print '<tr><td>'.$langs->trans('Km').'</td>';
-	print '<td><input type="text" name="km" class="flat maxwidth100" value="'.dol_escape_htmltag(GETPOST('km', 'alpha')).'"></td></tr>';
-
-	// Date planned
-	print '<tr><td>'.$langs->trans('DatePlanned').'</td><td>';
-	print $form->selectDate('', 'date_planned', 1, 1, 0, '', 1, 1, 0, '', '', '', '', 1, '', '', 'auto');
-	print '</td></tr>';
-
-	// Mechanic
-	print '<tr><td>'.$langs->trans('Mechanic').'</td><td>';
-	print $form->select_dolusers(GETPOSTINT('fk_user_assign'), 'fk_user_assign', 1, null, 0, $mechanicIncludeonly, '', '0', 0, 0, '', 0, '', 'maxwidth500');
-	print '</td></tr>';
-
-	print '</table>'."\n";
-
-	print dol_get_fiche_end();
-
-	print $form->buttonsSaveCancel("Create");
-	print '</form>'."\n";
-
-	// JS: when a vehicle is selected, auto-fill the ThirdParty selector
-	print '<script>'."\n";
-	print '$(document).ready(function() {'."\n";
-	print '  $("select[name=\'fk_vehicule\']").on("change", function() {'."\n";
-	print '    var vehiculeId = parseInt($(this).val(), 10);'."\n";
-	print '    if (vehiculeId > 0) {'."\n";
-	print '      $.ajax({'."\n";
-	print '        url: "'.dol_buildpath('/workshop/ajax/get_vehicule_info.php', 1).'",'."\n";
-	print '        method: "POST",'."\n";
-	print '        data: { id: vehiculeId, token: "'.currentToken().'" },'."\n";
-	print '        dataType: "json",'."\n";
-	print '        success: function(data) {'."\n";
-	print '          if (data.fk_soc > 0) {'."\n";
-	print '            var $socSel = $("select[name=\'fk_soc\']");'."\n";
-	print '            if ($socSel.find("option[value=\'" + data.fk_soc + "\']").length === 0) {'."\n";
-	print '              $socSel.append(new Option(data.soc_name, data.fk_soc, true, true));'."\n";
-	print '            } else {'."\n";
-	print '              $socSel.val(data.fk_soc);'."\n";
-	print '            }'."\n";
-	print '            $socSel.trigger("change");'."\n";
-	print '          }'."\n";
-	print '        }'."\n";
-	print '      });'."\n";
-	print '    }'."\n";
-	print '  });'."\n";
-	print '});'."\n";
-	print '</script>'."\n";
-} elseif ($object->id > 0) {
-	// ========== VIEW / EDIT FORM ==========
-	print dol_get_fiche_head($head, 'card', $langs->trans('OperationOrder'), -1, 'fa-tools');
-
-	// Object confirmation dialogs
-	if ($action == 'delete') {
-		print $form->formconfirm(
-			$_SERVER['PHP_SELF'].'?id='.$object->id,
-			$langs->trans('DeleteOR'),
-			$langs->trans('ConfirmDeleteOR'),
-			'confirm_delete',
-			'',
-			0,
-			1
-		);
-	}
-	if ($action == 'open') {
-		print $form->formconfirm(
-			$_SERVER['PHP_SELF'].'?id='.$object->id,
-			$langs->trans('OpenOR'),
-			$langs->trans('ConfirmOpenOR'),
-			'confirm_open',
-			'',
-			0,
-			1
-		);
-	}
-	if ($action == 'done') {
-		print $form->formconfirm(
-			$_SERVER['PHP_SELF'].'?id='.$object->id,
-			$langs->trans('DoneOR'),
-			$langs->trans('ConfirmDoneOR'),
-			'confirm_done',
-			'',
-			0,
-			1
-		);
-	}
-	if ($action == 'close') {
-		print $form->formconfirm(
-			$_SERVER['PHP_SELF'].'?id='.$object->id,
-			$langs->trans('CloseOR'),
-			$langs->trans('ConfirmCloseOR'),
-			'confirm_close',
-			'',
-			0,
-			1
-		);
-	}
-	if ($action == 'reopen') {
-		print $form->formconfirm(
-			$_SERVER['PHP_SELF'].'?id='.$object->id,
-			$langs->trans('ReOpenOR'),
-			$langs->trans('ConfirmReOpenOR'),
-			'confirm_reopen',
-			'',
-			0,
-			1
-		);
-	}
-	if ($action == 'cancel') {
-		print $form->formconfirm(
-			$_SERVER['PHP_SELF'].'?id='.$object->id,
-			$langs->trans('CancelOR'),
-			$langs->trans('ConfirmCancelOR'),
-			'confirm_cancel',
-			'',
-			0,
-			1
-		);
-	}
-
-	// ---- Object header banner ----
-	$linkback = '<a href="'.dol_buildpath('/workshop/or_list.php', 1).'?restore_lastsearch_values=1">'.$langs->trans('BackToList').'</a>';
-
-	$morehtmlref = '<div class="refidno">';
-	if (!empty($object->ref_client)) {
-		$morehtmlref .= $langs->trans('RefClient').': '.$object->ref_client;
-	}
-	$morehtmlref .= '</div>';
-
-	dol_banner_tab($object, 'ref', $linkback, 1, 'ref', 'ref', $morehtmlref);
-
-	print '<div class="fichecenter">';
-	print '<div class="fichehalfleft">';
-
-	print '<table class="border centpercent tableforfield">'."\n";
-
-	// Status (only in view mode)
-	if ($action != 'edit') {
-		print '<tr><td class="titlefield">'.$langs->trans('Status').'</td>';
-		print '<td>'.$object->getLibStatut(4).'</td></tr>';
-	}
-
-	// Third party
-	print '<tr><td'.($action == 'edit' ? ' class="fieldrequired"' : '').'>'.$langs->trans('ThirdParty').'</td><td>';
-	if ($action == 'edit') {
-		print $form->select_company($object->fk_soc, 'fk_soc', '', 1, 0, 0, array(), 0, 'maxwidth500 widthcentpercentminusxx');
-	} else {
-		if ($object->fk_soc > 0) {
-			$soc = new Societe($db);
-			$soc->fetch($object->fk_soc);
-			print $soc->getNomUrl(1);
-		}
-	}
-	print '</td></tr>';
-
-	// Vehicle
-	print '<tr><td'.($action == 'edit' ? ' class="fieldrequired"' : '').'>'.$langs->trans('Vehicule').'</td><td>';
-	if ($action == 'edit') {
-		print $object->showInputField($object->fields['fk_vehicule'], 'fk_vehicule', $object->fk_vehicule, '', '', '', 'maxwidth500');
-	} else {
-		if ($object->fk_vehicule > 0) {
-			dol_include_once('/workshop/class/Vehicule.class.php');
-			$vehicule = new Vehicule($db);
-			$vehicule->fetch($object->fk_vehicule);
-			print $vehicule->getNomUrl(1);
-		}
-	}
-	print '</td></tr>';
-
-	// Km
-	print '<tr><td>'.$langs->trans('Km').'</td><td>';
-	if ($action == 'edit') {
-		print '<input type="text" name="km" class="flat maxwidth100" value="'.dol_escape_htmltag($object->km).'">';
-	} else {
-		print dol_escape_htmltag($object->km);
-	}
-	print '</td></tr>';
-
-	// Mechanic
-	print '<tr><td>'.$langs->trans('Mechanic').'</td><td>';
-	if ($action == 'edit') {
-		print $form->select_dolusers($object->fk_user_assign, 'fk_user_assign', 1, null, 0, $mechanicIncludeonly, '', '0', 0, 0, '', 0, '', 'maxwidth500');
-	} else {
-		if ($object->fk_user_assign > 0) {
-			$userassign = new User($db);
-			$userassign->fetch($object->fk_user_assign);
-			print $userassign->getNomUrl(1);
-		}
-	}
-	print '</td></tr>';
-
-	print '</table>'."\n";
-	print '</div>';
-
-	print '<div class="fichehalfright">';
-	print '<table class="border centpercent tableforfield">'."\n";
-
-	// Date planned
-	print '<tr><td class="titlefield">'.$langs->trans('DatePlanned').'</td><td>';
-	if ($action == 'edit') {
-		print $form->selectDate($object->date_planned, 'date_planned', 1, 1, 0, '', 1, 1, 0, '', '', '', '', 1, '', '', 'auto');
-	} else {
-		print dol_print_date($object->date_planned, 'dayhour');
-	}
-	print '</td></tr>';
-
-	// Date start
-	print '<tr><td>'.$langs->trans('DateStart').'</td><td>';
-	if ($action == 'edit') {
-		print $form->selectDate($object->date_start, 'date_start', 1, 1, 1, '', 1, 1, 0, '', '', '', '', 1, '', '', 'auto');
-	} else {
-		print dol_print_date($object->date_start, 'dayhour');
-	}
-	print '</td></tr>';
-
-	// Date end
-	print '<tr><td>'.$langs->trans('DateEnd').'</td><td>';
-	if ($action == 'edit') {
-		print $form->selectDate($object->date_end, 'date_end', 1, 1, 1, '', 1, 1, 0, '', '', '', '', 1, '', '', 'auto');
-	} else {
-		print dol_print_date($object->date_end, 'dayhour');
-	}
-	print '</td></tr>';
-
-	// Totals
-	print '<tr><td>'.$langs->trans('TotalHT').'</td>';
-	print '<td class="right">'.price($object->total_ht).'</td></tr>';
-
-	print '<tr><td>'.$langs->trans('TotalHTPart').'</td>';
-	print '<td class="right">'.price($object->total_ht_part).'</td></tr>';
-
-	print '<tr><td>'.$langs->trans('TotalHTMO').'</td>';
-	print '<td class="right">'.price($object->total_ht_mo).'</td></tr>';
-
-	print '</table>'."\n";
-	print '</div>';
-	print '</div>'; // fichecenter
-
-	print dol_get_fiche_end();
-
-	// ---- Action buttons ----
-	if ($action == 'edit') {
-		print '<form action="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'" method="POST">'."\n";
-		print '<input type="hidden" name="token" value="'.newToken().'">'."\n";
-		print '<input type="hidden" name="action" value="update">'."\n";
-		print '<input type="hidden" name="id" value="'.$object->id.'">'."\n";
-		print $form->buttonsSaveCancel();
-		print '</form>'."\n";
-	} else {
-		// Standard action buttons
-		print "\n".'<div class="tabsAction">'."\n";
-
-		// Edit
-		if ($permissiontoadd && $object->status != Operationorder::STATUS_CLOSED && $object->status != Operationorder::STATUS_CANCELLED) {
-			print dolGetButtonAction($langs->trans('Modify'), '', 'default', $_SERVER['PHP_SELF'].'?id='.$object->id.'&action=edit&token='.newToken(), '', $permissiontoadd);
-		}
-
-		// Open (Draft -> Open)
-		if ($object->status == Operationorder::STATUS_DRAFT && $permissiontovalidate) {
-			print dolGetButtonAction($langs->trans('OpenOR'), '', 'default', $_SERVER['PHP_SELF'].'?id='.$object->id.'&action=open&token='.newToken(), '', $permissiontovalidate);
-		}
-
-		// Done (Open -> Done)
-		if ($object->status == Operationorder::STATUS_OPEN && $permissiontoadd) {
-			print dolGetButtonAction($langs->trans('DoneOR'), '', 'default', $_SERVER['PHP_SELF'].'?id='.$object->id.'&action=done&token='.newToken(), '', $permissiontoadd);
-		}
-
-		// Close (Done -> Closed)
-		if ($object->status == Operationorder::STATUS_DONE && $permissiontoadd) {
-			print dolGetButtonAction($langs->trans('CloseOR'), '', 'default', $_SERVER['PHP_SELF'].'?id='.$object->id.'&action=close&token='.newToken(), '', $permissiontoadd);
-		}
-
-		// Reopen (any non-draft -> Draft)
-		if (in_array($object->status, array(Operationorder::STATUS_OPEN, Operationorder::STATUS_DONE, Operationorder::STATUS_CLOSED)) && $permissiontoadd) {
-			print dolGetButtonAction($langs->trans('ReOpenOR'), '', 'default', $_SERVER['PHP_SELF'].'?id='.$object->id.'&action=reopen&token='.newToken(), '', $permissiontoadd);
-		}
-
-		// Cancel
-		if ($object->status != Operationorder::STATUS_CANCELLED && $object->status != Operationorder::STATUS_CLOSED && $permissiontoadd) {
-			print dolGetButtonAction($langs->trans('CancelOR'), '', 'danger', $_SERVER['PHP_SELF'].'?id='.$object->id.'&action=cancel&token='.newToken(), '', $permissiontoadd);
-		}
-
-		// Delete
-		if ($permissiontodelete) {
-			print dolGetButtonAction($langs->trans('Delete'), '', 'delete', $_SERVER['PHP_SELF'].'?id='.$object->id.'&action=delete&token='.newToken(), '', $permissiontodelete);
-		}
-
-		print '</div>'."\n";
-
-		// ---- Jobs/Lines section ----
-		print '<div class="div-table-responsive-no-min">'."\n";
-		print '<table class="noborder centpercent">'."\n";
-		print '<tr class="liste_titre">';
-		print '<td>'.$langs->trans('Ref').'</td>';
-		print '<td>'.$langs->trans('Label').'</td>';
-		print '<td class="right">'.$langs->trans('TotalHT').'</td>';
-		print '</tr>'."\n";
-
-		if (!empty($object->lines)) {
-			foreach ($object->lines as $line) {
-				print '<tr class="oddeven">';
-				print '<td>'.dol_escape_htmltag($line->ref ?? '').'</td>';
-				print '<td>'.dol_escape_htmltag($line->label).'</td>';
-				print '<td class="right">'.price($line->total_ht).'</td>';
-				print '</tr>'."\n";
-			}
-		} else {
-			print '<tr><td colspan="3"><span class="opacitymedium">'.$langs->trans('NoRecordFound').'</span></td></tr>';
-		}
-
-		print '</table>'."\n";
-		print '</div>'."\n";
-	}
+print '<form action="'.$_SERVER['PHP_SELF'].'" method="POST">'."\n";
+print '<input type="hidden" name="token" value="'.newToken().'">'."\n";
+print '<input type="hidden" name="action" value="add">'."\n";
+if ($backtopage) {
+	print '<input type="hidden" name="backtopage" value="'.dol_escape_htmltag($backtopage).'">'."\n";
 }
+
+print dol_get_fiche_head(array(), '', $langs->trans('OperationOrder'), -1, 'fa-tools');
+
+print '<table class="border centpercent tableforfieldcreate">'."\n";
+
+// ── Véhicule (obligatoire) ───────────────────────────────────────────────────
+// Affichage : VIN + immatriculation (les deux ont showoncombobox=1)
+// Recherche : VIN, immatriculation (les deux ont searchall=1)
+// Le tiers (fk_soc) est déduit automatiquement lors de la création.
+print '<tr>';
+print '<td class="titlefieldcreate fieldrequired">'.$langs->trans('Vehicule').'</td>';
+print '<td>';
+print $object->showInputField($object->fields['fk_vehicule'], 'fk_vehicule', GETPOSTINT('fk_vehicule'), '', '', '', 'maxwidth500');
+print '</td>';
+print '</tr>'."\n";
+
+// ── Kilométrage ──────────────────────────────────────────────────────────────
+print '<tr>';
+print '<td class="titlefieldcreate">'.$langs->trans('Km').'</td>';
+print '<td>';
+print $object->showInputField($object->fields['km'], 'km', GETPOST('km', 'alpha'), '', '', '', 'maxwidth100');
+print '</td>';
+print '</tr>'."\n";
+
+// ── Conducteur + bouton "+" ──────────────────────────────────────────────────
+print '<tr>';
+print '<td class="titlefieldcreate">'.$langs->trans('Conducteur').'</td>';
+print '<td>';
+print $object->showInputField($object->fields['fk_conducteur'], 'fk_conducteur', GETPOSTINT('fk_conducteur'), '', '', '', 'maxwidth500');
+print ' <a href="#" class="butActionNew" onclick="orCardOpenNewConducteur(); return false;" title="'.dol_escape_htmltag($langs->trans('NewConducteur')).'">';
+print '<span class="fa fa-plus-circle valignmiddle"></span>';
+print '</a>';
+print '</td>';
+print '</tr>'."\n";
+
+// ── Tag(s) + bouton "+" ──────────────────────────────────────────────────────
+$tagObj  = new Tag($db);
+$allTags = $tagObj->getAllActiveTags();
+
+print '<tr>';
+print '<td class="titlefieldcreate">'.$langs->trans('Tags').'</td>';
+print '<td>';
+if (is_array($allTags) && !empty($allTags)) {
+	$tagArray       = array();
+	foreach ($allTags as $tid => $tag) {
+		$tagArray[$tid] = $tag->label;
+	}
+	$selectedTagIds = GETPOST('fk_tags', 'array:int');
+	print $form->multiselectarray('fk_tags', $tagArray, $selectedTagIds, 0, 0, 'maxwidth500', 0, 0, '', '', 1);
+} else {
+	print '<span class="opacitymedium">'.$langs->trans('NoTagDefined').'</span>';
+}
+print ' <a href="#" class="butActionNew" onclick="orCardOpenNewTag(); return false;" title="'.dol_escape_htmltag($langs->trans('NewTag')).'">';
+print '<span class="fa fa-plus-circle valignmiddle"></span>';
+print '</a>';
+print '</td>';
+print '</tr>'."\n";
+
+print '</table>'."\n";
+
+print dol_get_fiche_end();
+
+print $form->buttonsSaveCancel("Create");
+
+print '</form>'."\n";
+
+// ── JavaScript ───────────────────────────────────────────────────────────────
+$jsself = dol_escape_js($_SERVER['PHP_SELF']);
+print '<script type="text/javascript">
+/**
+ * Lit la valeur d\'un champ FK (input hidden) ou d\'un input classique.
+ */
+function orCardGetField(name) {
+	// Champ caché FK (ex: select2 Dolibarr)
+	var $hidden = jQuery("input[name=\'" + name + "\'][type=\'hidden\']");
+	if ($hidden.length) return $hidden.val() || "";
+	// Input classique
+	return jQuery("[name=\'" + name + "\']").val() || "";
+}
+
+/**
+ * Collecte les tags sélectionnés dans le multi-select.
+ */
+function orCardGetTags() {
+	var vals = jQuery("select[name=\'fk_tags[]\']").val();
+	return vals ? vals : [];
+}
+
+/**
+ * Construit la query-string d\'état pour préserver le formulaire.
+ */
+function orCardStateQS(overrides) {
+	overrides = overrides || {};
+	var fk_vehicule   = overrides.fk_vehicule   !== undefined ? overrides.fk_vehicule   : orCardGetField("fk_vehicule");
+	var km            = overrides.km             !== undefined ? overrides.km            : orCardGetField("km");
+	var fk_conducteur = overrides.fk_conducteur  !== undefined ? overrides.fk_conducteur : orCardGetField("fk_conducteur");
+	var fk_tags       = overrides.fk_tags        !== undefined ? overrides.fk_tags       : orCardGetTags();
+
+	var qs = "&fk_vehicule=" + encodeURIComponent(fk_vehicule);
+	qs += "&km=" + encodeURIComponent(km);
+	qs += "&fk_conducteur=" + encodeURIComponent(fk_conducteur);
+	jQuery.each(fk_tags, function(i, v) { qs += "&fk_tags[]=" + encodeURIComponent(v); });
+	return qs;
+}
+
+function orCardOpenNewConducteur() {
+	window.location.href = "' . $jsself . '?action=new_conducteur" + orCardStateQS();
+}
+
+function orCardOpenNewTag() {
+	window.location.href = "' . $jsself . '?action=new_tag" + orCardStateQS();
+}
+</script>
+';
 
 llxFooter();
 $db->close();

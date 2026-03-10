@@ -7,6 +7,7 @@ CREATE TABLE llx_workshop_operationorder (
   entity                 integer NOT NULL DEFAULT 1,
   fk_soc                 integer NOT NULL DEFAULT 0,
   fk_vehicule            integer NOT NULL DEFAULT 0,
+  fk_conducteur          integer          DEFAULT NULL,
   date_valid             datetime         DEFAULT NULL,
   date_start             datetime         DEFAULT NULL,
   date_end               datetime         DEFAULT NULL,
