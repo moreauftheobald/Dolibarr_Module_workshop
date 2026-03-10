@@ -164,7 +164,7 @@ if (!empty($planning_group_ids)) {
  * @param  int[]  $group_ids IDs of the planning groups to include
  * @return array             FullCalendar businessHours entries
  */
-function workshopComputeBusinessHours($db, $group_ids)
+function workshopComputeBusinessHours($db, $group_ids, $user_ids = array())
 {
 	global $conf;
 
@@ -183,6 +183,11 @@ function workshopComputeBusinessHours($db, $group_ids)
 	$conditions = array("(fk_object = 0 AND object_type = 'workshop')");
 	foreach ($group_ids as $gid) {
 		$conditions[] = "(fk_object = " . (int) $gid . " AND object_type = 'usergroup')";
+	}
+	// Include individual user plannings so that mechanics with earlier/later
+	// schedules than the global workshop extend the slot range accordingly.
+	foreach ($user_ids as $uid) {
+		$conditions[] = "(fk_object = " . (int) $uid . " AND object_type = 'user')";
 	}
 
 	$sql  = 'SELECT * FROM ' . MAIN_DB_PREFIX . 'workshop_planning';
@@ -243,7 +248,22 @@ function workshopGetDayRange($business_hours)
 	$ends   = array_column($business_hours, 'endTime');
 	sort($starts);
 	rsort($ends);
-	return array('start' => $starts[0], 'end' => $ends[0]);
+
+	// Apply ±1 hour buffer so that overtime slots before/after normal hours
+	// are visible on the calendar.
+	$base     = '2000-01-01 ';
+	$start_ts = strtotime($base . substr($starts[0], 0, 5)) - 3600;
+	$end_ts   = strtotime($base . substr($ends[0],   0, 5)) + 3600;
+	$midnight = strtotime($base . '00:00:00');
+	$eod      = $midnight + 86400; // equivalent of 24:00
+
+	$start_ts = max($start_ts, $midnight);
+	$end_ts   = min($end_ts, $eod);
+
+	$start_str = date('H:i:s', $start_ts);
+	$end_str   = ($end_ts >= $eod) ? '24:00:00' : date('H:i:s', $end_ts);
+
+	return array('start' => $start_str, 'end' => $end_str);
 }
 
 /**
@@ -271,10 +291,20 @@ function workshopGetTimeSlots($start, $end, $interval_minutes = 30)
 // ---------------------------------------------------------------------------
 // Compute business hours and calendar slot range
 // ---------------------------------------------------------------------------
-$business_hours = workshopComputeBusinessHours($db, array_keys($planning_groups));
+$business_hours = workshopComputeBusinessHours($db, array_keys($planning_groups), array_keys($all_users));
 $day_range      = workshopGetDayRange($business_hours);
 $slot_min       = $day_range['start'];
 $slot_max       = $day_range['end'];
+
+// Days of the week (FC convention: 0=Sun…6=Sat) that have no planning entry
+// are hidden from the calendar view.
+$days_with_planning = array();
+foreach ($business_hours as $bh) {
+	foreach ($bh['daysOfWeek'] as $dow) {
+		$days_with_planning[$dow] = true;
+	}
+}
+$hidden_days = array_values(array_diff(array(0, 1, 2, 3, 4, 5, 6), array_keys($days_with_planning)));
 
 // ---------------------------------------------------------------------------
 // Week / day navigation
@@ -497,6 +527,7 @@ if ($mode === 'journee') {
 	print '    initialView:      \'timeGridWeek\',' . "\n";
 	print '    initialDate:      \'' . dol_escape_js($week_start) . '\',' . "\n";
 	print '    firstDay:         1,' . "\n"; // Week starts on Monday
+	print '    hiddenDays:       ' . json_encode($hidden_days) . ',' . "\n";
 	print '    businessHours:    ' . (empty($business_hours) ? 'false' : 'businessHours') . ',' . "\n";
 	print '    slotMinTime:      \'' . dol_escape_js($slot_min) . '\',' . "\n";
 	print '    slotMaxTime:      \'' . dol_escape_js($slot_max) . '\',' . "\n";
