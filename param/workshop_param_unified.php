@@ -123,12 +123,11 @@ $object = new $objConfig['class_name']($db);
 $postValues = array();
 foreach ($objConfig['fields'] as $fieldName => $fieldConfig) {
 	if ($fieldConfig['type'] === 'related_select'
-		|| ($fieldConfig['type'] === 'select' && $fieldName !== 'active')) {
-		$postValues[$fieldName] = GETPOST($fieldName, 'int');
-	} elseif ($fieldConfig['type'] === 'select') {
-		// 'active' and other selects with int values
+		|| $fieldConfig['type'] === 'societe'
+		|| $fieldConfig['type'] === 'select') {
 		$postValues[$fieldName] = GETPOST($fieldName, 'int');
 	} else {
+		// 'text', 'color', 'other' → alpha (allows # for hex colors)
 		$postValues[$fieldName] = GETPOST($fieldName, 'alpha');
 	}
 }
@@ -232,7 +231,8 @@ if (($page * $limit) > $nbtotalofrecords) {
 	$offset = 0;
 }
 
-$objectslist = $object->fetchAll('ASC', 'label', $limit + 1, $offset);
+$sortField   = !empty($objConfig['sort_field']) ? $objConfig['sort_field'] : 'label';
+$objectslist = $object->fetchAll('ASC', $sortField, $limit + 1, $offset);
 if (!is_array($objectslist)) {
 	$objectslist = array();
 }

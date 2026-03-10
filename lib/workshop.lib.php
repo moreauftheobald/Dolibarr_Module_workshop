@@ -182,10 +182,11 @@ function workshopORAdminPrepareHead(): array
  *   - class_name:     (string) PHP class name to instantiate
  *   - context:        (string) 'vehicule', 'atelier', or 'both'
  *   - tab_label:      (string) Translation key for the tab title
+ *   - sort_field:     (string) Field name to sort the list by (default: 'label')
  *   - fields:         (array)  Field definitions (see below)
  *
  * Field definition keys:
- *   - type:           'text' | 'select' | 'related_select'
+ *   - type:           'text' | 'color' | 'select' | 'related_select' | 'societe'
  *   - label:          (string) Translation key for the field label
  *   - required:       (bool)   Field is required (default false)
  *   - values:         (array)  For 'select': static key => label array
@@ -200,6 +201,7 @@ function workshopORAdminPrepareHead(): array
 function getWorkshopParamObjects(): array
 {
 	return array(
+		// ── Véhicule context ────────────────────────────────────────────────
 		'marque' => array(
 			'class_file' => '/workshop/class/vehiculemark.class.php',
 			'class_name' => 'VehiculeMark',
@@ -250,6 +252,31 @@ function getWorkshopParamObjects(): array
 				'code'   => array('type' => 'text',   'label' => 'code',   'required' => true),
 				'label'  => array('type' => 'text',   'label' => 'label',  'required' => true),
 				'active' => array('type' => 'select', 'label' => 'active', 'values' => array('0' => 'Non', '1' => 'Oui'), 'default' => '1'),
+			),
+		),
+		'conducteur' => array(
+			'class_file' => '/workshop/class/Conducteur.class.php',
+			'class_name' => 'Conducteur',
+			'context'    => 'vehicule',
+			'tab_label'  => 'ConducteurList',
+			'sort_field' => 'nom',
+			'fields'     => array(
+				'nom'    => array('type' => 'text',    'label' => 'ConducteurNom',    'required' => true),
+				'prenom' => array('type' => 'text',    'label' => 'ConducteurPrenom', 'required' => true),
+				'fk_soc' => array('type' => 'societe', 'label' => 'ConducteurSociete'),
+			),
+		),
+		// ── Atelier / OR context ─────────────────────────────────────────────
+		'tag' => array(
+			'class_file' => '/workshop/class/Tag.class.php',
+			'class_name' => 'Tag',
+			'context'    => 'atelier',
+			'tab_label'  => 'TagList',
+			'fields'     => array(
+				'code'   => array('type' => 'text',   'label' => 'TagCode',    'required' => true),
+				'label'  => array('type' => 'text',   'label' => 'TagLibelle', 'required' => true),
+				'color'  => array('type' => 'color',  'label' => 'TagCouleur', 'default' => '#3c7dc4'),
+				'active' => array('type' => 'select', 'label' => 'active',     'values' => array('0' => 'Non', '1' => 'Oui'), 'default' => '1'),
 			),
 		),
 	);
@@ -348,6 +375,33 @@ function workshopBuildParamFormQuestion(string $fieldName, array $fieldConfig, $
 		);
 	}
 
+	if ($fieldConfig['type'] === 'color') {
+		$colorVal = !empty($value) ? $value : (isset($fieldConfig['default']) ? $fieldConfig['default'] : '#000000');
+		$html  = '<input type="color" name="'.$fieldName.'" value="'.dol_escape_htmltag($colorVal).'"';
+		$html .= ' style="width:60px;height:32px;padding:2px;border:1px solid #ccc;cursor:pointer;">';
+		return array(
+			'type'  => 'other',
+			'label' => $langs->trans($fieldConfig['label']),
+			'name'  => $fieldName,
+			'value' => $html,
+		);
+	}
+
+	if ($fieldConfig['type'] === 'societe') {
+		global $form;
+		if (!is_object($form)) {
+			$form = new Form($db);
+		}
+		$selectedId = ($dataEdit !== null && !empty($dataEdit->$fieldName)) ? (int) $dataEdit->$fieldName : 0;
+		$html = $form->select_company($selectedId, $fieldName, '', $langs->trans('SelectThirdParty'), 1, 0, array(), 0, 'minwidth300');
+		return array(
+			'type'  => 'other',
+			'label' => $langs->trans($fieldConfig['label']),
+			'name'  => $fieldName,
+			'value' => $html,
+		);
+	}
+
 	return array();
 }
 
@@ -384,6 +438,27 @@ function workshopRenderParamFieldValue(string $fieldName, array $fieldConfig, $d
 		dol_include_once($fieldConfig['related_file']);
 		$relObj = new $fieldConfig['related_class']($db);
 		return dol_escape_htmltag($relObj->getValueFromId((int) $value, 'label'));
+	}
+
+	if ($fieldConfig['type'] === 'color') {
+		if (empty($value)) {
+			return '-';
+		}
+		$v = dol_escape_htmltag($value);
+		return '<span style="display:inline-block;width:14px;height:14px;background-color:'.$v
+			.';border:1px solid #999;vertical-align:middle;border-radius:2px;"></span>&nbsp;'.$v;
+	}
+
+	if ($fieldConfig['type'] === 'societe') {
+		if (empty($value)) {
+			return '-';
+		}
+		require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
+		$soc = new Societe($db);
+		if ($soc->fetch((int) $value) > 0) {
+			return dol_escape_htmltag($soc->name);
+		}
+		return '-';
 	}
 
 	return dol_escape_htmltag($value);

@@ -560,21 +560,7 @@ class modWorkshop extends DolibarrModules
 			'user'=>2,
 		);
 
-		$this->menu[$r++] = array(
-			'fk_menu'  => 'fk_mainmenu=workshop,fk_leftmenu=workshop_param',
-			'type'     => 'left',
-			'titre'    => 'TagList',
-			'prefix'   => img_picto('', 'fa-tag', 'class="pictofixedwidth valignmiddle paddingright"'),
-			'mainmenu' => 'workshop',
-			'leftmenu' => 'workshop_param_tag',
-			'url'      => '/workshop/tag/tag_list.php',
-			'langs'    => 'workshop@workshop',
-			'position' => 1000 + $r,
-			'enabled'  => 'isModEnabled("workshop") && getDolGlobalInt("WORKSHOP_USE_OR")',
-			'perms'    => '$user->hasRight("workshop", "tag", "read")',
-			'target'   => '',
-			'user'     => 2,
-		);
+		// Tags OR : gérés via le formulaire "Paramètres OR" (workshop_param_unified.php?context=atelier)
 
 		$this->menu[$r++]=array(
 			'fk_menu'=>'fk_mainmenu=workshop,fk_leftmenu=workshop_param',
@@ -667,39 +653,7 @@ class modWorkshop extends DolibarrModules
 			'object'=>'Vehicule'
 		);
 
-		$this->menu[$r++] = array(
-			'fk_menu'  => 'fk_mainmenu=vehicules',
-			'type'     => 'left',
-			'titre'    => 'ConducteurList',
-			'prefix'   => img_picto('', 'fa-id-card', 'class="pictofixedwidth valignmiddle paddingright"'),
-			'mainmenu' => 'vehicules',
-			'leftmenu' => 'vehicule_conducteur_list',
-			'url'      => '/workshop/conducteur/conducteur_list.php',
-			'langs'    => 'workshop@workshop',
-			'position' => 1000 + $r,
-			'enabled'  => 'isModEnabled("workshop")',
-			'perms'    => '$user->hasRight("workshop", "conducteur", "read")',
-			'target'   => '',
-			'user'     => 2,
-			'object'   => 'Conducteur',
-		);
-
-		$this->menu[$r++] = array(
-			'fk_menu'  => 'fk_mainmenu=vehicules',
-			'type'     => 'left',
-			'titre'    => 'NewConducteur',
-			'prefix'   => img_picto('', 'fa-plus', 'class="pictofixedwidth valignmiddle paddingright"'),
-			'mainmenu' => 'vehicules',
-			'leftmenu' => 'vehicule_conducteur_new',
-			'url'      => '/workshop/conducteur/conducteur_card.php?action=create',
-			'langs'    => 'workshop@workshop',
-			'position' => 1000 + $r,
-			'enabled'  => 'isModEnabled("workshop")',
-			'perms'    => '$user->hasRight("workshop", "conducteur", "write")',
-			'target'   => '',
-			'user'     => 2,
-			'object'   => 'Conducteur',
-		);
+		// Conducteurs : gérés via le formulaire "Param_Vehicule" (workshop_param_unified.php?context=vehicule)
 
 		// Unified parameter form for the vehicule context (one tab per registered object)
 		$this->menu[$r++] = array(

@@ -228,6 +228,46 @@ class Conducteur extends CommonObject
 	}
 
 	/**
+	 * Load all conducteurs from database (used by the unified param page).
+	 *
+	 * @param  string $sortorder  Sort order ('ASC' or 'DESC')
+	 * @param  string $sortfield  Sort field (default: 'nom')
+	 * @param  int    $limit      Max number of records (0 = no limit)
+	 * @param  int    $offset     Offset for pagination
+	 * @param  array  $filter     Unused — kept for signature compat
+	 * @param  string $filtermode Unused — kept for signature compat
+	 * @return array|int          Array of Conducteur objects indexed by rowid, or -1 on error
+	 */
+	public function fetchAll($sortorder = 'ASC', $sortfield = 'nom', $limit = 0, $offset = 0, $filter = array(), $filtermode = 'AND')
+	{
+		$sf  = !empty($sortfield) ? $this->db->sanitize($sortfield) : 'nom';
+		$so  = !empty($sortorder) ? $this->db->sanitize($sortorder) : 'ASC';
+
+		$sql  = 'SELECT rowid FROM '.$this->db->prefix().$this->table_element;
+		$sql .= ' WHERE 1=1';
+		$sql .= ' ORDER BY '.$sf.' '.$so;
+
+		if ($limit > 0) {
+			$sql .= $this->db->plimit((int) $limit, (int) $offset);
+		}
+
+		$resql = $this->db->query($sql);
+		if (!$resql) {
+			$this->error = $this->db->lasterror();
+			return -1;
+		}
+
+		$ret = array();
+		while ($obj = $this->db->fetch_object($resql)) {
+			$tmp = new Conducteur($this->db);
+			$tmp->fetch($obj->rowid);
+			$ret[$obj->rowid] = $tmp;
+		}
+
+		return $ret;
+	}
+
+	/**
 	 * Return the full name (prenom + nom)
 	 *
 	 * @return string

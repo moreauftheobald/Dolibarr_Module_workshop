@@ -408,7 +408,7 @@ Param_Vehicule_pneu=Tyre types
 # Unified parameter form
 #
 WorkshopUnifiedParamTitle=Parameters
-WorkshopUnifiedParam=Auxiliary objects (workshop)
+WorkshopUnifiedParam=OR Parameters
 WorkshopNoObjectsForContext=No objects defined for context "%s"
 
 #

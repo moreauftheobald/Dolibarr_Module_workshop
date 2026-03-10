@@ -270,7 +270,7 @@ pneulabel=Nom du type de pneu
 AllMarks=Toute marques
 VehiculeMarkId=Marque associée
 WorkshopUnifiedParamTitle=Paramètres
-WorkshopUnifiedParam=Objets annexes (atelier)
+WorkshopUnifiedParam=Paramètres OR
 WorkshopNoObjectsForContext=Aucun objet défini pour le contexte "%s"
 
 #
