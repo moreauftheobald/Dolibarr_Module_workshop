@@ -114,26 +114,28 @@ function orCardStateQueryString()
 }
 
 /**
- * Build the hidden-field list for a formconfirm dialog so the state
- * survives the POST + redirect cycle.
+ * Build the URL fragment that carries the OR-form state for a sub-dialog.
+ * Returns a full query string (starting with '?') ready to be appended to PHP_SELF.
  *
- * @param  array $extra  Optional extra fields to add to the list
- * @return array         $formquestion array fragment
+ * @param  array $overrides  Associative array of values to override
+ * @return string             URL starting with '?'
  */
-function orCardStateHiddenFields($extra = array())
+function orCardStatePageUrl($overrides = array())
 {
-	$fk_vehicule   = GETPOSTINT('fk_vehicule');
-	$km            = GETPOST('km', 'alpha');
-	$fk_conducteur = GETPOSTINT('fk_conducteur');
-	$fk_tags       = array_filter(array_map('intval', (array) GETPOST('fk_tags', 'array:int')));
+	$fk_vehicule   = isset($overrides['fk_vehicule'])   ? (int) $overrides['fk_vehicule']   : GETPOSTINT('fk_vehicule');
+	$km            = isset($overrides['km'])             ? $overrides['km']                  : GETPOST('km', 'alpha');
+	$fk_conducteur = isset($overrides['fk_conducteur']) ? (int) $overrides['fk_conducteur'] : GETPOSTINT('fk_conducteur');
+	$fk_tags       = isset($overrides['fk_tags'])
+		? $overrides['fk_tags']
+		: array_filter(array_map('intval', (array) GETPOST('fk_tags', 'array:int')));
 
-	$fields   = array();
-	$fields[] = array('type' => 'hidden', 'name' => 'fk_vehicule',   'value' => (int) $fk_vehicule);
-	$fields[] = array('type' => 'hidden', 'name' => 'km',            'value' => dol_escape_htmltag($km));
-	$fields[] = array('type' => 'hidden', 'name' => 'fk_conducteur', 'value' => (int) $fk_conducteur);
-	$fields[] = array('type' => 'hidden', 'name' => 'tags_state',    'value' => implode(',', $fk_tags));
-
-	return array_merge($fields, $extra);
+	$url  = '?fk_vehicule='.$fk_vehicule;
+	$url .= '&km='.urlencode((string) $km);
+	$url .= '&fk_conducteur='.$fk_conducteur;
+	foreach ($fk_tags as $t) {
+		$url .= '&fk_tags[]='.((int) $t);
+	}
+	return $url;
 }
 
 /**
@@ -149,11 +151,10 @@ function orCardRestoreUrl($self, $overrides = array())
 	$km            = isset($overrides['km'])             ? $overrides['km']                  : GETPOST('km', 'alpha');
 	$fk_conducteur = isset($overrides['fk_conducteur']) ? (int) $overrides['fk_conducteur'] : GETPOSTINT('fk_conducteur');
 
-	// Tags: merge state string + overrides
-	$tags_state = GETPOST('tags_state', 'alpha');
-	$fk_tags    = isset($overrides['fk_tags'])
+	// Tags: use overrides or read fk_tags[] from request (GET or POST)
+	$fk_tags = isset($overrides['fk_tags'])
 		? $overrides['fk_tags']
-		: array_filter(array_map('intval', explode(',', (string) $tags_state)));
+		: array_filter(array_map('intval', (array) GETPOST('fk_tags', 'array:int')));
 
 	$url  = $self.'?fk_vehicule='.$fk_vehicule;
 	$url .= '&km='.urlencode((string) $km);
@@ -196,6 +197,7 @@ if (empty($reshook)) {
 		$conducteur         = new Conducteur($db);
 		$conducteur->nom    = GETPOST('conducteur_nom', 'alphanohtml');
 		$conducteur->prenom = GETPOST('conducteur_prenom', 'alphanohtml');
+		$conducteur->fk_soc = GETPOSTINT('conducteur_fk_soc') ?: null;
 
 		if (empty(trim((string) $conducteur->nom))) {
 			setEventMessages($langs->trans('ErrConducteurNomRequired'), null, 'errors');
@@ -243,8 +245,7 @@ if (empty($reshook)) {
 			if ($newId > 0) {
 				setEventMessage($langs->trans('TagCreated'));
 				// Add the new tag to the current selection
-				$tags_state = GETPOST('tags_state', 'alpha');
-				$fk_tags    = array_filter(array_map('intval', explode(',', (string) $tags_state)));
+				$fk_tags    = array_filter(array_map('intval', (array) GETPOST('fk_tags', 'array:int')));
 				$fk_tags[]  = $newId;
 				header('Location: '.orCardRestoreUrl($_SERVER['PHP_SELF'], array('fk_tags' => $fk_tags)));
 				exit;
@@ -323,7 +324,9 @@ print load_fiche_titre($langs->trans('NewOperationOrders'), '', 'fa-tools');
 
 // Dialog : Nouveau conducteur
 if ($action == 'new_conducteur' || $action == 'confirm_new_conducteur') {
-	$fq = orCardStateHiddenFields(array(
+	// L'état du formulaire OR est passé dans l'URL (GET) — pas de hidden dans formquestion
+	$pageUrl = $_SERVER['PHP_SELF'].orCardStatePageUrl();
+	$fq = array(
 		array(
 			'type'  => 'text',
 			'label' => $langs->trans('ConducteurNom').' <span class="fieldrequired">*</span>',
@@ -336,9 +339,15 @@ if ($action == 'new_conducteur' || $action == 'confirm_new_conducteur') {
 			'name'  => 'conducteur_prenom',
 			'value' => GETPOST('conducteur_prenom', 'alphanohtml'),
 		),
-	));
+		array(
+			'type'  => 'other',
+			'label' => $langs->trans('ConducteurSociete'),
+			'name'  => 'conducteur_fk_soc',
+			'value' => $form->select_company(GETPOSTINT('conducteur_fk_soc'), 'conducteur_fk_soc', '', $langs->trans('SelectThirdParty'), 1, 0, array(), 0, 'minwidth200'),
+		),
+	);
 	print $form->formconfirm(
-		$_SERVER['PHP_SELF'],
+		$pageUrl,
 		$langs->trans('NewConducteur'),
 		'',
 		'confirm_new_conducteur',
@@ -355,7 +364,9 @@ if ($action == 'new_conducteur' || $action == 'confirm_new_conducteur') {
 
 // Dialog : Nouveau tag
 if ($action == 'new_tag' || $action == 'confirm_new_tag') {
-	$fq = orCardStateHiddenFields(array(
+	// L'état du formulaire OR est passé dans l'URL (GET) — pas de hidden dans formquestion
+	$pageUrl = $_SERVER['PHP_SELF'].orCardStatePageUrl();
+	$fq = array(
 		array(
 			'type'  => 'text',
 			'label' => $langs->trans('Code').' <span class="fieldrequired">*</span>',
@@ -373,9 +384,9 @@ if ($action == 'new_tag' || $action == 'confirm_new_tag') {
 			'label' => $langs->trans('TagCouleur'),
 			'value' => '<input type="color" name="tag_color" value="'.dol_escape_htmltag(GETPOST('tag_color', 'alphanohtml') ?: '#3c7dd4').'" style="height:28px;width:60px;cursor:pointer;">',
 		),
-	));
+	);
 	print $form->formconfirm(
-		$_SERVER['PHP_SELF'],
+		$pageUrl,
 		$langs->trans('NewTag'),
 		'',
 		'confirm_new_tag',
@@ -446,7 +457,7 @@ if (is_array($allTags) && !empty($allTags)) {
 		$tagArray[$tid] = $tag->label;
 	}
 	$selectedTagIds = GETPOST('fk_tags', 'array:int');
-	print $form->multiselectarray('fk_tags', $tagArray, $selectedTagIds, 0, 0, 'maxwidth500', 0, 0, '', '', 1);
+	print $form->multiselectarray('fk_tags', $tagArray, $selectedTagIds, 0, 0, 'minwidth300 widthcentpercent', 0, 0, '', '', 1);
 } else {
 	print '<span class="opacitymedium">'.$langs->trans('NoTagDefined').'</span>';
 }
