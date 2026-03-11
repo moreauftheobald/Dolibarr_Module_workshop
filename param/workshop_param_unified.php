@@ -260,23 +260,21 @@ if (!empty($context)) {
 $formconfirm = '';
 
 if ($action === 'delete' && !empty($rowid)) {
-	$formquestion   = array();
-	$formquestion[] = array('type' => 'hidden', 'name' => 'tab',     'value' => $tab);
-	$formquestion[] = array('type' => 'hidden', 'name' => 'context', 'value' => $context);
-	$formquestion[] = array('type' => 'hidden', 'name' => 'rowid',   'value' => $rowid);
-	$formconfirm    = $form->formconfirm(
-		$_SERVER["PHP_SELF"],
+	// tab, context et rowid passés dans l'URL — pas de hidden dans formquestion
+	$pageUrl     = $_SERVER["PHP_SELF"].'?tab='.urlencode($tab).'&context='.urlencode($context).'&rowid='.(int) $rowid;
+	$formconfirm = $form->formconfirm(
+		$pageUrl,
 		$langs->trans('Delete'),
 		$langs->trans('ConfirmDelete'),
 		'confirmdelete',
-		$formquestion,
+		array(),
 		'yes',
 		1
 	);
 } elseif ($action === 'new') {
-	$formquestion   = array();
-	$formquestion[] = array('type' => 'hidden', 'name' => 'tab',     'value' => $tab);
-	$formquestion[] = array('type' => 'hidden', 'name' => 'context', 'value' => $context);
+	// tab et context passés dans l'URL — pas de hidden dans formquestion
+	$pageUrl      = $_SERVER["PHP_SELF"].'?tab='.urlencode($tab).'&context='.urlencode($context);
+	$formquestion = array();
 	foreach ($objConfig['fields'] as $fieldName => $fieldConfig) {
 		$q = workshopBuildParamFormQuestion($fieldName, $fieldConfig, null, $db, $langs);
 		if (!empty($q)) {
@@ -284,7 +282,7 @@ if ($action === 'delete' && !empty($rowid)) {
 		}
 	}
 	$formconfirm = $form->formconfirm(
-		$_SERVER["PHP_SELF"],
+		$pageUrl,
 		$langs->trans('New'),
 		'',
 		'confirmnew',
@@ -295,16 +293,15 @@ if ($action === 'delete' && !empty($rowid)) {
 		700
 	);
 } elseif ($action === 'edit' && !empty($rowid)) {
+	// tab, context et rowid passés dans l'URL — pas de hidden dans formquestion
+	$pageUrl  = $_SERVER["PHP_SELF"].'?tab='.urlencode($tab).'&context='.urlencode($context).'&rowid='.(int) $rowid;
 	// Load the record to edit (may already be in $objectslist)
 	$dataEdit = isset($objectslist[$rowid]) ? $objectslist[$rowid] : null;
 	if ($dataEdit === null) {
 		$dataEdit = new $objConfig['class_name']($db);
 		$dataEdit->fetch($rowid);
 	}
-	$formquestion   = array();
-	$formquestion[] = array('type' => 'hidden', 'name' => 'tab',     'value' => $tab);
-	$formquestion[] = array('type' => 'hidden', 'name' => 'context', 'value' => $context);
-	$formquestion[] = array('type' => 'hidden', 'name' => 'rowid',   'value' => $rowid);
+	$formquestion = array();
 	foreach ($objConfig['fields'] as $fieldName => $fieldConfig) {
 		$q = workshopBuildParamFormQuestion($fieldName, $fieldConfig, $dataEdit, $db, $langs);
 		if (!empty($q)) {
@@ -312,7 +309,7 @@ if ($action === 'delete' && !empty($rowid)) {
 		}
 	}
 	$formconfirm = $form->formconfirm(
-		$_SERVER["PHP_SELF"],
+		$pageUrl,
 		$langs->trans('Edit'),
 		'',
 		'confirmedit',
