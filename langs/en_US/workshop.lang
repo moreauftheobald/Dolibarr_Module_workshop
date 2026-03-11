@@ -47,6 +47,11 @@ Param_Service_Type=Service types
 # OR Card labels
 #
 ORCard=Repair order
+ORPointages=Timesheets
+ORDebitPieces=Parts used
+ORHistoriqueVehicule=Vehicle history
+ORVSR=VSR
+ORHistory=History
 ShowOperationorder=Show repair order
 DeleteOR=Delete repair order
 ConfirmDeleteOR=Are you sure you want to delete this repair order?

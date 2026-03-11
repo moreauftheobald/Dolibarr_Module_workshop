@@ -377,13 +377,13 @@ function workshopBuildParamFormQuestion(string $fieldName, array $fieldConfig, $
 
 	if ($fieldConfig['type'] === 'color') {
 		$colorVal = !empty($value) ? $value : (isset($fieldConfig['default']) ? $fieldConfig['default'] : '#000000');
-		$html  = '<input type="color" name="'.$fieldName.'" value="'.dol_escape_htmltag($colorVal).'"';
-		$html .= ' style="width:60px;height:32px;padding:2px;border:1px solid #ccc;cursor:pointer;">';
+		// Use type='text' so Dolibarr's formconfirm correctly includes the value in the GET submission.
+		// A companion color picker (<input type="color">) is injected via JavaScript (see workshop_param_unified.php).
 		return array(
-			'type'  => 'other',
+			'type'  => 'text',
 			'label' => $langs->trans($fieldConfig['label']),
 			'name'  => $fieldName,
-			'value' => $html,
+			'value' => dol_escape_htmltag($colorVal),
 		);
 	}
 
@@ -444,7 +444,9 @@ function workshopRenderParamFieldValue(string $fieldName, array $fieldConfig, $d
 		if (empty($value)) {
 			return '-';
 		}
-		$v = dol_escape_htmltag($value);
+		// Normalize: ensure '#' prefix for valid CSS
+		$hex = ($value[0] !== '#') ? '#'.$value : $value;
+		$v   = dol_escape_htmltag($hex);
 		return '<span style="display:inline-block;width:14px;height:14px;background-color:'.$v
 			.';border:1px solid #999;vertical-align:middle;border-radius:2px;"></span>&nbsp;'.$v;
 	}

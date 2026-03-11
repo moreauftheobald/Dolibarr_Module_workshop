@@ -126,8 +126,12 @@ foreach ($objConfig['fields'] as $fieldName => $fieldConfig) {
 		|| $fieldConfig['type'] === 'societe'
 		|| $fieldConfig['type'] === 'select') {
 		$postValues[$fieldName] = GETPOST($fieldName, 'int');
+	} elseif ($fieldConfig['type'] === 'color') {
+		// Use 'nohtml' to allow the '#' character in hex color codes (e.g. #3c7dc4).
+		// 'alpha' would strip '#', resulting in an invalid color value saved to the DB.
+		$raw = GETPOST($fieldName, 'nohtml');
+		$postValues[$fieldName] = preg_match('/^#[0-9a-fA-F]{6}$/', $raw) ? strtolower($raw) : '';
 	} else {
-		// 'text', 'color', 'other' → alpha (allows # for hex colors)
 		$postValues[$fieldName] = GETPOST($fieldName, 'alpha');
 	}
 }

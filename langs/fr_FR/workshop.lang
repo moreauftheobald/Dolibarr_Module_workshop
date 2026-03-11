@@ -187,6 +187,11 @@ Param_Vehicule=Paramètres véhicules
 # OR Card labels
 #
 ORCard=Ordre de réparation
+ORPointages=Pointages
+ORDebitPieces=Débit pièces
+ORHistoriqueVehicule=Historique véhicule
+ORVSR=VSR
+ORHistory=Historique
 ShowOperationorder=Voir l'ordre de réparation
 DeleteOR=Supprimer l'ordre de réparation
 ConfirmDeleteOR=Êtes-vous sûr de vouloir supprimer cet ordre de réparation ?

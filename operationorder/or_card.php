@@ -18,7 +18,7 @@
 /**
  * \file       operationorder/or_card.php
  * \ingroup    workshop
- * \brief      Création d'un Ordre de Réparation (OR)
+ * \brief      Création et affichage (vue) d'un Ordre de Réparation (OR)
  */
 
 // Load Dolibarr environment
@@ -54,7 +54,9 @@ if (!$res) {
 }
 
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.form.class.php';
+require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
 dol_include_once('/workshop/class/operationorder.class.php');
+dol_include_once('/workshop/class/Vehicule.class.php');
 dol_include_once('/workshop/class/Conducteur.class.php');
 dol_include_once('/workshop/class/Tag.class.php');
 dol_include_once('/workshop/class/OperationorderTag.class.php');
@@ -72,6 +74,7 @@ $langs->loadLangs(array('workshop@workshop'));
 $action      = GETPOST('action', 'aZ09');
 $confirm     = GETPOST('confirm', 'alpha');
 $cancel      = GETPOST('cancel', 'alpha');
+$id          = GETPOSTINT('id');
 $backtopage  = GETPOST('backtopage', 'alpha');
 $backtopageforcancel = GETPOST('backtopageforcancel', 'alpha');
 
@@ -83,6 +86,15 @@ $extrafields->fetch_name_optionals_label($object->table_element);
 $hookmanager->initHooks(array('orcard', 'globalcard'));
 
 $permissiontoadd = $user->hasRight('workshop', 'operationorders', 'write');
+
+// En mode vue : chargement de l'objet depuis la base
+if ($id > 0) {
+	$ret = $object->fetch($id);
+	if ($ret <= 0) {
+		dol_print_error($db, $object->error);
+		exit;
+	}
+}
 
 
 /*
@@ -171,14 +183,15 @@ function orCardRestoreUrl($self, $overrides = array())
  */
 
 if ($cancel) {
-	if (!empty($backtopageforcancel)) {
-		header("Location: ".$backtopageforcancel);
-		exit;
+	if ($id > 0) {
+		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
+	} elseif (!empty($backtopageforcancel)) {
+		header('Location: '.$backtopageforcancel);
 	} elseif (!empty($backtopage)) {
-		header("Location: ".$backtopage);
-		exit;
+		header('Location: '.$backtopage);
+	} else {
+		header('Location: '.$_SERVER['PHP_SELF']);
 	}
-	header("Location: ".$_SERVER['PHP_SELF']);
 	exit;
 }
 
@@ -263,12 +276,28 @@ if (empty($reshook)) {
 		$object->fk_vehicule   = GETPOSTINT('fk_vehicule');
 		$object->km            = GETPOST('km', 'alpha');
 		$object->fk_conducteur = GETPOSTINT('fk_conducteur');
-		$object->status        = Operationorder::STATUS_DRAFT;
 		$object->fk_user_creat = $user->id;
+
+		// Statut défini dans le paramètre admin, fallback STATUS_DRAFT
+		$statusOnCreate = getDolGlobalInt('WORKSHOP_OR_STATUS_ON_CREATE');
+		$object->status = $statusOnCreate > 0 ? $statusOnCreate : Operationorder::STATUS_DRAFT;
+
+		// Totaux à 0
+		$object->total_ht          = 0;
+		$object->total_ht_part     = 0;
+		$object->total_ht_mo       = 0;
+		$object->total_ht_service  = 0;
+		$object->total_ht_external = 0;
+		$object->total_ht_refund   = 0;
+
+		// Dates de planification et clôture à NULL, dates techniques à NULL
+		$object->date_planned = null;
+		$object->date_valid   = null;
+		$object->date_start   = null;
+		$object->date_end     = null;
 
 		// Dériver le tiers depuis le véhicule sélectionné
 		if ($object->fk_vehicule > 0) {
-			dol_include_once('/workshop/class/Vehicule.class.php');
 			$vehicule = new Vehicule($db);
 			if ($vehicule->fetch($object->fk_vehicule) > 0) {
 				$object->fk_soc = (int) $vehicule->fk_soc;
@@ -282,6 +311,14 @@ if (empty($reshook)) {
 		if (empty($object->fk_soc)) {
 			setEventMessages($langs->trans('ErrInvalidSocid'), null, 'errors');
 			$error++;
+		}
+
+		// Référence via le module de numérotation configuré dans l'admin
+		if (!$error) {
+			$nextRef = $object->getNextNumRef();
+			if (!empty($nextRef)) {
+				$object->ref = $nextRef;
+			}
 		}
 
 		$ret = $extrafields->setOptionalsFromPost(null, $object, '@GETPOSTISSET');
@@ -309,12 +346,164 @@ if (empty($reshook)) {
 			$action = 'create';
 		}
 	}
+
+	// ── Mode vue : sauvegarde des éditions en ligne ──────────────────────────
+
+	if ($action == 'save_fk_soc' && $id > 0 && $permissiontoadd) {
+		$object->fk_soc = GETPOSTINT('fk_soc');
+		if ($object->update($user) < 0) {
+			setEventMessages($object->error, $object->errors, 'errors');
+		}
+		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
+		exit;
+	}
+
+	if ($action == 'save_ref_client' && $id > 0 && $permissiontoadd) {
+		$object->ref_client = GETPOST('ref_client', 'alphanohtml');
+		if ($object->update($user) < 0) {
+			setEventMessages($object->error, $object->errors, 'errors');
+		}
+		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
+		exit;
+	}
+
+	if ($action == 'save_fk_vehicule' && $id > 0 && $permissiontoadd) {
+		$object->fk_vehicule = GETPOSTINT('fk_vehicule');
+		// Re-synchroniser le tiers avec le nouveau véhicule
+		if ($object->fk_vehicule > 0) {
+			$vehicule = new Vehicule($db);
+			if ($vehicule->fetch($object->fk_vehicule) > 0) {
+				$object->fk_soc = (int) $vehicule->fk_soc;
+			}
+		}
+		if ($object->update($user) < 0) {
+			setEventMessages($object->error, $object->errors, 'errors');
+		}
+		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
+		exit;
+	}
 }
 
 
 /*
  * View
  */
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MODE VUE : affichage de la fiche OR existante
+// ═══════════════════════════════════════════════════════════════════════════
+if ($id > 0) {
+
+	llxHeader('', $object->ref.' — '.$langs->trans('OperationOrder'), '', '', 0, 0, array(), array(), '', 'mod-workshop page-orcard');
+
+	$head = operationorderPrepareHead($object);
+	print dol_get_fiche_head($head, 'card', $langs->trans('OperationOrder'), -1, 'fa-tools', 0, '', '', 0, '', 1);
+
+	$linkback = '<a href="'.dol_buildpath('/workshop/operationorder/or_list.php', 1).'?restore_lastsearch_values=1">'.$langs->trans('BackToList').'</a>';
+
+	// ── Construction du morehtmlref (lignes sous le numéro OR dans le bandeau)
+
+	// Tags de l'OR — pastilles colorées juste sous le numéro
+	$orTagObj  = new OperationorderTag($db);
+	$orTagList = $orTagObj->getTagsForOR($object->id);
+	$morehtmlref = '';
+	if (is_array($orTagList) && !empty($orTagList)) {
+		$morehtmlref .= '<div style="margin-bottom:6px;">';
+		foreach ($orTagList as $tag) {
+			$morehtmlref .= $tag->getNomUrl().' ';
+		}
+		$morehtmlref .= '</div>';
+	}
+
+	$morehtmlref .= '<div class="refidno">';
+
+	// Société (modifiable en ligne)
+	$morehtmlref .= $langs->trans('ThirdParty').': ';
+	if ($action == 'editfk_soc' && $permissiontoadd) {
+		$morehtmlref .= '<form method="POST" action="'.$_SERVER['PHP_SELF'].'" style="display:inline-block">';
+		$morehtmlref .= '<input type="hidden" name="token" value="'.newToken().'">';
+		$morehtmlref .= '<input type="hidden" name="action" value="save_fk_soc">';
+		$morehtmlref .= '<input type="hidden" name="id" value="'.$object->id.'">';
+		$morehtmlref .= $object->showInputField($object->fields['fk_soc'], 'fk_soc', $object->fk_soc, '', '', '', 'minwidth200');
+		$morehtmlref .= ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
+		$morehtmlref .= ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
+		$morehtmlref .= '</form>';
+	} else {
+		if ($object->fk_soc > 0) {
+			$soc = new Societe($db);
+			$soc->fetch($object->fk_soc);
+			$morehtmlref .= $soc->getNomUrl(1);
+		} else {
+			$morehtmlref .= '<span class="opacitymedium">'.$langs->trans('None').'</span>';
+		}
+		if ($permissiontoadd) {
+			$morehtmlref .= ' <a class="editfielda" href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'&action=editfk_soc">'.img_edit().'</a>';
+		}
+	}
+
+	$morehtmlref .= '<br>';
+
+	// Référence client (modifiable en ligne)
+	$morehtmlref .= $langs->trans('RefClient').': ';
+	if ($action == 'editref_client' && $permissiontoadd) {
+		$morehtmlref .= '<form method="POST" action="'.$_SERVER['PHP_SELF'].'" style="display:inline-block">';
+		$morehtmlref .= '<input type="hidden" name="token" value="'.newToken().'">';
+		$morehtmlref .= '<input type="hidden" name="action" value="save_ref_client">';
+		$morehtmlref .= '<input type="hidden" name="id" value="'.$object->id.'">';
+		$morehtmlref .= '<input type="text" name="ref_client" class="minwidth200" value="'.dol_escape_htmltag((string) $object->ref_client).'">';
+		$morehtmlref .= ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
+		$morehtmlref .= ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
+		$morehtmlref .= '</form>';
+	} else {
+		$morehtmlref .= (!empty($object->ref_client) ? dol_escape_htmltag($object->ref_client) : '<span class="opacitymedium">'.$langs->trans('None').'</span>');
+		if ($permissiontoadd) {
+			$morehtmlref .= ' <a class="editfielda" href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'&action=editref_client">'.img_edit().'</a>';
+		}
+	}
+
+	$morehtmlref .= '<br>';
+
+	// Véhicule (modifiable en ligne)
+	$morehtmlref .= $langs->trans('Vehicule').': ';
+	if ($action == 'editfk_vehicule' && $permissiontoadd) {
+		$morehtmlref .= '<form method="POST" action="'.$_SERVER['PHP_SELF'].'" style="display:inline-block">';
+		$morehtmlref .= '<input type="hidden" name="token" value="'.newToken().'">';
+		$morehtmlref .= '<input type="hidden" name="action" value="save_fk_vehicule">';
+		$morehtmlref .= '<input type="hidden" name="id" value="'.$object->id.'">';
+		$morehtmlref .= $object->showInputField($object->fields['fk_vehicule'], 'fk_vehicule', $object->fk_vehicule, '', '', '', 'minwidth200');
+		$morehtmlref .= ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
+		$morehtmlref .= ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
+		$morehtmlref .= '</form>';
+	} else {
+		if ($object->fk_vehicule > 0) {
+			$vehicule = new Vehicule($db);
+			if ($vehicule->fetch($object->fk_vehicule) > 0) {
+				$morehtmlref .= $vehicule->getNomUrl(1);
+			}
+		} else {
+			$morehtmlref .= '<span class="opacitymedium">'.$langs->trans('None').'</span>';
+		}
+		if ($permissiontoadd) {
+			$morehtmlref .= ' <a class="editfielda" href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'&action=editfk_vehicule">'.img_edit().'</a>';
+		}
+	}
+
+	$morehtmlref .= '</div>';
+
+	// ── Bandeau ──────────────────────────────────────────────────────────────
+	dol_banner_tab($object, 'ref', $linkback, 1, 'ref', 'ref', $morehtmlref, '', $object->getLibStatut(4));
+
+	print dol_get_fiche_end();
+
+	llxFooter();
+	$db->close();
+	exit;
+}
+
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MODE CRÉATION : formulaire de saisie d'un nouvel OR
+// ═══════════════════════════════════════════════════════════════════════════
 
 llxHeader('', $langs->trans('NewOperationOrders'), '', '', 0, 0, array(), array(), '', 'mod-workshop page-orcard');
 

@@ -209,6 +209,25 @@ class Operationorder extends CommonObject
 	}
 
 	/**
+	 * Return next reference for this object (used by createCommon numbering logic).
+	 *
+	 * @return string  Next reference string, or '' on error
+	 */
+	public function getNextNumRef()
+	{
+		$modName = getDolGlobalString('WORKSHOP_OR_ADDON', 'mod_workshopor_standard');
+		dol_include_once('/workshop/core/modules/workshopor/modules_workshopor.php');
+		$modFile = dol_buildpath('/workshop/core/modules/workshopor/'.$modName.'.php', 0);
+		if (!file_exists($modFile)) {
+			$this->error = 'BadDefinedNumRef';
+			return '';
+		}
+		require_once $modFile;
+		$obj = new $modName();
+		return $obj->getNextValue($this);
+	}
+
+	/**
 	 * Create object into database
 	 *
 	 * @param  User $user      User that creates

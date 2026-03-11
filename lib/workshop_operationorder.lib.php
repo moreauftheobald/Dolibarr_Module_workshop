@@ -62,19 +62,52 @@ function operationorderPrepareHead($object)
 	$h = 0;
 	$head = array();
 
+	// Fiche OR (onglet courant)
 	$head[$h][0] = dol_buildpath('/workshop/operationorder/or_card.php', 1).'?id='.$object->id;
 	$head[$h][1] = $langs->trans('ORCard');
 	$head[$h][2] = 'card';
 	$h++;
 
+	// Pointages
+	$head[$h][0] = dol_buildpath('/workshop/operationorder/or_pointages.php', 1).'?id='.$object->id;
+	$head[$h][1] = $langs->trans('ORPointages');
+	$head[$h][2] = 'pointages';
+	$h++;
+
+	// Débit pièces
+	$head[$h][0] = dol_buildpath('/workshop/operationorder/or_pieces.php', 1).'?id='.$object->id;
+	$head[$h][1] = $langs->trans('ORDebitPieces');
+	$head[$h][2] = 'pieces';
+	$h++;
+
+	// Historique véhicule
+	$head[$h][0] = dol_buildpath('/workshop/operationorder/or_historique_vehicule.php', 1).'?id='.$object->id;
+	$head[$h][1] = $langs->trans('ORHistoriqueVehicule');
+	$head[$h][2] = 'historique_vehicule';
+	$h++;
+
+	// VSR
+	$head[$h][0] = dol_buildpath('/workshop/operationorder/or_vsr.php', 1).'?id='.$object->id;
+	$head[$h][1] = $langs->trans('ORVSR');
+	$head[$h][2] = 'vsr';
+	$h++;
+
+	// Fichiers joints
+	$head[$h][0] = dol_buildpath('/workshop/operationorder/or_document.php', 1).'?id='.$object->id;
+	$head[$h][1] = $langs->trans('Documents');
+	$head[$h][2] = 'document';
+	$h++;
+
+	// Notes
 	$head[$h][0] = dol_buildpath('/workshop/operationorder/or_note.php', 1).'?id='.$object->id;
 	$head[$h][1] = $langs->trans('Notes');
 	$head[$h][2] = 'note';
 	$h++;
 
-	$head[$h][0] = dol_buildpath('/workshop/operationorder/or_document.php', 1).'?id='.$object->id;
-	$head[$h][1] = $langs->trans('Documents');
-	$head[$h][2] = 'document';
+	// Historique
+	$head[$h][0] = dol_buildpath('/workshop/operationorder/or_history.php', 1).'?id='.$object->id;
+	$head[$h][1] = $langs->trans('ORHistory');
+	$head[$h][2] = 'history';
 	$h++;
 
 	complete_head_from_modules($conf, $langs, $object, $head, $h, 'operationorder@workshop');
