@@ -61,6 +61,7 @@ dol_include_once('/workshop/class/Conducteur.class.php');
 dol_include_once('/workshop/class/Tag.class.php');
 dol_include_once('/workshop/class/OperationorderTag.class.php');
 dol_include_once('/workshop/lib/workshop_operationorder.lib.php');
+dol_include_once('/workshop/lib/workshop.lib.php');
 
 if (!isModEnabled('workshop')) {
 	accessforbidden();
@@ -241,7 +242,9 @@ if (empty($reshook)) {
 		$tag         = new Tag($db);
 		$tag->code   = GETPOST('tag_code', 'alphanohtml');
 		$tag->label  = GETPOST('tag_label', 'alphanohtml');
-		$tag->color  = GETPOST('tag_color', 'alphanohtml');
+		$rawColor    = GETPOST('tag_color', 'nohtml');
+		$palette     = getWorkshopColorPalette();
+		$tag->color  = isset($palette[$rawColor]) ? $rawColor : '';
 		$tag->active = 1;
 
 		if (empty(trim((string) $tag->code))) {
@@ -568,11 +571,21 @@ if ($action == 'new_tag' || $action == 'confirm_new_tag') {
 			'name'  => 'tag_label',
 			'value' => GETPOST('tag_label', 'alphanohtml'),
 		),
-		array(
-			'type'  => 'other',
-			'label' => $langs->trans('TagCouleur'),
-			'value' => '<input type="color" name="tag_color" value="'.dol_escape_htmltag(GETPOST('tag_color', 'alphanohtml') ?: '#3c7dd4').'" style="height:28px;width:60px;cursor:pointer;">',
-		),
+		(function () use ($langs) {
+			$palette  = getWorkshopColorPalette();
+			$rawColor = GETPOST('tag_color', 'nohtml');
+			$selected = isset($palette[$rawColor]) ? $rawColor : '#3c7dc4';
+			if (!isset($palette[$selected])) {
+				$selected = key($palette);
+			}
+			return array(
+				'type'    => 'select',
+				'label'   => $langs->trans('TagCouleur'),
+				'name'    => 'tag_color',
+				'values'  => $palette,
+				'default' => $selected,
+			);
+		})(),
 	);
 	print $form->formconfirm(
 		$pageUrl,
