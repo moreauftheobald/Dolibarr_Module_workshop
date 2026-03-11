@@ -321,6 +321,34 @@ function workshopUnifiedParamPrepareHead(string $context = ''): array
 
 
 /**
+ * Returns the predefined colour palette available for tag/label colour fields.
+ * Keys are lowercase 7-character hex codes (#rrggbb); values are French labels.
+ *
+ * @return array<string,string>
+ */
+function getWorkshopColorPalette(): array
+{
+	return array(
+		'#dc3545' => 'Rouge',
+		'#e8561a' => 'Rouge orangé',
+		'#fd7e14' => 'Orange',
+		'#ffc107' => 'Jaune',
+		'#8bc34a' => 'Vert clair',
+		'#28a745' => 'Vert',
+		'#20c997' => 'Turquoise',
+		'#17a2b8' => 'Cyan',
+		'#3c7dc4' => 'Bleu',
+		'#007bff' => 'Bleu vif',
+		'#6f42c1' => 'Violet',
+		'#e83e8c' => 'Rose',
+		'#6c757d' => 'Gris',
+		'#343a40' => 'Gris foncé',
+		'#212529' => 'Noir',
+	);
+}
+
+
+/**
  * Build a formconfirm question entry for a single field.
  *
  * @param  string      $fieldName   Field name (key in $objConfig['fields'])
@@ -376,14 +404,19 @@ function workshopBuildParamFormQuestion(string $fieldName, array $fieldConfig, $
 	}
 
 	if ($fieldConfig['type'] === 'color') {
-		$colorVal = !empty($value) ? $value : (isset($fieldConfig['default']) ? $fieldConfig['default'] : '#000000');
-		// Use type='text' so Dolibarr's formconfirm correctly includes the value in the GET submission.
-		// A companion color picker (<input type="color">) is injected via JavaScript (see workshop_param_unified.php).
+		$palette = getWorkshopColorPalette();
+		$default = isset($fieldConfig['default']) ? $fieldConfig['default'] : key($palette);
+		// Pre-select the stored value; fall back to the config default or the first palette entry.
+		$selected = !empty($value) && isset($palette[$value]) ? $value : $default;
+		if (!isset($palette[$selected])) {
+			$selected = key($palette);
+		}
 		return array(
-			'type'  => 'text',
-			'label' => $langs->trans($fieldConfig['label']),
-			'name'  => $fieldName,
-			'value' => dol_escape_htmltag($colorVal),
+			'type'    => 'select',
+			'label'   => $langs->trans($fieldConfig['label']),
+			'name'    => $fieldName,
+			'values'  => $palette,
+			'default' => $selected,
 		);
 	}
 
@@ -444,11 +477,11 @@ function workshopRenderParamFieldValue(string $fieldName, array $fieldConfig, $d
 		if (empty($value)) {
 			return '-';
 		}
-		// Normalize: ensure '#' prefix for valid CSS
-		$hex = ($value[0] !== '#') ? '#'.$value : $value;
-		$v   = dol_escape_htmltag($hex);
+		$v       = dol_escape_htmltag($value);
+		$palette = getWorkshopColorPalette();
+		$label   = isset($palette[$value]) ? dol_escape_htmltag($palette[$value]) : $v;
 		return '<span style="display:inline-block;width:14px;height:14px;background-color:'.$v
-			.';border:1px solid #999;vertical-align:middle;border-radius:2px;"></span>&nbsp;'.$v;
+			.';border:1px solid #999;vertical-align:middle;border-radius:2px;"></span>&nbsp;'.$label;
 	}
 
 	if ($fieldConfig['type'] === 'societe') {

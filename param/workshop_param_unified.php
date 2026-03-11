@@ -127,10 +127,11 @@ foreach ($objConfig['fields'] as $fieldName => $fieldConfig) {
 		|| $fieldConfig['type'] === 'select') {
 		$postValues[$fieldName] = GETPOST($fieldName, 'int');
 	} elseif ($fieldConfig['type'] === 'color') {
-		// Use 'nohtml' to allow the '#' character in hex color codes (e.g. #3c7dc4).
-		// 'alpha' would strip '#', resulting in an invalid color value saved to the DB.
+		// The colour is submitted as a hex code chosen from a palette <select>.
+		// Use 'nohtml' to preserve '#', then whitelist against the palette for security.
 		$raw = GETPOST($fieldName, 'nohtml');
-		$postValues[$fieldName] = preg_match('/^#[0-9a-fA-F]{6}$/', $raw) ? strtolower($raw) : '';
+		$palette = getWorkshopColorPalette();
+		$postValues[$fieldName] = isset($palette[$raw]) ? $raw : '';
 	} else {
 		$postValues[$fieldName] = GETPOST($fieldName, 'alpha');
 	}
@@ -420,6 +421,35 @@ if (empty($reshook)) {
 	print '<div class="tabsAction">'."\n";
 	print '</div>'."\n";
 }
+
+// Colour select enhancement: add a small coloured square preview next to every <select>
+// whose option values are hex colour codes (palette selects injected by formconfirm).
+print '<script>'."\n";
+print '(function () {'."\n";
+print '  function enhanceColorSelects() {'."\n";
+print '    document.querySelectorAll("select").forEach(function (sel) {'."\n";
+print '      if (sel.dataset.wsColorEnhanced) return;'."\n";
+print '      if (!sel.options.length) return;'."\n";
+print '      if (!/^#[0-9a-fA-F]{6}$/i.test(sel.options[0].value)) return;'."\n";
+print '      sel.dataset.wsColorEnhanced = "1";'."\n";
+print '      var swatch = document.createElement("span");'."\n";
+print '      swatch.style.cssText = "display:inline-block;width:18px;height:18px;border-radius:3px;'
+	. 'border:1px solid #999;vertical-align:middle;margin-left:6px;background-color:" + sel.value + ";";'."\n";
+print '      sel.parentNode.insertBefore(swatch, sel.nextSibling);'."\n";
+print '      sel.addEventListener("change", function () { swatch.style.backgroundColor = sel.value; });'."\n";
+print '    });'."\n";
+print '  }'."\n";
+print '  if (document.readyState === "loading") {'."\n";
+print '    document.addEventListener("DOMContentLoaded", enhanceColorSelects);'."\n";
+print '  } else {'."\n";
+print '    enhanceColorSelects();'."\n";
+print '  }'."\n";
+// Also run when jQuery UI dialogs open (Dolibarr uses jQuery UI for formconfirm).
+print '  if (typeof jQuery !== "undefined") {'."\n";
+print '    jQuery(document).on("dialogopen", function () { setTimeout(enhanceColorSelects, 50); });'."\n";
+print '  }'."\n";
+print '})();'."\n";
+print '</script>'."\n";
 
 // End of page
 llxFooter();
