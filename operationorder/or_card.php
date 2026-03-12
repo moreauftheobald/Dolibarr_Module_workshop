@@ -723,6 +723,31 @@ function orCardOpenNewConducteur() {
 function orCardOpenNewTag() {
 	window.location.href = "' . $jsself . '?action=new_tag" + orCardStateQS();
 }
+
+// Colour select enhancement: show a coloured swatch next to palette <select> elements.
+(function () {
+	function enhanceColorSelects() {
+		document.querySelectorAll("select").forEach(function (sel) {
+			if (sel.dataset.wsColorEnhanced) return;
+			if (!sel.options.length) return;
+			if (!/^#[0-9a-fA-F]{6}$/i.test(sel.options[0].value)) return;
+			sel.dataset.wsColorEnhanced = "1";
+			var swatch = document.createElement("span");
+			swatch.style.cssText = "display:inline-block;width:18px;height:18px;border-radius:3px;"
+				+ "border:1px solid #999;vertical-align:middle;margin-left:6px;background-color:" + sel.value + ";";
+			sel.parentNode.insertBefore(swatch, sel.nextSibling);
+			sel.addEventListener("change", function () { swatch.style.backgroundColor = sel.value; });
+		});
+	}
+	if (document.readyState === "loading") {
+		document.addEventListener("DOMContentLoaded", enhanceColorSelects);
+	} else {
+		enhanceColorSelects();
+	}
+	if (typeof jQuery !== "undefined") {
+		jQuery(document).on("dialogopen", function () { setTimeout(enhanceColorSelects, 50); });
+	}
+})();
 </script>
 ';
 
