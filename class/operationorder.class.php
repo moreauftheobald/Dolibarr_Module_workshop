@@ -77,6 +77,7 @@ class Operationorder extends CommonObject
 	public $fields = array(
 		'rowid'          => array('type' => 'integer',      'label' => 'TechnicalID',    'enabled' => 1, 'position' => 1,   'notnull' => 1, 'visible' => 0),
 		'ref'            => array('type' => 'varchar(255)',  'label' => 'Ref',            'enabled' => 1, 'position' => 10,  'notnull' => 1, 'visible' => 1, 'default' => '(PROV)', 'index' => 1, 'searchall' => 1, 'showoncombobox' => 1, 'validate' => 1),
+		'entity'         => array('type' => 'integer',      'label' => 'Entity',         'enabled' => 1, 'position' => 905, 'notnull' => 1, 'visible' => -2, 'default' => 1, 'index' => 1),
 		'ref_client'     => array('type' => 'varchar(255)',  'label' => 'RefClient',      'enabled' => 1, 'position' => 20,  'notnull' => 0, 'visible' => 1, 'searchall' => 1),
 		'fk_soc'         => array('type' => 'integer:Societe:societe/class/societe.class.php', 'label' => 'ThirdParty', 'picto' => 'company', 'enabled' => 1, 'position' => 30, 'notnull' => 1, 'visible' => 1, 'css' => 'maxwidth500 widthcentpercentminusxx', 'csslist' => 'tdoverflowmax150', 'showoncombobox' => 1),
 		'fk_vehicule'    => array('type' => 'integer:Vehicule:workshop/class/Vehicule.class.php', 'label' => 'Vehicule', 'picto' => 'fa-truck', 'enabled' => 1, 'position' => 40, 'notnull' => 1, 'visible' => 1, 'css' => 'maxwidth500 widthcentpercentminusxx', 'csslist' => 'tdoverflowmax150'),
@@ -511,7 +512,7 @@ class Operationorder extends CommonObject
 			$label = implode($this->getTooltipContentArray($params));
 		}
 
-		$url = DOL_URL_ROOT.'/workshop/operationorder/or_card.php?id='.$this->id;
+		$url =dol_buildpath('/workshop/operationorder/or_card.php',1) . '?id='.$this->id;
 
 		if ($option != 'nolink') {
 			$linkclose = '';
