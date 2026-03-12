@@ -276,6 +276,7 @@ if (empty($reshook)) {
 	if ($action == 'add' && $permissiontoadd) {
 		$error = 0;
 
+		$object->entity =$conf->entity;
 		$object->fk_vehicule   = GETPOSTINT('fk_vehicule');
 		$object->km            = GETPOST('km', 'alpha');
 		$object->fk_conducteur = GETPOSTINT('fk_conducteur');
