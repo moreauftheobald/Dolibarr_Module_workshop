@@ -421,6 +421,15 @@ WriteConducteurs=Create/edit drivers
 DeleteConducteurs=Delete drivers
 
 #
+# Service Type (MO / Parts / Misc types)
+#
+WorkshopSetupServiceType=Service types
+ServiceTypeList=Service types
+GroupType=Group
+PrixMO=Labour rate (€/h)
+TauxHoraireHTParH=Hourly rate excl. tax per hour
+
+#
 # Job Type (job type for repair orders)
 #
 JobTypeList=Job Types

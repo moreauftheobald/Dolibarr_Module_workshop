@@ -529,6 +529,15 @@ WriteConducteurs=Créer/modifier les conducteurs
 DeleteConducteurs=Supprimer les conducteurs
 
 #
+# Service Type (types de service MO / Pièce / Divers…)
+#
+WorkshopSetupServiceType=Types de service
+ServiceTypeList=Types de service
+GroupType=Groupe
+PrixMO=Taux MO (€/h)
+TauxHoraireHTParH=Taux horaire HT par heure
+
+#
 # Job Type (type de job pour les ordres de réparation)
 #
 JobTypeList=Types de jobs
