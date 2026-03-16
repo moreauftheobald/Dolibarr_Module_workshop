@@ -1,0 +1,1 @@
+ALTER TABLE llx_operationorderaction_extrafields ADD UNIQUE INDEX uk_llx_operationorderaction_extrafields_fk_object (fk_object);

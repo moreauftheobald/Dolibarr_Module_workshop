@@ -1,0 +1,813 @@
+Module104088Name = Ordre de Réparation
+Module104088Desc = OperationOrder Description
+
+OperationOrderModuleDescription=Module de gestion des ordre de réparation
+
+OperationOrderSetup = Configuration du module Ordre de réparation
+OperationOrderAbout = À propos du module Ordre de réparation
+
+OperationOrder=Ordre de réparation
+AbricotNeedUpdate=Le module abricot doit être mis à jour
+LinkToThirparty=Lien vers le tiers
+
+PlaceOfEntitie=Site de %s
+
+PDFSpongeDescriptionHericourt=Modèle de facture PDF Sponge Hericourt. Un modèle de facture complet
+
+OperationOrderDictTypeLabel=Ordre de Réparation - Type de job
+Blocked_status_code=Statut inaccessible si aucune ligne "ventilation produit" négative n'est présente
+Fk_soc=Société refacturée
+MissingNegativeProductVentilationLine=Ligne "Ventilation produit" négative manquante
+OperationOrderDictTagLabel=Ordre de Réparation - Liste des tags
+
+# SETUP
+ParamLabel=Nom du paramètre
+ParamDesc=Une description si besoin
+ParamHelp=Le contenu de l'aide
+OperationOrderExtrafieldPage=Attributs supplémentaires d'ordre de réparation
+OPODER_SUPPLIER_ORDER_LIMITED_TO_SERVICE=Limiter les commandes fournisseurs effectués depuis les lignes d'ordre de réparation à des services.
+OPODER_SUPPLIER_ORDER_AUTO_VALIDATE=Valider automatiquement les commandes fournisseurs effectués depuis les lignes d'ordre de réparation
+OPODER_STATUS_ON_PLANNED=Statut à utiliser lors de la planification d'un ordre de réparation
+OPERATION_ORDER_GROUPUSER_DEFAULTPLANNING=Groupe d'utilisateurs à prendre en compte pour le planning OR
+OPODER_DISPLAY_STOCK_ON_PLANNING=Afficher une alerte sur les évènements du planning en fonction des stocks physiques/virtuels
+OPODER_DISPLAY_STOCK_ON_PLANNING_help=Prenant en compte les commandes fournisseurs associés à l’ordre de réparation et leurs dates de livraison prévues
+OPODER_CANT_EXCEED_SENT_QTY=Sur l'écran "Atelier" ne pas pouvoir excéder les quantités présentes dans l'ordre de réparation
+OPODER_CANT_EXCEED_SENT_QTY_help=Si activé, il est impossible de sortir du stock une quantité supérieure à ce qui est présent dans l'OR pour chaque produit
+OPODER_ADD_PRODUCT_IN_OR_IF_MISSING=Sur l'écran "Atelier", si on scanne un produit absent de l'OR, ajouter ce produit à l'OR
+OPERATION_ORDER_PERCENTAGECAPACITY_ALERTPLANNINGOR=Alerte planning : capacité d'opérations
+BarCodeImpSetup=Paramétrage code-barres des tâches improductives
+BarCodeAdded=Code-barres ajouté
+BarCodeDeleted=Code-barres supprimé
+AddBarCode=Ajouter un code-barres
+OPORDER_CHANGE_OR_STATUS_ON_START=Au démarrage d'une tâche, changer le statut de l'ordre de réparation associé
+OPODER_STATUS_ON_START=Statut à utiliser lors de la réalisation de tâches sur l'OR
+OPODER_STATUS_ON_START_help=Attention ce statut doit être accessible par le statut précédent de l'OR<br />ex.: statut précédent "planifié" => statut à utiliser "en cours à l'atelier"
+OPORDER_CHANGE_OR_STATUS_ON_STOP=A l'arrêt d'une tâche, changer le statut de l'ordre de réparation associé (si aucune autre tâche n'est en court)
+OPODER_STATUS_ON_STOP=Statut à utiliser lors de l'arrêt de tâches sur l'OR
+OPODER_STATUS_ON_STOP_help=Attention ce statut doit être accessible par le statut précédent de l'OR<br />ex.: statut précédent "en cours à l'atelier" => statut à utiliser "planifié"
+OPERATION_ORDER_BARCODE_TYPE = Type de codes-barres à utiliser
+OR_ACTIVITYPLANNING_IMPROD_COLOR=Couleur utilisée dans l'écran "Activités journalières" pour afficher les activités improductives
+OR_ACTIVITYPLANNING_INTIME_COLOR=Couleur utilisée dans l'écran "Activités journalières" lorsque la tâche a été effectuée dans les temps
+OR_ACTIVITYPLANNING_LATE_COLOR=Couleur utilisée dans l'écran "Activités journalières" lorsque la tâche est en dépassement (temps passé > temps prévu)
+OR_ACTIVITYPLANNING_INPROGRESS_COLOR=Couleur utilisée dans l'écran "Activités journalières" lorsque la tâche est en cours
+OORDER_HIDE_TIME_SPENT_IF_CHILD=Cacher le champs "Temps passé" sur l'ajout ou l'édition de lignes si la ligne à des lignes enfants
+OORDER_HIDE_TIME_PLANNED_IF_CHILD=Cacher le champs "Temps planifié" sur l'ajout ou l'édition de lignes si la ligne a des lignes enfants
+workedtimeformsetup=Parametrage de l'ecran Temps travaillés
+OPERATIONORDER_EXCLUDE_IMPRO = Pointage Exclus des temps travaillés
+efficiencyformsetup=Parametrage de l'ecran Efficacité
+OPERATIONORDER_EXCLUDE_EFF = Pointage Exclus des temps pour calcul de l'efficacité
+checkorsetup=configuration du Check OR
+OPERATIONORDER_STATUT_BEFORE_CHECK=Statut précédent le Check OR
+OPERATIONORDER_STATUT_AFTER_CHECK=Statut suivant le check OR
+OPERATIONORDER_MO_COEF_MIN= Variabilité facturation MO minimum (%%)
+OPERATIONORDER_MO_COEF_MAX= Variabilité facturation MO maximum (%%)
+OPERATIONORDER_PT_COEF_MIN= Variabilité facturation pièce minimum (%%)
+OPERATIONORDER_PT_COEF_MAX= Variabilité facturation pièce maximum (%%)
+OPERATIONORDER_ORDERABLE_STATUS = Status d'OR permattant de commander les pièces manquantes
+OPERATIONORDER_COEF_REFACT_PRESTA_EXT=Coefficient de majoration de facture de sous traitance (%%)
+OPERATIONORDER_PLANNING_REFRESH_RATE=Nb de secondre proposées pour la réfraissement automatique du planning atelier (min 5s)
+OPERATION_ORDER_DEPAN_PRODUCT = Service à créer sur les dépannages
+
+DoSearchOpenedOperationOrderOnThisStatus=Liste des statuts d'ordre de réparation à tester lors de la création d'un nouvel OR sur un véhicule pour alerter l'utilisateur
+OPERATIONORDER_WAREHOUSE_ENCOURS_ATELIER=Entrepot des piéces en cours atelier
+SOFOR_CREATE_NEW_SUPPLIER_ODER_ANY_TIME = Créer une commande fournisseur brouillon pour chaque commande client
+invoiceORStatus=Gestion des status de facturation des OR
+OPERATIONORDER_STATUT_FOR_INVOICE=Status depuis lequel il est possible de facturer
+OPERATIONORDER_STATUT_AFTER_INVOICE=Status de l'OR aprés création de la facture
+OpererationOrderJobSettings=Paramètre pour le travail planifié (Module Travaux planifié : tache "Traitement de Operation Order")
+OPERATIONORDER_AUTO_CLOSE_POINTAGE_TIME=Heure (format HH:MM) de cloture auto des pointages restés ouvert
+OPERATIONORDER_AUTO_CLOSE_EMAIL=Adresse email à notifier à la fin du "Travaux planifié" du module
+OPERATIONORDER_AUTO_RESCHEDUL_OR_STATUS=Statuts des OR déplacer à la date du traitement s'ils ne sont pas réalisés avant
+
+# MENU
+LeftMenuOperationOrder=Ordre de réparation
+LeftMenuOperationOrderCreate=Nouvel ordre de réparation
+LeftMenuOperationOrderList=Liste des OR
+LeftMenuOperationOrderListHistory=Historique
+OperationOrderTopMenu=Atelier
+LeftMenuOperationOrderStatusMenu=Gestion des Parametres
+LeftMenuOperationOrderStatusCreate=Nouveau statut
+LeftMenuOperationOrderStatusList=Liste
+LeftMenuOperationOrderParam=Parametres
+OperationOrderInfo=Suivi
+LeftMenuOperationOrderManager=Atelier
+orderseeking=Recherche de commande
+LeftMenuOperationOrderCreateDepan = Créer Un dépannage
+ExportComptaVente=Export journal de vente
+
+# EVENT ACTION COM CONF
+OperationOrderStatusChange=Changement de status d'un ordre de réparation
+OperationOrderStatusChangeDesc=permet l'historisation des changements de status des ordres de réparation
+
+# EVENT ACTION COM
+OperationOrderSetStatus=Changement statut %s de l'ordre de fabrication %s
+#OperationOrderSetStatusActiveEvent=Activation de l'ordre de fabrication %s
+#OperationOrderSetStatusReopenEvent=Réouverture de l'ordre de fabrication %s
+#OperationOrderSetStatusDraftEvent=Passage en brouillion de l'ordre de fabrication %s
+#OperationOrderSetStatusValidatedEvent=Validation de l'ordre de fabrication %s
+#OperationOrderSetStatusAcceptedEvent=Ordre de fabrication %s accepté
+#OperationOrderSetStatusToPlanEvent=Ordre de fabrication %s a planifier
+#OperationOrderSetStatusClosedEvent=Ordre de fabrication %s cloturé
+
+
+# Extrafields
+oorder_available_for_supplier_order=Ordre de réparation : ouvre une creation de commande fournisseur
+oorder_available_for_supplier_order_help=Lors de l'ajout de ce produit/service dans un ordre de réparation proposer de créer une commande fournisseur
+ProductionCapacityRate=Taux de capacité de production de l'utilisateur (en pourcentage)
+oorder_ventilation_produit=Ventilation produit
+OrScan=Pointable OR
+OrScanHelp=Si coché, alors c'est le code barre qui sera affiché à la place de la référence dans le document Thor des ordres de réparations
+driver_help = a coché pour faire apparaitre le contact dans la liste des conducteurs sur les OR
+fichier signature=Fichier de signature
+sign_files=Nom du fichier image contenant la signature de l'utilisateur y compris l'extention (.png ou .jpg etc etc..)
+doc obligatoire=Document Obligatoire
+doc_obl_help=Document lié a ce service ou produit devant etre Obligatoirement lié a l'ordre de réparation. Mettre le document en fichier joint au format PDF et preciser ici le nom du fichier sans son extension.
+supplier_order_type = Type de commande fournisseur
+overhead_category = Catégorie de frais
+
+
+# STATUS
+OperationOrderStatusActivated=Activé
+OperationOrderStatusCanceled=Abandonnée (fermée)
+OperationOrderStatusDraft=Brouillon (à valider)
+OperationOrderStatusValidated=Validé
+OperationOrderStatusRefused=Refusée (fermée)
+OperationOrderStatusAccepted=Acceptée (fermée)
+OperationOrderStatusClosed=Traité
+OperationOrderStatusDisabled=Désactivé
+OperationOrderStatusShortActivated=Activé
+OperationOrderStatusShortCanceled=Abandonnée
+OperationOrderStatusShortDraft=Brouillon
+OperationOrderStatusShortValidated=Validé
+OperationOrderStatusShortRefused=Refusée
+OperationOrderStatusShortAccepted=Acceptée
+OperationOrderStatusShortClosed=Traité
+OperationOrderStatusShortToPlan=A planifier
+OperationOrderStatusShortDisabled=Désactivé
+ErrorLoadingStatus=Erreur : aucun statut actif détecté, cela signifie généralement que la configuration des statuts n'est pas terminée
+DisplayOnPlanningHelp=Afficher les ordres de réparation sur ce statut dans le planning
+DisplayOnPlanning=Afficher les ordres de réparation sur ce statut dans le planning
+CleanEventOnThisStatus=Lorsqu'un ordre de réparation passe sur ce statut, supprimer la plannification existante de l'OR
+CleanEventOnThisStatusHelp=Utile pour déplanifier un ordre de réparation
+OperationOrderPointable=OR Pointable
+OperationOrderPointableHelp=un OR dans ce status est pointable dans l'écran de l'atelier
+
+NewStatus=Nouveau statut
+NoOperationOrderStatus=Pas de statut
+OperationOrderStatusList=Liste des statuts
+DateCre=Date de création
+DateMaj=Date de mise à jour
+NewOperationOrderStatus=Nouveau status d'ordre de réparation
+OperationOrderStatus=Statut d'ordre de réparation
+OperationOrderStatusCard=Fiche
+OperationOrderStatusActivate=Activer
+OperationOrderStatusDisable=Désactiver
+OperationOrderStatusDelete=Supprimer
+OperationOrderStatusEdit=Modifier
+CouldEdit=Groupes utilisateur pouvant modifier un ordre de réparation sur ce statut
+CouldEditHelp=Si coché ce statut désactive la posibilité de modifier l'ordre de réparation. Pour pouvoir de nouveau modifier l'ordre de réparation il faut repasser sur un autre statut qui permet la modification
+CouldChangeToThisStatus=Groupes utilisateur pouvant passer à ce status
+TargetableStatus=Statuts accessibles depuis ce statut
+ConfirmValidateOperationOrderStatusBody=Êtes-vous sûr de vouloir passer cet ordre de réparation sous la référence <b>%s</b> à l'état <b>%s</b> ?
+ConfirmValidateOperationOrderStatusTitle=Passer l'ordre de réparation à l'état %s
+StatusChanged=Status modifié
+WarningORStatusCode=Lors de la définition de statut sur plusieurs entités, veillez à leur donner le même code dans chaque entité, afin de garder la cohérence des traitements
+ConfirmCreateInvoice=Création de facture
+ConfirmCreatePropal=Création de devis
+CreatePropal=Créer devis
+CreateSuccessPropal=Devis créé avec succes %s
+
+# RIGHTS
+operationorder_read=Peut voir les ordres de réparation
+operationorder_write=Peut créer et modifier les ordres de réparations
+operationorder_delete = Suppression les ordres de réparations
+operationorder_status_read=Peut consulter les différents status d'ordres de réparation
+operationorder_status_write=Peut créer/modifier les différents status d'ordres de réparation
+operationorder_planning_read=Peut consulter le planning des ordres de réparations
+operationorder_userplanning_write=Peut modifier les planning utilisateur
+operationorder_usergroupplanning_write=Peut modifier les planning groupe d'utilisateurs
+operationorder_manager_read=Accéder au manager d'atelier
+operationorder_advance_read = Autorisation de lecture avancée
+operationorder_override_checkor=Droits avancé de validation OR Check
+operationorder_compta_read=Export comptable journal de vente
+
+
+# LIST
+OperationOrderList=Liste ordre de réparation
+NoOperationOrder=(vide)
+overshootStatus=Dépassement
+overshootStatus_Over=En dépassement
+overshootStatus_inTime=Dans les temps
+
+# CARD
+ShowOperationOrder=Ordre de réparation
+NewOperationOrder=Création ordre de réparation
+NewOperationOrderDepan=Création d'un dépannage
+OperationOrderCard=Fiche ordre de réparation
+DateOperationOrder=Date ordre de réparation
+DateCreationOperationOrder=Date création
+ErrorsOccuredDuringLineChildrenInsert=Une erreur c'est produite lors de l'ajout des lignes enfants
+OperationOrderCreateSupplierOrder=Créer commande fournisseur
+CreateSupplierOrder=Créer commande fournisseur
+supplierMissingSocId=Fournisseur manquant
+supplierFieldMissing=Champs manquant
+SupplierOrderSaveError=Sauvegarde de la commande fournisseur en erreur
+ProductType=Type
+SupplierOrderCreated=Commande fournisseur créée
+TimePlannedTheoretical=Temps d'immobilisation théorique
+TimePlannedForced=Temps de mise a disposition du véhicule
+WarningORTimePlannedF=OR déjà présent sur le planning
+planned_date_help=Date de plannification de la réparation/entretiens
+PlannedDate=Date de planification
+ErrorPriceLineORMin=Prix inférieur au prix minimum du produit
+StockInOtherEntity = Stock dans les autres environnements
+
+OperationOrderModify=Modifier
+OperationOrderClone=Cloner
+OperationOrderValid=Valider
+OperationOrderClose=Clôturer
+OperationOrderAccept=Accepter
+OperationOrderRefuse=Refuser
+OperationOrderReopen=Rouvrir
+OperationOrderCancel=Abandonner
+OperationOrderDelete=Supprimer
+operationorderLinePc=Pc
+OperationOrderSetToPlan=A plannifier
+OperationOrderSetPlanned=Planifé
+ORCloturedate=Date de cloture de l'OR:
+
+StockPlace=Emplacement
+TimePlanned=Temps planifié
+TimeSpent=Temps passé
+AddOperationOrderLine=Ajouter une ligne à l'ordre de réparation
+OperationOrderLineAdded=ligne ajoutée l'ordre de réparation
+LineNotFound=Ligne introuvable
+
+QtyOrdered=Quantité commandé
+QtyPlanned=Quantité prévue
+QtyUsed=Quantité utilisé
+ExpectedWorkload=Charge de travail prévue
+HoursPlanned=Temps Plannifié
+HoursSpent=Temps consommé
+TimeDifference=Ecart : temps prévue - temps réel passé
+NotEnoughStockAvailable=Stock insufisant
+VirtualStockAvailable=En stock virtuel
+StockAvailable=En stock
+OperationOrderType=Type
+LineOperationOrderType=Type de job
+OperationOrderTypeLong=Type OR
+SetStatusStatusNotAllowed=Modification de status impossible
+
+ConfirmValidateOperationOrderTitle=Valider ordre de réparation
+ConfirmValidateOperationOrderBody=Êtes-vous sûr de vouloir valider cet ordre de réparation sous la référence <b>%s</b> ?
+
+ConfirmModifyOperationOrderTitle=Dévalider l'ordre de réparation
+ConfirmModifyOperationOrderBody=Êtes-vous sûr de vouloir restaurer l'ordre de réparation %s au statut brouillon ?
+
+ConfirmDeleteOperationOrderTitle=Supprimer ordre de réparation
+ConfirmDeleteOperationOrderBody=Êtes-vous sûr de vouloir effacer cet ordre de réparation ?
+
+ConfirmCloseOperationOrderTitle=Clôturer ordre de réparation
+ConfirmCloseOperationOrderBody=Êtes-vous sûr de vouloir clôturer cet ordre de réparation ?
+OperationOrderCloned=Ordre de réparation cloné
+OperationOrderCloneError=Clônage en échec
+OperationOrderNotFound=Ordre de réparation non trouvé
+OperationOrderDeleteError=Erreur lors de la suppression de l'ordre de réparation %s
+TotalHTReimbursement=Total HT Remboursement
+TotalHTPart=Total HT Pièce
+TotalHTService=Total HT Service
+TotalHTExternal=Total HT Externe
+TotalHTMO = Total HT Main d'oeuvre
+TotalHT = Total HT
+LineTotalHTReimbursement=Total ligne HT Remboursement
+LineTotalHTPart=Total ligne HT Pièce
+LineTotalHTExternal=Total ligne HT Externe
+LineTotalHTMO = Total ligne HT Main d'oeuvre
+LineTotalHT = Total ligne HT
+Linktovh = Lier la pièce ou l'operation au véhicule
+UnLinktovh = dissocier la pièce ou l'operation au véhicule
+unlinkedtovh= liens entre la piece et le véhicule supprimé
+linkedtovh= liens entre la piece et le véhicule créé
+vhupdatefailed = Impossible de sauvegarder le véhicule
+vhnotfound = Véhicule non trouvé
+novhlinkedtoor = Pas de véhicule lié a l'OR
+CheckOR = Resultat Check OR
+ORcheckfailled = Check OR Echoué
+ORchecknotdone = Check OR Non Fait
+ORcheckPassed = Check OR Passé
+OpNotDone=Opé. non faite
+debit-part = Debit de pièces
+DateClose = Date de cloture
+Notetheobald = Note interne Théobald
+ORgds =  N° d'OR GDS
+Mecanics = Mécanicien
+operations = Opérations disponibles
+linkedvh = Véhicule Lié
+km_on_creation = Kilométrage à la création de l'OR
+categories = Tag/Catégories de l'OR
+driver = Conducteur
+OperationOrderPointages = Pointages
+OperationOrderDebit = Débit de pieces
+Mecanicien = Mecanicien
+Operation = Opération
+Description = Description
+Debut = Début
+fin = Fin
+Duree = temps de travail effectif
+planninglink = 	lien vers planning
+NoOperationOrderPointage = Pas de pointages enregistrés pour cet OR
+OperationOrderdebitList = Liste des débits de pièces de l'OR
+datem = Date
+fk_product = Réf. produit
+product_label =	Libellé produit
+fk_entrepot = Entrepôt
+fk_user_author = Auteur
+mlabel = Libellé du mouvement
+type_mouvement = Sens du mouvement
+qtyvalue = Qté
+
+FreeORConfirm=Voulez vous libérer l'OR correspondant à la facture
+
+# AJAX
+UnitCodeNotFound=Code %s non trouvé dans le dictionnaire des unitées
+ConfirmCloneOperationOrderTitle=Confirmation de clonage
+ConfirmCloneOperationOrderBody=Souhaitez-vous vraiment cloner cette fiche %s ?
+
+# PARAMS
+OPODER_STATUS_ON_CREATE=Statut à utiliser lors de la création d'un ordre de réparation
+OperationOrderStatusAdmin=Paramètres des statuts
+LeftMenuOperationOrderStatusAdmin=Paramètres
+ActivateOperationorderSharing=Activer le partage des des ordres de réparation entre entités (pensez à configurer le partage ci-dessous)
+MulticompanyConfiguration=Configuration des partages entre entités
+Multicompany=Options du module multi sociétés
+
+# PDF
+PdfCustomOrderTitle=Ordre de réparation
+OperationOrderDate=Date
+PDFolafDescription=Modèle standard des ordres de réparations
+PdfBarcodeImpTitle=PDF Code-barres Improductifs
+GenerateFile=Générer le fichier
+Customer_Sign=Signature et nom du client
+# Planning
+LeftMenuOperationOrderPlanning=Planification
+OperationOrderPlanning=Planification des ordres de réparation
+Planable=Planifiable
+PlanableHelp=Les ordres de réparations ayant ce statut seront sélectionnables lors de la création dans la vue planification
+CreateNewORAction=Créer un nouvel événement OR
+PublicHolidayNonWorkedDaysList=Liste des jours non travaillés
+oojoursOff=Jours non travaillés
+OnlineSync=Synchronisation en ligne
+HoursMinFormat=Format d'affichage en heures et minutes (hh:mm), veuillez saisir au même format
+ErrorORActionCreation=Erreur lors de la création de l'événement de type "Ordre de réparation"
+SucessORActionCreation=L'événement de type "Ordre de réparation" a été créé avec succès
+OnlyVirtualStockIsEnough=Stock physique insuffisant, stock théorique suffisant (en tenant compte des dates de livraison prévues)
+NotEnoughStock=Stock physique et théorique insuffisant (en tenant compte des dates de livraison prévues)
+CheckVirtualStock=Vérification du stock théorique
+CheckVirtualStockHelp=Si la case est cochée, ce statut sera vérifié lors du calcul du stock théorique (les produits contenus dans les ORs à ce statut en seront déduits)
+ProductQtyInOperationOrder=Quantité de produit dans les ordres de réparation
+
+#USERPLANNING
+MorningD=Début de matinée
+MorningF=Fin de matinée
+AfternoonD=Début d'après-midi
+AfternoonF=Fin d'après-midi
+OOUpdate = Modification de l'ordre de réparation %s
+OOStockMvt = OR %s :  Mouvement de stock
+OOStockMvtDetail = Mouvement de stock sur le produit %s, de %d depuis l'entrepot %s
+ErrorHistoryStockMVT=Erreur de création de l'historique OR sur Mvt Stock
+OOLineUpdate = Modification de ligne dans l'ordre de réparation %s, produit %s
+OODelete = Suppression de l'ordre de réparation %s
+OOLineDelete = Suppression de ligne dans l'ordre de réparation %s, produit %s
+OOCreate = Création de l'ordre de réparation %s
+OOLineCreate = Création de ligne dans l'ordre de réparation %s, produit %s
+errNoPlanning=Pas de planning défini pour l'utilisateur ou le groupe
+
+
+OperationOrderHistoryList=Historique
+OperationOrderHistory=Historique
+#manager
+productUsedForOorder=Produit utilisé pour Ordre de réparation %s
+ErrorNoGroupForPlanning=Aucun groupe d'utilisateur n'est défini pour l'atelier
+ErrorNoUserInGroupForPlanning=Aucun utilisateur présent dans le groupe atelier sur cette entité
+ErrorCounterStart=Erreur de démarrage de l'action
+ErrorCurrentCounterStop=Erreur durant l'arrêt du compteur pour l'utilisateur %s
+ErrorCounterStop=Erreur durant l'arrêt du compteur %s pour l'utilisateur %s
+MsgCounterStop=Compteur %s arrété pour l'utilisateur %s
+MsgCounterStart=Compteur %s démarré pour l'utilisateur %s
+noCounterToStop=Aucun compteur à arréter.
+ErrorCounterInvalidUser=Pas d'utilisateur pour démarrer cette tâche, veuillez sélectionner un utilisateur avant de démarrer la tâche
+ErreurCounterInvalidLineSelected=La ligne sélectionnée n'appartient pas à l'OR sélectionné.
+ErrorStockMVTService=Le produit sélectionné est un service. Selon votre configuration, on ne peut pas déstocker des services.
+ErrorStockMVT=Un probléme est survenu lors de l'enregistrement du mouvement de stock. Sortie de stock impossible.
+ErrorNoDefaultWarehouse=Pas d'entrepot par défaut pour ce produit. Sortie de stock impossible.
+ErrorNoWarehouseFound=Pas d'entrepot pour ce produit ou cette ligne d'OR. Sortie de stock impossible.
+ErrorCantFetchOR=Impossible de récupérer l'ordre de réparation.
+ErrorNoProdWithThisBarcode=Impossible de trouver un produit avec le code barre : %s
+ErrorProductHasNoBarCode=Le produit n'a pas de code Barre enregistré
+ErrorProductqtyExceded=La quantité total dans l'OR pour se produit a été atteinte. Aucun mouvement de stock généré.
+StockMouvementGenerated=Mouvement de stock effectué pour le produit %s
+ErrorCannotAddProductNoDefaultWarehouse=Impossible d'ajouter le produit %s à l'Ordre de réparation %s : pas de stock par défaut pour ce produit.
+ErrorProductMissingInOR=Le produit %s n'est pas présent dans l'ordre de réparation %s. Pas de sortie de stock.
+ProductAddedToOR=Le produit %s a été ajouté à l'ordre de réparation %s.
+ErrorAddProductInOR=Une erreur s'est produite pendant l'ajout du produit %s à l'ordre de réparation %s.
+UpdateTasktime=Modifier l'activité
+ErrorFetchingCounter=Erreur de récupération de l'activité
+DateD=début
+DateF=fin
+ErrorInvertedDates=la date de début ne peut pas être inférieure à la date de fin
+ErrorDateToLow=la date de début ne peut pas être inférieure à : %s
+ErrorDateToHigh=la date de fin ne peut pas être supérieure à : %s
+ErrorUpdateSchedule=Erreur la sauvegarde
+CannotGetNextSchedules = Impossible de récupérer les prochains créneaux
+ErrorUpdateScheduleDateMissing=la Date de début et de fin sont obligatoires
+ErrorUpdateScheduleEndDateMissingCloseTask=Une tache en cours existe, vous n'avez pas coché "cloturer la tache en cours" : la date de fin est obligatoire
+ErrorUpdateScheduleStartDateMissing=la Date de début est obligatoires
+ErrorOrDetNotUpdated=Erreur lors de la mise à jour de la ligne d'OR
+ErrorNoORSelected=Pas d'ordre de réparaton sélectionné
+ErrorNoORLineSelected=Vous n'avez sélectionné aucune ligne d'ordre de réparation
+operationorder_counter_delete=Pouvoir supprimer une saisie de temps
+operationorder_counter_update=Pouvoir modifier les saisies de temps sur l'écran éactivités journalières"
+askDeleteCounter=Voulez-vous vraiment supprimer cette saisie ?
+ErrorORNeedAtLeast1Line=Erreur : il vous faut au moins une ligne dans l'OR pour faire un mouvement de stock
+
+CloseCurrentTask=Cloturer l'action en cours
+
+ReloadPlanningEach=Recharger le planning toute les %s secondes (Attention:  modification en cours perdues)
+
+ORRef=Ref OR
+
+OperationOrderStatusExtrafieldPage=Attributs supplémentaires (Status)
+
+
+OperationOrderRelated = Ordres de réparations liés
+LeftMenuOperationOrderORPlanning=Activités journalières
+
+ErrorNoUserInGroupOrNoGroup=Pas d'utilisateur dans le "Groupe d'utilisateurs à prendre en compte pour le planning OR" ou pas de groupe configuré
+ClotureEventOnThisStatus=Lorsqu'un ordre de réparation passe sur ce statut, le champ date de clôture est peuplé
+
+RequirePlannedDate =Seuls les OR possédant une date de plannification peuvent passer à ce statut
+PlannedDateMustBeFilledToPassAtThisStatus =La date de planification doit être renseignée pour passer à ce statut
+OverloadReachedForThisDay =La surcharge est atteinte pour ce jour
+OperationOrderActionNotCreated =La vue planning de l'OR ne s'est pas correctement crée
+RequiredVentillation=Seuls les OR ayant une ventilation produit peuvent passé à ce status
+
+#Formulaire OR check
+ORDebit = Debit sur
+ORCredit = Supprimé sur
+valid = Valider
+Cancel=Annuler
+multientitysharing = Partage entre entitées
+orcheck = Check OR
+orcontrole = Controle OR avant cloture
+pricecoef = Coefficient de prix
+admin2ltrucks = Administration du modute 2L Trucks
+controleMO = Controle de la main d/'oeuvre
+operation = Opération
+hprevues = Temps prévus
+hpointée = Temps Pointés
+facture = Temps Facturé
+qty = Quantité
+totmo = Synthèse main d'oeuvre de l'OR
+action = Actions
+controlepart = controle des pieces
+controlejob = Controle des Jobs
+qtyprev = Quantité Prévue
+qtydebit = Quantité débitée
+price = prix unitaire
+totalivoiced = Total HT
+mouvstock = Mouvementer le Stock
+notdone = Non réalisé
+debit = débiter
+controlext = Controle des travaux exterieurs
+createorder = créer le bon de commande
+desc = decription
+ordered= N° Bon de commande
+orderedto = fournisseur
+notifyplus = NotificationsStockInOtherEntity
+tikketassigned = Ticket assigné
+defaultmailadress = Adresse mail par defaut pour l'envoi de mail de notification
+mofactvar = Variabilité facturation MO
+ptfactvar = Variabilité facturation piece
+Excludeimpro = Pointage Exclus des temps travaillés
+Excludeeff = Pointage Exclus des temps pour calcul de l'efficacité
+addFilestoOR = Ajout piece joint a l'object
+emplacement = Emplacement a debiter
+DiscountPercent=Remise %%
+
+lltrucksdeviscoefmo = Devis - Coeficient de majoration de la MO
+lltrucksdeviscoefpiece = Devis - Coeficient de majoration des pieces
+lltrucksdeviscoefservice = Devis - Coeficient de majoration des services
+record = Enregistrer
+doc = parametres des documents obligatoires.
+tikketcreated = Nouveau ticket
+Dispo = Véhicule disponible a l'atelier entre le
+TicketNewEmailSubjectAdmin = Nouveau ticket - Ref
+NewTicket = Créer Ticket
+
+PointageBtnSubmitSearch = Rechercher
+Month = Mois
+Day = Jour
+Name = Nom de l'employé
+DateDebut = Premier pointage
+DateFin = Dernier pointage
+Amplitude = Amplitude journalière
+Duree = temps de travail effectif
+DateWeek = Jour de la semaine
+Htheorique = Temps prévu
+Hsup = Heures sups
+ProgressDeclared = Avancement de la tache
+
+OrderBtnSubmitSearch = Recherche par bon de commande
+ProductBtnSubmitSearch = Recherche par produit
+OrderNumber = Référence Fournisseur
+refFournisseur = Référence Fournisseur
+refTH = Référence Theobald
+refClient = Référence Client
+barcode = Code Barre
+label = Nom de l'article
+
+OperationOrderPointageList=Liste des pointges de l'OR
+createor = Créer l'OR
+Split=Découper
+ORSplitOK=Découpage de l'OR réussi
+
+#box
+workshopefficiency = Efficacité Atelier
+efficiency = Efficacité
+efficiencybox = Synthèse efficacité atelier
+
+#Formulaire efficacité
+efficiency=Efficacité
+
+#Formulaire temps travaillés
+workedtime=Temps travaillés
+
+
+GOPSend=Garantie de paiement %s (OR: %s, immatriculation: %s)
+OperationOrderSplit=Découper l'OR
+TimeToSlpit=Temps à découper
+CannotSplitMoreThanActualTime=Vous ne pouvez pas découper un temps supérieur au pointage actuel
+MoveTime=Déplacer le pointage
+LineToMoveTime=Ligne pour le nouveau pointage
+
+
+UpdateVehiculeInfo=Mise à jour automatique des informations du véhicule lié
+VehiculeInfosDetails=Les champs suivants seront mis à jour : Date dernière opération, Km dernière opération
+
+
+SupplierORderDeleteRedirectOR = La Commande fournisseur vide à été supprimé, vous avez été redirigé vers l'OR
+
+
+NoClosedOperationOrderForThisVehiculeFound=Il existe déjà un OR %s non clôturer sur le véhicule
+
+OperationOrderToCreate=OR à créer
+
+operationnonplanifiees=OR Non planifiés
+
+Operationorderstatus=Status des OR
+
+or_is_job=Est un Job
+or_is_job_help=Vous demandera de précisez le type de job dans l'OR lors de son ajout
+
+Commandepiece=Commande de piéces
+
+SupplierOrderFromOrderForOr=Commande de piéce depuis depuis OR
+
+noproducttoorder=Aucun produit à commander
+ProductsToOrder=Produit à commander
+QtyToOrder=Qté. à commander
+GenerateSupplierOrder=Créer les commandes fournisseur
+
+CannotFindFournPriceFor=Impossible trouver le prix fournisseur pour %s
+
+
+FULLCALENDARSCHEDULER_BUSINESSHOURS_WEEK_START = Heure de début de travail en semaine
+FULLCALENDARSCHEDULER_BUSINESSHOURS_WEEK_END = Heure de fin de travail en semaine
+FULLCALENDARSCHEDULER_BUSINESSHOURS_WEEKEND_START = Heure de début de travail en week-end
+FULLCALENDARSCHEDULER_BUSINESSHOURS_WEEKEND_END = Heure de fin de travail en week-end
+FULLCALENDARSCHEDULER_SNAP_DURATION = Granularité des créneaux (par défault HH:MM:SS, événements déplaçables par bloc de HH:MM:SS)
+FULLCALENDARSCHEDULER_ASPECT_RATIO = Ratio d'affichage (permet de modifier la hauteur visible du calendrier, valeur par defaut : 1.6)
+FULLCALENDARSCHEDULER_MIN_TIME = Heure de début d'affichage du calendrier
+FULLCALENDARSCHEDULER_MAX_TIME = Heure de fin d'affichage du calendrier
+FULLCALENDARSCHEDULER_MAX_TIME_help = Cas particulier, pour pouvoir utiliser l'heure 23 saisissez 24:00
+FULLCALENDARSCHEDULER_ROW_HEIGHT = Hauteur des créneaux horaire (effet de zoom, la valeur attendue est une valeur Css, exemple : 50px)
+FULLCALENDARSCHEDULER_LOCALE_LANG = Calendar Language (example of values : fr, en, es, ...)
+FULLCALENDAR_ThisInputIsForInfoOnly = ceci n'est qu'à titre informatif, un léger voile gris sera appliqué sur les tranches horaires non travaillées
+
+
+ImcompleteSetup=Paramétrage du module incomplet %s
+qtytoinvoice=Qté à facturer
+
+
+oorder_fk_warehouse = Entrepot Source
+InvoiceCreated=Facture(s) créée(s)
+YourInvoiceFromOrderIsNotCorrect=La facture que vous voulez valider contiens des lignes de produits qui ne sont pas issue des/de la commande(s) liée(s). Vous repartir des commandes pour les corriger et refaire la facture, Vous pouvez supprimer cette facture elle ne sera pas validable.
+CannotDeleteValidatedInvoice=Il n'est pas possible de supprimer une facture validée. Vous devez faire un avoir.
+
+Driver=Conducteur
+
+
+#param screens
+ParamOrSetupJob=Parametrage des Jobs
+ParamOrSetupMo=Parametrage de la Main d'oeuvre
+ParamOrSetupSt=Parametrage Sous Traitance
+ParamOrSetupServ=Parametrage Services
+ParamOrSetupJobType=Parametrage des type de Jobs
+ParamOrSetupOrTag=Parametrage des Categorie OR
+SellingPriceMin=Prix de vente Min.
+statut=Statut
+joblabel=Désignation du job
+doc_obligatoire=Document Obligatoire
+DeleteJob=Supprimer un job
+DeleteJobQuestion=Etes vous sur de vouloir supprimer le Job ?
+NewJob=Créer un Job
+EditJob=Editer un Job
+tobuy = En Achat
+tosell = En Vente
+molabel=Intitulé de l'opération de main d'oeuvre
+DeleteMo=Supprimer une main d'oeuvre
+DeleteMoQuestion=Etes vous sur de vouloir supprimer la main d'oeuvre ?
+NewMo=Créer une main d'oeuvre
+EditMo=Editer une main d'oeuvre
+price_min=prix de vente mini.
+stlabel=Intitulé de sous traitance
+DeleteSt=Supprimer une sous traitance
+DeleteStQuestion=Etes vous sur de vouloir supprimer la sous traitance ?
+NewSt=Créer une sous traitance
+EditSt=Editer une sous traitance
+servlabel=Intitulé de l'opération de service
+DeleteServ=Supprimer un service
+DeleteServQuestion=Etes vous sur de vouloir supprimer le service ?
+NewServ=Créer un service
+EditServ=Editer un service
+jobtypelabel=Intitulé du type de job
+DeleteJobType=Supprimer un type de Job
+DeleteJobTypeQuestion=Etes vous sur de vouloir supprimer le type de Job ?
+NewJobType=Créer un type de job
+EditJobType=Editer un type de job
+fk_soc=Société
+code=Code
+active=Activé
+ortaglabel=Intitulé de la categorie d'OR
+DeleteOrTag=Supprimer une catégorie d'OR
+DeleteOrTagQuestion=Etes vous sur de vouloir supprimer la catégorie d'OR ?
+NewOrTag=Créer une catégorie d'OR
+EditOrTag=Editer une categorie d'OR
+color=Couleur
+CreateErrors=Erreur(s) lors de la creation
+UpdateErrors=Erreur(s) lors de la mise a jour
+DeleteError=Erreur(s) lors de la Suppression
+CreateSucces=Création réussie
+UpdateSucces=Mise a jour réussie
+DeleteSucces=Suppression réussie
+SelectJob=Selectionner le Job
+
+#
+# Export Compta VT
+#
+CodeJournal = Code Journal
+CodeAux=Code Auxiliaire
+CodeAnalytique=Code Analytique
+AmountAnalytique=Montant Analytique
+SellExportDateTime=Date d'export en comptabilité
+ExportComptaVente=Export  Journal de vente
+OPERATIONORDER_CODE_JOUNAL_VT=Code Journal de vente
+OPERATIONORDER_CODE_JOUNAL_VT=Code Journal de vente
+ACCOUNTING_ACCOUNT_CUSTOMER_INTRAGP=Code comptable collectif intra-groupe
+AccountancyExport=Paramétrage export journal de vente
+AccountancyCodeStupImompleteForInvoice=Configuration de comptabilité incomplète pour la facture %s
+cdComptaIntragp=Fin Code Compta. Intra groupe
+
+#PDF GOP
+gop = Garantie de paiement
+du = du
+validity = (Valable 2 mois à compter de ce jour)
+dest = Destinataire
+tel = Tel.
+mail = Mail
+txt1 = Nous vous confirmons notre garantie de paiement pour la réparation suivante:
+txt2 = Notre Client:
+txt3 = VEHICULE:
+txt4 = Motif de l'intervention:
+txt5 = MONTANT MAXIMUM DE LA GARANTIE:
+txt6 = € Hors Taxes
+vin = VIN:
+immat = Immatriculation:
+ct = En contrat
+until = jusqu'au:
+ErrorGoToUserProfile=Allez dans votre fiche utilisateur pour corriger
+ErrorsignFileNotFound=Le fichier signature %s n'a pas été trouvé
+ErrorGOPnotvalid=Garantie de paiement non valide car non signée
+
+
+#CronJobs
+OperationOrderJob=Traitement de Operation Order
+OperationOrderEndJob=Fin traitement Orparation Order %s
+OperationOrderStartJob=Debut traitement Orparation Order %s
+OperationOrderJobRunResult=Rapport automatique ( %s ) du traitement planifié
+ORUpdatedStopJob=Le statut le l'OR %s à été mis à jour
+OperationOrderReschedulJob=L'OR %s à été replanifié au %s
+
+#PDF Stock Comptage
+DocumentModelcomptagePDF=Modèle PDF de comptage de Stock, Idem Standard, mais sans les quantités
+
+#PDF Factures
+total_ht_reimbursement=Total Prise en Charge
+total_ht_external=Total Sous traitance
+total_ht_mo=Total Main d'Oeuvre
+total_ht_part=Total Piece
+total_ht_service=Total Services
+
+SaveDefaultWarehouse = Sauvegarder en tant qu'entrepot par default
+DefaultWarehouseChosen = Entrepot par défaut
+WarehouseIsMandatory = Entrepot par défaut est obligatoire
+
+#
+# WebPortal
+#
+OperationOrderListController =  Liste des ordres de réparations
+OperationOrderFormController =  Créer un depannage
+OperationOrderFormTitle =  Créer un depannage
+OperationOrderListTitle = Liste des ordres de réparations
+WebPortalOperationorderListTitle = Liste des ordres de réparations
+OperationOrderListDesc = Liste des ordres de réparations
+OperationOrderFormTitleDesc =  Créer un depannage
+OperationOrderListTitleDesc = Liste des ordres de réparations
+WebPortalOperationOrderListMenu = Ordres de réparations
+WebPortalOperationOrderFormMenu = Créer un dépannage
+WebPortalOperationOrderFormTitle = Créer un dépannage
+OperationOrderCardTitle = Ordre de réparation
+OperationOrderCardTitleDesc = Ordre de réparation
+ThirdpartyName = Nom dcontru client
+Operations = Opérations
+MissingDateOperationOrder = Il manque la date de l'ordre de réparation
+MissingVehicule = Il manque le véhicule
+MissingSupplier = Il manque l'atelier
+MissingOperations = Il manque au moins une opération pour créer le dépannage
+MissingKmOnCreation = Il manque le kilométrage à la création de l'OR
+MissingDesc = Il manque la description
+MissingLoggedSocieteAccount = Une erreur est survenue lors de la récupération de l'utilisateur
+MissingConf = Il manque une configuration veuillez contacter l'administrateur de ce site
+CheckTransmitter = Émetteur
+OrderSupplierPDF = Bon de commande
+UserDoesNotHaveRightPermission = L'utilisateur n'a pas les permissions requises pour créer cet ordre de réparation, veuillez contacter votre administrateur
+DriverList = Conducteurs
+DriverListController = Conducteurs
+DriverListTitle = Conducteurs
+WebPortalDriverFormMenu = Conducteurs
+WebPortalDriverListMenu = Conducteurs
+WebPortalDriverListTitle= Conducteurs
+DriverActive = Actif
+DriverInactive = Inactif
+NewDriver = Nouveau Conducteur
+DriverFirstname = Prénom
+DriverLastname = Nom
+DriverPoste = Poste / Fonction
+DriverCivility = Civilité
+DriverEmail = Email
+DriverPhone = Téléphone Portable
+MissingLastname = Il manque le nom de famille
+MissingFirstname = Il manque le prénom
+MissingCivility = Il manque la civilité
+WebPortalVSRFormMenu = VSR
+WebPortalOperation = Opération
+VSRListController = VSR
+VSRbyVehicule = VSR par véhicule
+OPByVehicule = Opération par véhicule
+OperationByVehiculeList = Liste des opérations par véhicule
+NoRecordFoundPleaseSelectAVehiculeFirst = Aucun enregistrement trouvé veuillez selectionner un vehicule
+VehiculeNotFound = Le vehicule n'a pas été trouvé
+VSRVehicule = VSR du véhicule
+DriverFormTitle =  Liste des conducteurs
+VehiculeListController =  Liste des véhicules
+VehiculeListTitle = Liste des véhicules
+WebPortalVehiculeListTitle = Liste des véhicules
+VehiculeListDesc = Liste des véhicules
+VehiculeListTitleDesc = Liste des véhicules
+WebPortalVehiculeListMenu = Véhicules
+WebPortalVehiculeListDesc = Liste des véhicules
+WebPortalOPByVehiculeListMenu = Opération par véhicule
+VehiculeCardTitle =Véhicule
+VehiculeCardTitleDesc = Véhicule
+ThirdpartyName = Nom du client
+YouCannotAccessThisWebPortalPage = Vous ne pouvez pas acceder à cette page.
+LinkTOVSR = Lien vers le VSR
+ModifyDriver = Modifier le conducteur
+RefProduct = Référence Produit
+StockAnomaly = Anomalie de stock
+StockAnomalies = Anomalies de stock
+MoveToOtherWarehouse = Déplacer
+VehiculeFiles = Fichiers du vehicules
+OrFiles = Fichiers de l'OR
+SomethingWrongHappenedDuringFileLoad = Quelque chose ne s'est pas bien passé durant la récupération du fichier
+OnlyPdfCanBeLoadedHere = Seulement des pdf peuvent être téléchargé
+EmailSupplier = Liste des emails du fournisseur
+
+ThorWarehouse=Entrepôt
+TimePlannedQty=Temps plan.
+
+PricePolicies=Politique de prix de vente
+OPERATIONORDER_PERCENT_PRICE_UP_PMP=Pourcentage appliqué au PMP pour définir le prix de vente
+
+OOThirdpartiesLinked=Clients liés
+OOInvoiceTo=FACTURATION:

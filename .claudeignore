@@ -1,0 +1,22 @@
+# .claudeignore — Module Workshop
+# Les fichiers listés ici sont exclus du contexte automatique de Claude Code.
+# Ils restent accessibles en lecture explicite sur demande (ex: "consulte .claude/legacy/...").
+
+# -----------------------------------------------------------------------
+# Anciens modules — référence logique métier uniquement, ne pas modifier
+# -----------------------------------------------------------------------
+.claude/legacy/dolifleet/**
+.claude/legacy/operationorder/**
+
+# -----------------------------------------------------------------------
+# Fichiers de build, cache et temporaires
+# -----------------------------------------------------------------------
+vendor/**
+node_modules/**
+*.log
+*.cache
+
+# -----------------------------------------------------------------------
+# Fichiers de données SQL de migration — ne pas modifier directement
+# -----------------------------------------------------------------------
+script/migration/**

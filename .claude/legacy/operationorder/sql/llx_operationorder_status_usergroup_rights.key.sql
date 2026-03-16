@@ -1,0 +1,7 @@
+ALTER TABLE llx_operationorder_status_usergroup_rights ADD UNIQUE INDEX uk_or_status_usergroup_rights_status_code_ug(fk_operationorderstatus, code, fk_usergroup);
+
+ALTER TABLE llx_operationorder_status_usergroup_rights ADD INDEX idx_operationorder_status_usergroup_rights_odst (fk_operationorderstatus);
+ALTER TABLE llx_operationorder_status_usergroup_rights ADD INDEX idx_operationorder_status_usergroup_rights_ug (fk_usergroup);
+
+ALTER TABLE llx_operationorder_status_usergroup_rights ADD CONSTRAINT fk_operationorder_status_usergroup_rights_odst FOREIGN KEY (fk_operationorderstatus) REFERENCES llx_operationorder_status (rowid);
+ALTER TABLE llx_operationorder_status_usergroup_rights ADD CONSTRAINT fk_operationorder_status_usergroup_rights_ug FOREIGN KEY (fk_usergroup) REFERENCES llx_usergroup (rowid);

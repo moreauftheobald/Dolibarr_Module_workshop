@@ -1,0 +1,1 @@
+ALTER TABLE llx_operationordertasktime_extrafields ADD UNIQUE INDEX uk_operationordertasktime_extrafields_fk_object (fk_object);

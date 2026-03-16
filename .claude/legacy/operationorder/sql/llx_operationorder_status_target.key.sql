@@ -1,0 +1,5 @@
+ALTER TABLE llx_operationorder_status_target ADD INDEX idx_operationorder_status_target_odst (fk_operationorderstatus);
+ALTER TABLE llx_operationorder_status_target ADD INDEX idx_operationorder_status_target_odst_target (fk_usergroup);
+
+ALTER TABLE llx_operationorder_status_target ADD CONSTRAINT fk_operationorder_status_target_odst FOREIGN KEY (fk_operationorderstatus) REFERENCES llx_operationorder_status (rowid);
+ALTER TABLE llx_operationorder_status_target ADD CONSTRAINT fk_operationorder_status_target_odst_target FOREIGN KEY (fk_operationorderstatus_target) REFERENCES llx_operationorder_status (rowid);

@@ -1,0 +1,220 @@
+Module104087Name = Véhicules
+Module104087Desc = Module de gestion de flotte de véhicules
+
+ATMAbout = Ce module a été développé par <a href="http://www.atm-consulting.fr" target="_blank">ATM Consulting</a><br>Vous pouvez retrouver la documentation sur notre <a href="http://wiki.atm-consulting.fr/index.php/Accueil" target="_blank">wiki</a><br><br>Pour toute question technique ou retour, contactez-nous sur <a href="mailto:support@atm-consulting.fr">support@atm-consulting.fr</a><br><br>Pour toute question commerciale, contactez-nous sur <a href="mailto:contact@atm-consulting.fr">contact@atm-consulting.fr</a> ou au +33 9 77 19 50 70<br><br>Retrouvez nos autres modules sur <a href="http://www.dolistore.com/search.php?orderby=position&orderway=desc&search_query=atm&submit_search=Rechercher" target="_blank">Dolistore</a>
+
+doliFleet=Véhicules
+
+c_dolifleet_contract_type=DoliFleet - Types de contrat véhicule
+c_dolifleet_vehicule_type=DoliFleet - Types de véhicule
+c_dolifleet_vehicule_mark=DoliFleet - Marques de véhicule
+c_dolifleet_vehicule_activity_type=DoliFleet - Type d'activité véhicule
+c_dolifleet_vehicule_dimpneu=DoliFleet - Dimension pneumatique
+ModDoliFleetDescription=Module de gestion de véhicules
+
+# DROITS
+vehicule_read=Voir les véhicules
+vehicule_write=Créez/modifier les véhicules
+vehicule_delete=Supprimer les véhicules
+# SETUP
+ParamLabel=Nom du paramètre
+ParamDesc=Une description si besoin
+ParamHelp=Le contenu de l'aide
+doliFleetSetup = Configuration du module doliFleet
+doliFleetAbout = A propos du module doliFleet
+DOLIFLEET_MOTRICE_TYPES=Type de véhicule tracteur
+DOLIFLEET_DEFAULT_RENTAL_AMOUNT=Loyer par défaut (si aucun n'est trouvé dans la matrice client ou générale)
+DOLIFLEET_DELAY_SEARCH_OPERATIONS=Délai en mois pour rechercher les opérations précédentes dans la planification des opérations véhicules
+ShareDolifleet_vehicule=Activer le partage des véhicules
+DOLIFLEET_VEHICULESharing=Partage des véhicules
+DOLIFLEET_VEHICULESharingDescription=Sélection des entités qui partagerons leur base véhicules avec cette entité.
+Multicompany=Options du module multi sociétés
+ActivateVehiculeSharing=Activer le partage des véhicules entre entités (pensez à configurer le partage ci-dessous)
+MulticompanyConfiguration=Configuration des partages entre entités
+ShareWith=Reprend les données dans
+multicompanySharing=Partage entre entités
+
+# MENU
+TopMenudoliFleet=Vehicule
+MenudoliFleetVehicule=Vehicule
+LeftMenudoliFleetVehiculeCreate=Créer un véhicule
+LeftMenudoliFleetVehiculeList=Liste de véhicule
+MenudoliFleetVehiculeSetup=Parametres
+
+# STATUS
+doliFleetVehiculeStatusDraft=Inactif
+doliFleetVehiculeStatusActivated=Actif
+doliFleetVehiculeStatusValidate=Actif
+
+doliFleetOperationStatusDraft=Brouillon
+doliFleetOperationStatusToPlan=à planifier
+doliFleetOperationStatusPlanned=Planifié
+doliFleetOperationStatusDone=Réalisé
+
+doliFleetVehiculeStatusShortDraft=Inactif
+doliFleetVehiculeStatusShortActivated=Actif
+doliFleetVehiculeStatusShortValidate=Actif
+
+doliFleetOperationStatusShortDraft=Brouillon
+doliFleetOperationStatusShortToPlan=à planifier
+doliFleetOperationStatusShortPlanned=Planifié
+doliFleetOperationStatusShortDone=Réalisé
+
+
+# LIST
+doliFleetVehiculeList=Liste de véhicules
+NodoliFleet=(vide)
+
+# CARD
+NewdoliFleetVehicule=Création véhicule
+doliFleetVehiculeCard=Fiche véhicule
+doliFleetVehicule=Véhicule
+NewdoliFleet=Nouveau véhicule
+immatriculation_date=Date de première mise en circulation
+immatriculation_date_short=Mise en circulation
+vehiculeDelayExploit=Durée maximum d'exploitation
+LinkToThirparty=Lien vers le tiers
+km_date=Date de relevé kilométrique
+date_customer_exploit=Date de mise en exploitation
+date_customer_exploit_help=Mise en exploitation peut différer de la mise en circulation
+date_end_contract=Date fin de contrat
+contractType=Type de contrat
+modele = Modèle
+immatriculation = Immatriculation
+kilometrage = Kilometrage
+vehiculeType=Type de véhicule
+vehiculeMark=Marque du véhicule
+ShowdoliFleetVehicule=Voir le véhicule
+ActivityType=Type d'activité
+NodoliFleetActivity=Pas d'activité
+ActivityAdded=Activité ajoutée
+VehiculeActivities=Activités véhicule
+LinkedVehicules=Véhicules liés
+VehiculeUnlinked=Le véhicule a été délié
+VehiculeOperations=Opérations
+VehiculeOperation=Opération
+VehiculeOperationDelay=Délais depuis dernière opé.
+VehiculeOperationLastDateDone=Date dernière opé.
+VehiculeOperationLastKmDone=Km dernière opé.
+VehiculeOperationDateDue=Date réele procaine opération
+VehiculeOperationDateNext=Date prochaine opération
+VehiculeOperationKmNext=Km prochaine opération
+VehiculeOperationOnTime=Retards
+VehiculeOperationNextOR=OR prochaine opération
+doliFleetVehiculeOperationList=Liste des opérations par véhicule
+Empty=Vide
+NotEmpty=Non vide
+operationDeleted=Opération supprimée
+AtelierPrincipal=Atelier principal
+SNCarrosserie=S/N Carrosserie
+SNEssieu=S/N Essieu
+DFolVC=Present dans Volvo Connect
+CoutMensuel=Cout Mensuel
+DateFinFinancement=Date fin financement
+TypeFinancement=Type financement
+DateEndLocation=Date de fin de location
+SortiePrevue=Sortie prévue
+DimensionsPneumatiques=Dimensions Pneumatiques
+NbPneu=Nombre de Pneumatique
+AgeVeh=Age
+
+doliFleetModify=Modifier
+doliFleetClone=Cloner
+doliFleetClose=Cloturer
+doliFleetValid=Valider
+doliFleetActivate=Activer
+doliFleetUnactivate=Désactiver
+doliFleetReopen=Rouvrir
+doliFleetCancel=Abandonner
+doliFleetDelete=Supprimer
+
+# formConfirm
+ConfirmActivatedoliFleetVehiculeTitle=Confirmation d'activation
+ConfirmActivatedoliFleetVehiculeBody=Souhaitez-vous vraiment activer cette fiche véhicule %s ?
+ConfirmReopendoliFleetVehiculeTitle=Confirmation de désactivation
+ConfirmReopendoliFleetVehiculeBody=Souhaitez-vous vraiment désactiver cette fiche véhicule %s ?
+ConfirmDeletedoliFleetVehiculeTitle=Confirmation de suppression
+ConfirmDeletedoliFleetVehiculeBody=Souhaitez-vous vraiment supprimer cette fiche véhicule %s ?
+ConfirmClonedoliFleetVehiculeTitle=Confirmation de clonage
+ConfirmClonedoliFleetVehiculeBody=Souhaitez-vous vraiment clone cette fiche véhicule %s ?
+ConfirmDelActivitydoliFleetVehiculeBody=Voulez-vous vraiment supprimer cette activité ?
+ConfirmUnlinkVehiculedoliFleetVehiculeTitle=Confirmation de suppression du lien
+ConfirmUnlinkVehiculedoliFleetVehiculeBody=Voulez-vous vraiment supprimer le lien avec le véhicule ?
+ConfirmDelOperationdoliFleetVehiculeBody=Voulez-vous vraiment supprimer cette opération ?
+ConfirmDeldoliFleetLineBody=Voulez-vous vraiment supprimer cette ligne ?
+
+# Erreur
+ErrNoVinNumber=Aucun VIN renseigné
+ErrVinAlreadyUsed=Le VIN est déjà utilisé pour le véhicule %s
+ErrInvalidFkVehicule=Véhicule invalide
+ErrNoActivityType=Pas de type d'activité renseigné
+ErrAlreadyInActivity=Le véhicule est déjà en activité pour les date spécifiées
+ErrNoVehiculeToLink=Pas de véhicule à lier
+ErrVehiculeAlreadyLinkedDates=Le véhicule %s est déjà lié au véhicule %s du %s au %s
+ErrVehiculeUnlink=Impossible de délier le véhicule
+ErrOperationNoProdId=Opération : pas de produit sélectionné
+ErrOperationInvalidProduct=Produit erroné
+ErrOperationNoCritera=Vous devez renseigner un des critères km ou délai
+ErrOperationMaxKM=Le critère km est inférieur à %s (plus grand km saisi dans les opérations du véhicule)
+ErrInvalidType=Type de véhicule invalide
+ErrInvalidMark=Marque de véhicule invalide
+ErrNoDelayForLine=Pas de durée saisi
+ErrInvalidAmount=Montant saisie invalide
+ErrVehiculeThirPartiesAreDifferent=Les tiers des véhicules à lier sont différents
+ErrEmptyVehiculeImmatDate=Date de mise en circulation invalide
+ErrInvalidSocid=Tiers invalide
+
+
+ORListHisto=Historique véhicule
+CreateOperationOrderFromVehicule=Créer OR
+
+#Setup Screen
+
+Missinglabel=Label manquant
+CreateErrors=Erreur de création
+UpdateErrors=Erreur de mise a jour
+DeleteErrors=Erreur de supression
+CreateSucces=Création réussie
+UpdateSucces=Mise a jour réussie
+DeleteSucces=Supression réussie
+MissingCode=Code Manquant
+
+DolifleetSetupMarque=Parametrage de marques
+DeleteMarque=Supprimer une Marque
+DeleteMarqueQuestion=Etes vous sur de vouloir supprimer une marque ?
+NewMarque=Créer une marque
+EditMarque=Editer une marque
+Missingmarquelabel=nom de marque manquant
+marquelabel=Nom de la marque
+
+DolifleetSetupType=Parametrage des types de véhicules
+DeleteType=Supprimer un type de véhicule
+DeleteTypeQuestion=Etes vous sur de vouloir supprimer un type de véhiucle ?
+NewType=Créer un type de véhicule
+EditType=Editer un type de véhicule
+typelabel=Nom du type de véhicule
+
+DolifleetSetupTypeCt=Parametrage des types de contrats
+DeleteTypect=Supprimer un type de contrat
+DeleteTypectQuestion=Etes vous sur de vouloir supprimer un type de contrat ?
+NewTypect=Créer un type de contrat
+EditTypect=Editer un type de contrat
+typectlabel=Nom du type de contrat
+
+DolifleetSetupPneu=Parametrage des types de pneu
+DeletePneu=Supprimer un type de pneu
+DeletePneuQuestion=Etes vous sur de vouloir supprimer un type de pneu ?
+NewPneu=Créer un type de pneu
+EditPneu=Editer un type de pneu
+pneulabel=Nom du type de pneu
+
+
+CloneOperationsFromVehicle=Cloner les opérations d'un autre véhicule
+CloneOperationsFromVehicleTitle=Cloner les opérations
+CloneOperationsFromVehicleBody=Les opérations planifiées du véhicule sélectionné seront copiées. Le kilométrage de dernière opération sera initialisé à 1 et la date de dernière opération à la date de mise en exploitation.
+CloneOperationsSourceVehicle=Véhicule source
+CloneOperationsSuccess=%s opération(s) clonée(s) avec succès
+ErrNoVehiculeToCloneFrom=Aucun véhicule source sélectionné
+ErrNoOperationsToClone=Le véhicule source n'a aucune opération à cloner
+
+ORListVSR=VSR

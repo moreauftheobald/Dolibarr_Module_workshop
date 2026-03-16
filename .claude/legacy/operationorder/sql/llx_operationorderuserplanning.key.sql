@@ -1,0 +1,1 @@
+ALTER TABLE llx_operationorderuserplanning ADD UNIQUE INDEX uk_llx_operationorderuserplanning_o_o_ent_act (fk_object,object_type,entity,active);

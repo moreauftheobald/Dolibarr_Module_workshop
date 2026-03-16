@@ -1,0 +1,1 @@
+ALTER TABLE llx_operationorderhistory ADD INDEX idx_operationorderhistory_fk_operationorder (fk_operationorder);
