@@ -5,6 +5,7 @@ CREATE TABLE llx_workshop_job_type (
   code          varchar(20)  NOT NULL DEFAULT '',
   label         varchar(255) NOT NULL DEFAULT '',
   plannable     integer      NOT NULL DEFAULT 0,
+  fk_soc        integer      DEFAULT NULL,
   active        integer      NOT NULL DEFAULT 1,
   fk_user_creat integer      DEFAULT NULL,
   fk_user_modif integer      DEFAULT NULL

@@ -37,8 +37,8 @@ class ServiceType extends dictionary
 	/** @var string Picto */
 	public $picto = 'fa-file';
 
-	/** @var int $group_type Service group type (0=MO, 1=Piece, 2=Divers, 3=Forfait, 4=Ext) */
-	public $group_type;
+	/** @var int $fk_job_type FK to llx_workshop_job_type */
+	public $fk_job_type;
 
 	/** @var float $prix_mo Hourly rate HT/h */
 	public $prix_mo;
@@ -96,15 +96,14 @@ class ServiceType extends dictionary
 			'csslist'        => 'tdoverflowmax150',
 			'showoncombobox' => 0,
 		),
-		'group_type' => array(
-			'type'    => 'select',
-			'label'   => 'GroupType',
-			'enabled' => 1,
-			'visible' => 1,
-			'notnull' => 0,
+		'fk_job_type' => array(
+			'type'     => 'integer:WorkshopJobType:workshop/class/workshopjobtype.class.php',
+			'label'    => 'JobType',
+			'enabled'  => 1,
+			'visible'  => 1,
+			'notnull'  => 0,
 			'position' => 40,
-			'options' => array(0 => 'MO', 1 => 'Piece', 2 => 'Divers', 3 => 'Forfait', 4 => 'Ext'),
-			'css'     => 'maxwidth500 widthcentpercentminusxx',
+			'css'      => 'maxwidth500 widthcentpercentminusxx',
 		),
 		'prix_mo' => array(
 			'type'     => 'double',

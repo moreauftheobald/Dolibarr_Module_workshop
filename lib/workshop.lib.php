@@ -275,11 +275,13 @@ function getWorkshopParamObjects(): array
 			'fields'     => array(
 				'code'       => array('type' => 'text',   'label' => 'Code',      'required' => true),
 				'label'      => array('type' => 'text',   'label' => 'Label',     'required' => true),
-				'group_type' => array(
-					'type'    => 'select',
-					'label'   => 'GroupType',
-					'values'  => array(0 => 'MO', 1 => 'Pièce', 2 => 'Divers', 3 => 'Forfait', 4 => 'Ext'),
-					'default' => '0',
+				'fk_job_type' => array(
+					'type'          => 'related_select',
+					'label'         => 'JobType',
+					'related_class' => 'WorkshopJobType',
+					'related_file'  => '/workshop/class/workshopjobtype.class.php',
+					'allow_null'    => true,
+					'null_label'    => 'None',
 				),
 				'prix_mo'    => array('type' => 'number', 'label' => 'PrixMO'),
 				'active'     => array('type' => 'select', 'label' => 'active', 'values' => array('0' => 'Non', '1' => 'Oui'), 'default' => '1'),
@@ -294,6 +296,7 @@ function getWorkshopParamObjects(): array
 				'code'      => array('type' => 'text',   'label' => 'Code',            'required' => true),
 				'label'     => array('type' => 'text',   'label' => 'Label',           'required' => true),
 				'plannable' => array('type' => 'select', 'label' => 'JobTypePlannable', 'values' => array('0' => 'No', '1' => 'Yes'), 'default' => '0'),
+				'fk_soc'    => array('type' => 'societe', 'label' => 'BillingThirdParty'),
 				'active'    => array('type' => 'select', 'label' => 'active',           'values' => array('0' => 'Non', '1' => 'Oui'), 'default' => '1'),
 			),
 		),
