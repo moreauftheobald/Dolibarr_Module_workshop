@@ -55,7 +55,7 @@ function workshopAdminPrepareHead()
 	$head[$h][2] = 'partage_entites';
 	$h++;
 
-	$head[$h][0] = dol_buildpath("/workshop/admin/setup_objets_annexes.php", 1);
+	$head[$h][0] = dol_buildpath("/workshop/vehicule/param/vh_setup_marque.php", 1);
 	$head[$h][1] = $langs->trans("WorkshopAdminTabObjetsAnnexes");
 	$head[$h][2] = 'objets_annexes';
 	$h++;
