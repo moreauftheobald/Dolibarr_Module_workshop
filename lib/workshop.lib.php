@@ -56,8 +56,13 @@ function workshopAdminPrepareHead()
 	$h++;
 
 	$head[$h][0] = dol_buildpath("/workshop/vehicule/param/vh_setup_marque.php", 1);
-	$head[$h][1] = $langs->trans("WorkshopAdminTabObjetsAnnexes");
+	$head[$h][1] = $langs->trans("WorkshopAdminTabDictVehicule");
 	$head[$h][2] = 'objets_annexes';
+	$h++;
+
+	$head[$h][0] = dol_buildpath("/workshop/param/workshop_param_unified.php", 1).'?context=atelier';
+	$head[$h][1] = $langs->trans("WorkshopAdminTabDictAtelier");
+	$head[$h][2] = 'dict_atelier';
 	$h++;
 
 	$head[$h][0] = dol_buildpath("/workshop/admin/about.php", 1);
@@ -104,21 +109,6 @@ function workshopObjetsAnnexesPrepareHead(): array
 	$head[$h][0] = dol_buildpath("/workshop/vehicule/param/vh_setup_pneu.php", 1);
 	$head[$h][1] = $langs->trans("VhSetupPneu");
 	$head[$h][2] = 'pneu';
-	$h++;
-
-	$head[$h][0] = dol_buildpath("/workshop/operationorder/param/operationorder_setup_service_type.php", 1);
-	$head[$h][1] = $langs->trans("WorkshopSetupServiceType");
-	$head[$h][2] = 'service_type';
-	$h++;
-
-	$head[$h][0] = dol_buildpath("/workshop/param/workshop_param_unified.php", 1).'?context=atelier&tab=job_type';
-	$head[$h][1] = $langs->trans("JobTypeList");
-	$head[$h][2] = 'job_type';
-	$h++;
-
-	$head[$h][0] = dol_buildpath("/workshop/param/workshop_param_unified.php", 1).'?context=atelier&tab=tag';
-	$head[$h][1] = $langs->trans("TagList");
-	$head[$h][2] = 'tag';
 	$h++;
 
 	complete_head_from_modules($conf, $langs, null, $head, $h, 'workshopobjetsannexes@workshop');
@@ -277,6 +267,24 @@ function getWorkshopParamObjects(): array
 			),
 		),
 		// ── Atelier / OR context ─────────────────────────────────────────────
+		'service_type' => array(
+			'class_file' => '/workshop/class/servicetype.class.php',
+			'class_name' => 'ServiceType',
+			'context'    => 'atelier',
+			'tab_label'  => 'WorkshopSetupServiceType',
+			'fields'     => array(
+				'code'       => array('type' => 'text',   'label' => 'Code',      'required' => true),
+				'label'      => array('type' => 'text',   'label' => 'Label',     'required' => true),
+				'group_type' => array(
+					'type'    => 'select',
+					'label'   => 'GroupType',
+					'values'  => array(0 => 'MO', 1 => 'Pièce', 2 => 'Divers', 3 => 'Forfait', 4 => 'Ext'),
+					'default' => '0',
+				),
+				'prix_mo'    => array('type' => 'number', 'label' => 'PrixMO'),
+				'active'     => array('type' => 'select', 'label' => 'active', 'values' => array('0' => 'Non', '1' => 'Oui'), 'default' => '1'),
+			),
+		),
 		'job_type' => array(
 			'class_file' => '/workshop/class/workshopjobtype.class.php',
 			'class_name' => 'WorkshopJobType',
@@ -393,6 +401,16 @@ function workshopBuildParamFormQuestion(string $fieldName, array $fieldConfig, $
 		);
 	}
 
+	if ($fieldConfig['type'] === 'number') {
+		$numVal = ($dataEdit !== null) ? price2num($value) : (isset($fieldConfig['default']) ? $fieldConfig['default'] : '0');
+		return array(
+			'type'  => 'text',
+			'label' => $langs->trans($fieldConfig['label']),
+			'name'  => $fieldName,
+			'value' => $numVal,
+		);
+	}
+
 	if ($fieldConfig['type'] === 'select') {
 		$default = ($dataEdit !== null) ? $value : (isset($fieldConfig['default']) ? $fieldConfig['default'] : '0');
 		return array(
@@ -477,6 +495,10 @@ function workshopRenderParamFieldValue(string $fieldName, array $fieldConfig, $d
 
 	if ($fieldConfig['type'] === 'text') {
 		return dol_escape_htmltag($value);
+	}
+
+	if ($fieldConfig['type'] === 'number') {
+		return dol_escape_htmltag(price2num($value));
 	}
 
 	if ($fieldConfig['type'] === 'select') {

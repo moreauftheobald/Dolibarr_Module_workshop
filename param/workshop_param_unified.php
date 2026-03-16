@@ -126,6 +126,8 @@ foreach ($objConfig['fields'] as $fieldName => $fieldConfig) {
 		|| $fieldConfig['type'] === 'societe'
 		|| $fieldConfig['type'] === 'select') {
 		$postValues[$fieldName] = GETPOST($fieldName, 'int');
+	} elseif ($fieldConfig['type'] === 'number') {
+		$postValues[$fieldName] = price2num(GETPOST($fieldName, 'alphanohtml'));
 	} elseif ($fieldConfig['type'] === 'color') {
 		// The colour is submitted as a hex code chosen from a palette <select>.
 		// Use 'nohtml' to preserve '#', then whitelist against the palette for security.
@@ -251,14 +253,8 @@ $title = $langs->trans($objConfig['tab_label']);
 
 llxHeader('', $title, '');
 
-// Use the Objets Annexes head (all annexes tabs) when called in atelier context
-// so the navigation is consistent with the vh_setup_* pages.
-if ($context === 'atelier') {
-	$head = workshopObjetsAnnexesPrepareHead();
-} else {
-	$head = workshopUnifiedParamPrepareHead($context);
-}
-print dol_get_fiche_head($head, $tab, $langs->trans('WorkshopAdminTabObjetsAnnexes'), -1, 'fontawesome_fa-tools');
+$head = workshopUnifiedParamPrepareHead($context);
+print dol_get_fiche_head($head, $tab, $langs->trans('WorkshopAdminTabDictAtelier'), -1, 'fontawesome_fa-tools');
 
 // Build the URL fragment that must survive across all navigation links
 $tabParam = 'tab='.urlencode($tab);

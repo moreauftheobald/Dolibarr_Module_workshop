@@ -130,6 +130,8 @@ WorkshopAdminTabVehicules=Vehicles
 WorkshopAdminTabOR=Repair orders
 WorkshopAdminTabDivers=Miscellaneous
 WorkshopAdminTabPartageEntites=Entity sharing
+WorkshopAdminTabDictVehicule=Vehicle dicts.
+WorkshopAdminTabDictAtelier=Workshop dicts.
 # Vehicles tab - parameters
 WorkshopTractorVehicleTypes=Tractor vehicle type
 WorkshopTractorVehicleTypesHelp=Select vehicle types considered as motor vehicles (tractors). Hold Ctrl for multiple selection.

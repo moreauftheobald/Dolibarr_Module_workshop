@@ -158,54 +158,6 @@ class ServiceType extends dictionary
 	 */
 	public function getNomUrl($withpicto = 0, $option = '', $notooltip = 0, $morecss = '', $save_lastsearch_value = -1)
 	{
-		global $conf, $langs, $hookmanager, $action;
-
-		if (!empty($conf->dol_no_mouse_hover)) {
-			$notooltip = 1;
-		}
-
-		$label = $this->code;
-		$url   = dol_buildpath('/workshop/operationorder/param/operationorder_setup_service_type.php', 1);
-
-		$linkclose = '';
-		if (empty($notooltip)) {
-			if (getDolGlobalInt('MAIN_OPTIMIZEFORTEXTBROWSER')) {
-				$label = $langs->trans('ShowServiceType');
-				$linkclose .= ' alt="'.dolPrintHTMLForAttribute($label).'"';
-			}
-			$linkclose .= ($label ? ' title="'.dolPrintHTMLForAttribute($label).'"' : ' title="tocomplete"');
-			$linkclose .= ' class="'.($morecss ? ' '.$morecss : '').'"';
-		} else {
-			$linkclose = ($morecss ? ' class="'.$morecss.'"' : '');
-		}
-
-		if ($option === 'nolink' || empty($url)) {
-			$linkstart = '<span';
-			$linkend   = '</span>';
-		} else {
-			$linkstart = '<a href="'.$url.'"';
-			$linkend   = '</a>';
-		}
-		$linkstart .= $linkclose.'>';
-
-		$result = $linkstart;
-		if ($withpicto) {
-			$result .= img_object(($notooltip ? '' : $label), ($this->picto ?: 'generic'), (($withpicto != 2) ? 'class="paddingright"' : ''), 0, 0, $notooltip ? 0 : 1);
-		}
-		if ($withpicto != 2) {
-			$result .= $this->code;
-		}
-		$result .= $linkend;
-
-		$hookmanager->initHooks(array($this->element.'dao'));
-		$parameters = array('id' => $this->id, 'getnomurl' => &$result);
-		$reshook = $hookmanager->executeHooks('getNomUrl', $parameters, $this, $action);
-		if ($reshook > 0) {
-			$result = $hookmanager->resPrint;
-		} else {
-			$result .= $hookmanager->resPrint;
-		}
-
-		return $result;
+		return dol_escape_htmltag($this->label ?: $this->code);
 	}
 }
