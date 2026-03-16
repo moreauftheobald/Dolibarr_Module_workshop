@@ -438,6 +438,19 @@ if (empty($reshook)) {
 		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
 		exit;
 	}
+
+	// ── Transition de statut ─────────────────────────────────────────────
+	if ($action == 'setStatus' && $id > 0 && $permissiontoadd) {
+		$fk_status = GETPOSTINT('fk_status');
+		$res = $object->setStatus($user, $fk_status);
+		if ($res < 0) {
+			setEventMessages($object->error, $object->errors, 'errors');
+		} else {
+			setEventMessage($langs->trans('StatusUpdated'));
+		}
+		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
+		exit;
+	}
 }
 
 
@@ -838,6 +851,150 @@ if ($id > 0) {
 	print '</div>'; // fichecenter
 
 	print dol_get_fiche_end();
+
+	// ═══════════════════════════════════════════════════════════════════════
+	// BOUTONS D'ACTION
+	// ═══════════════════════════════════════════════════════════════════════
+
+	// ── Chargement des constantes admin ───────────────────────────────────
+	$statusBeforeCheck   = getDolGlobalInt('WORKSHOP_OR_STATUT_BEFORE_CHECK');
+	$statusAfterCheck    = getDolGlobalInt('WORKSHOP_OR_STATUT_AFTER_CHECK');
+	$statusForInvoice    = getDolGlobalInt('WORKSHOP_OR_STATUT_FOR_INVOICE');
+	$statusAfterInvoice  = getDolGlobalInt('WORKSHOP_OR_STATUT_AFTER_INVOICE');
+	$orderableStatuses   = array_filter(array_map('intval', explode(',', getDolGlobalString('WORKSHOP_OR_ORDERABLE_STATUS'))));
+
+	$currentStatus       = $object->loadStatus();
+	$canEditAtStatus     = $currentStatus ? $currentStatus->userCan($user, 'edit') : (bool) $permissiontoadd;
+	$isCurrentOrderable  = in_array((int) $object->status, $orderableStatuses);
+	$isCurrentForInvoice = ($statusForInvoice > 0 && (int) $object->status === $statusForInvoice);
+	$orHasCharges        = ((float) $object->total_ht != 0);
+
+	// ── Rangée 1 : transitions de statut ──────────────────────────────────
+	print '<div class="tabsAction">'."\n";
+
+	if ($currentStatus && is_array($currentStatus->TStatusAllowed) && !empty($currentStatus->TStatusAllowed)) {
+		foreach ($currentStatus->TStatusAllowed as $targetStatusId) {
+			$targetStatusId = (int) $targetStatusId;
+
+			// Règle Check OR : remplacer le statut AFTER_CHECK si check_or insuffisant
+			$isAfterCheckTarget = ($statusBeforeCheck > 0
+				&& (int) $object->status === $statusBeforeCheck
+				&& $statusAfterCheck > 0
+				&& $targetStatusId === $statusAfterCheck);
+
+			if ($isAfterCheckTarget && (int) $object->check_or <= 1) {
+				// Afficher bouton "Check OR" bloquant
+				print '<a class="butActionRefused classfortooltip" title="'.dol_escape_htmltag($langs->trans('CheckORRequiredTooltip')).'">';
+				print img_picto('', 'fa-clipboard-check', 'class="paddingright"').$langs->trans('CheckOR');
+				print '</a>'."\n";
+				continue;
+			}
+
+			// Règle facturation : masquer le statut AFTER_INVOICE si total_ht > 0
+			$isAfterInvoiceTarget = ($isCurrentForInvoice && $statusAfterInvoice > 0 && $targetStatusId === $statusAfterInvoice);
+			if ($isAfterInvoiceTarget && $orHasCharges) {
+				continue; // bouton masqué — passage via "Facturer l'OR"
+			}
+
+			$targetStatus = new WorkshopOperationOrderStatus($db);
+			if ($targetStatus->fetch($targetStatusId) <= 0) {
+				continue;
+			}
+
+			$canChange     = $targetStatus->userCan($user, 'changeToThisStatus');
+			$needsPlanning = !empty($targetStatus->require_planned_date) && empty($object->date_planned);
+			$isActive      = $canChange && !$needsPlanning;
+
+			if ($isActive) {
+				$btnStyle = !empty($targetStatus->color) ? ' style="background-color:'.dol_escape_htmltag($targetStatus->color).';border-color:'.dol_escape_htmltag($targetStatus->color).';"' : '';
+				print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'" style="display:inline-block;margin:2px;">'."\n";
+				print '<input type="hidden" name="token" value="'.newToken().'">'."\n";
+				print '<input type="hidden" name="action" value="setStatus">'."\n";
+				print '<input type="hidden" name="id" value="'.$object->id.'">'."\n";
+				print '<input type="hidden" name="fk_status" value="'.$targetStatusId.'">'."\n";
+				print '<input type="submit" class="butAction"'.$btnStyle.' value="'.dol_escape_htmltag($targetStatus->label).'">'."\n";
+				print '</form>'."\n";
+			} else {
+				$tooltip = !$canChange ? $langs->trans('NotEnoughPermissions') : $langs->trans('PlanningDateRequired');
+				print '<a class="butActionRefused classfortooltip" title="'.dol_escape_htmltag($tooltip).'">';
+				print dol_escape_htmltag($targetStatus->label);
+				print '</a>'."\n";
+			}
+		}
+	}
+
+	// ── Bouton "Facturer l'OR" (uniquement si statut = WORKSHOP_OR_STATUT_FOR_INVOICE et total_ht > 0) ──
+	if ($isCurrentForInvoice && $orHasCharges) {
+		$canInvoice = $canEditAtStatus && isModEnabled('facture') && $user->hasRight('facture', 'creer');
+		$invoiceUrl = dol_buildpath('/workshop/operationorder/or_invoice.php', 1).'?id='.$object->id;
+		if ($canInvoice) {
+			print '<a class="butAction" href="'.dol_escape_htmltag($invoiceUrl).'">';
+			print img_picto('', 'bill', 'class="paddingright"').$langs->trans('FacturerOR');
+			print '</a>'."\n";
+		} else {
+			$tooltip = !$canEditAtStatus ? $langs->trans('NotEnoughPermissions') : $langs->trans('NoRightToCreateInvoice');
+			print '<a class="butActionRefused classfortooltip" title="'.dol_escape_htmltag($tooltip).'">';
+			print img_picto('', 'bill', 'class="paddingright"').$langs->trans('FacturerOR');
+			print '</a>'."\n";
+		}
+	}
+
+	print '</div>'."\n";
+
+	// ── Rangée 2 : boutons d'action métier ────────────────────────────────
+	print '<div class="tabsAction">'."\n";
+
+	// Ajouter un JOB
+	$addJobUrl = dol_buildpath('/workshop/operationorder/or_job_card.php', 1).'?fk_operationorder='.$object->id.'&action=create';
+	if ($canEditAtStatus) {
+		print '<a class="butAction" href="'.dol_escape_htmltag($addJobUrl).'">';
+		print img_picto('', 'fa-plus-circle', 'class="paddingright"').$langs->trans('AddJob');
+		print '</a>'."\n";
+	} else {
+		print '<a class="butActionRefused classfortooltip" title="'.dol_escape_htmltag($langs->trans('NotEnoughPermissions')).'">';
+		print img_picto('', 'fa-plus-circle', 'class="paddingright"').$langs->trans('AddJob');
+		print '</a>'."\n";
+	}
+
+	// Commande Pièces + Débit Pièce (uniquement si statut dans WORKSHOP_OR_ORDERABLE_STATUS)
+	if ($isCurrentOrderable) {
+		$commandeUrl = dol_buildpath('/workshop/operationorder/or_commande_pieces.php', 1).'?id='.$object->id;
+		print '<a class="butAction" href="'.dol_escape_htmltag($commandeUrl).'">';
+		print img_picto('', 'fa-shopping-cart', 'class="paddingright"').$langs->trans('CommandePieces');
+		print '</a>'."\n";
+
+		$debitUrl = dol_buildpath('/workshop/operationorder/or_pieces.php', 1).'?id='.$object->id;
+		print '<a class="butAction" href="'.dol_escape_htmltag($debitUrl).'">';
+		print img_picto('', 'fa-boxes', 'class="paddingright"').$langs->trans('DebitPiece');
+		print '</a>'."\n";
+	}
+
+	// Découper l'OR
+	$splitUrl = dol_buildpath('/workshop/operationorder/or_split.php', 1).'?id='.$object->id;
+	if ($canEditAtStatus) {
+		print '<a class="butAction" href="'.dol_escape_htmltag($splitUrl).'">';
+		print img_picto('', 'fa-cut', 'class="paddingright"').$langs->trans('SplitOR');
+		print '</a>'."\n";
+	} else {
+		print '<a class="butActionRefused classfortooltip" title="'.dol_escape_htmltag($langs->trans('NotEnoughPermissions')).'">';
+		print img_picto('', 'fa-cut', 'class="paddingright"').$langs->trans('SplitOR');
+		print '</a>'."\n";
+	}
+
+	// Supprimer
+	$permissiontodelete = $user->hasRight('workshop', 'operationorders', 'delete');
+	if ($permissiontodelete) {
+		$deleteUrl = $_SERVER['PHP_SELF'].'?id='.$object->id.'&action=delete&token='.newToken();
+		print '<a class="butActionDelete" href="'.dol_escape_htmltag($deleteUrl).'">';
+		print img_picto('', 'delete', 'class="paddingright"').$langs->trans('Delete');
+		print '</a>'."\n";
+	} else {
+		print '<a class="butActionRefused classfortooltip" title="'.dol_escape_htmltag($langs->trans('NotEnoughPermissions')).'">';
+		print img_picto('', 'delete', 'class="paddingright"').$langs->trans('Delete');
+		print '</a>'."\n";
+	}
+
+	print '</div>'."\n";
 
 	llxFooter();
 	$db->close();
