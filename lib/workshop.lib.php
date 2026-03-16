@@ -267,6 +267,18 @@ function getWorkshopParamObjects(): array
 			),
 		),
 		// ── Atelier / OR context ─────────────────────────────────────────────
+		'job_type' => array(
+			'class_file' => '/workshop/class/workshopjobtype.class.php',
+			'class_name' => 'WorkshopJobType',
+			'context'    => 'atelier',
+			'tab_label'  => 'JobTypeList',
+			'fields'     => array(
+				'code'      => array('type' => 'text',   'label' => 'Code',            'required' => true),
+				'label'     => array('type' => 'text',   'label' => 'Label',           'required' => true),
+				'plannable' => array('type' => 'select', 'label' => 'JobTypePlannable', 'values' => array('0' => 'No', '1' => 'Yes'), 'default' => '0'),
+				'active'    => array('type' => 'select', 'label' => 'active',           'values' => array('0' => 'Non', '1' => 'Oui'), 'default' => '1'),
+			),
+		),
 		'tag' => array(
 			'class_file' => '/workshop/class/Tag.class.php',
 			'class_name' => 'Tag',

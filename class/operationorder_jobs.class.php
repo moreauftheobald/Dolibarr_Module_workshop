@@ -70,6 +70,8 @@ class Operationorder_jobs extends CommonObject
 		'label'             => array('type' => 'varchar(255)', 'label' => 'Label',        'enabled' => 1, 'position' => 20,  'notnull' => 0, 'visible' => 1, 'searchall' => 1, 'showoncombobox' => 1, 'css' => 'minwidth300', 'autofocusoncreate' => 1),
 		'description'       => array('type' => 'html',        'label' => 'Description',  'enabled' => 1, 'position' => 30,  'notnull' => 0, 'visible' => 3, 'cssview' => 'wordbreak'),
 		'fk_service_type'   => array('type' => 'integer:ServiceType:workshop/class/servicetype.class.php', 'label' => 'ServiceType', 'enabled' => 1, 'position' => 40, 'notnull' => 0, 'visible' => 1, 'css' => 'maxwidth500 widthcentpercentminusxx'),
+		'fk_job_type'       => array('type' => 'integer:WorkshopJobType:workshop/class/workshopjobtype.class.php', 'label' => 'JobType', 'enabled' => 1, 'position' => 42, 'notnull' => 0, 'visible' => 1, 'css' => 'maxwidth300'),
+		'fk_soc'            => array('type' => 'integer:Societe:societe/class/societe.class.php:1', 'label' => 'BillingThirdParty', 'enabled' => 1, 'position' => 44, 'notnull' => 0, 'visible' => -1, 'css' => 'maxwidth500'),
 		'fk_user_assign'    => array('type' => 'integer:User:user/class/user.class.php', 'label' => 'AssignedTo', 'picto' => 'user', 'enabled' => 1, 'position' => 50, 'notnull' => 0, 'visible' => 1, 'csslist' => 'tdoverflowmax150'),
 		'qty_mo'            => array('type' => 'double',      'label' => 'QtyMO',        'enabled' => 1, 'position' => 55, 'notnull' => 0, 'visible' => 1, 'default' => 0, 'css' => 'maxwidth100'),
 		'prix_mo'           => array('type' => 'double',      'label' => 'PrixMO',       'enabled' => 1, 'position' => 56, 'notnull' => 0, 'visible' => 1, 'default' => 0, 'css' => 'maxwidth100'),
@@ -98,6 +100,8 @@ class Operationorder_jobs extends CommonObject
 	public $label;
 	public $description;
 	public $fk_service_type;
+	public $fk_job_type;
+	public $fk_soc;
 	public $fk_user_assign;
 	public $qty_mo;
 	public $prix_mo;
