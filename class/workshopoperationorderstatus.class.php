@@ -612,8 +612,17 @@ class WorkshopOperationOrderStatus extends CommonObject
 	 */
 	public function userGroupCan(User $user, $action = '')
 	{
+		// L'admin contourne toujours les restrictions de groupe
+		if (!empty($user->admin)) {
+			return true;
+		}
+
+		// Si aucun groupe n'est configuré pour cette action : fallback sur les droits Dolibarr de base
 		if (empty($this->TGroupCan[$action])) {
-			return false;
+			if ($action === 'read') {
+				return (bool) $user->hasRight('workshop', 'operationorders', 'read');
+			}
+			return (bool) $user->hasRight('workshop', 'operationorders', 'write');
 		}
 
 		$TUserGroups = $this->getUserGroups($user);
