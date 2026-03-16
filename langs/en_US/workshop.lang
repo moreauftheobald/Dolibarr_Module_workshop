@@ -81,6 +81,30 @@ ORStatusShortClosed=Closed
 ORStatusShortCancelled=Cancelled
 
 #
+# OR Card — standard view fields
+#
+DateOR=Repair order date
+DatePlanned=Planned date
+TempsImmobilisationTheo=Theoretical immobilisation time
+TotalHTMO=Total excl. tax Labour
+TotalHTPart=Total excl. tax Parts
+TotalHTService=Total excl. tax Service
+TotalHTExternal=Total excl. tax External
+TotalHTRefund=Total excl. tax Refund
+CheckOR=OR Check status
+CheckORNonVerifie=Not verified
+CheckOREnCours=Being verified
+CheckORVerifieOK=Verified OK
+CheckORVerifieReserves=Verified with reservations
+OperationsDisponibles=Available operations
+KmCreationOR=Mileage at OR creation
+VehiculeLie=Linked vehicle
+NoVehiculeLinked=No linked vehicle
+DateCloture=Closing date
+Hours=hours
+NA=N/A
+
+#
 # Admin page
 #
 WorkshopSetup = Workshop setup

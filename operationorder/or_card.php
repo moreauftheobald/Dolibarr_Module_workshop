@@ -55,6 +55,7 @@ if (!$res) {
 
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.form.class.php';
 require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
+require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
 dol_include_once('/workshop/class/operationorder.class.php');
 dol_include_once('/workshop/class/Vehicule.class.php');
 dol_include_once('/workshop/class/Conducteur.class.php');
@@ -386,6 +387,57 @@ if (empty($reshook)) {
 		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
 		exit;
 	}
+
+	if ($action == 'save_date_or' && $id > 0 && $permissiontoadd) {
+		$object->date_valid = dol_mktime(
+			GETPOSTINT('date_orhour'), GETPOSTINT('date_ormin'), 0,
+			GETPOSTINT('date_ormonth'), GETPOSTINT('date_orday'), GETPOSTINT('date_oryear')
+		);
+		if ($object->update($user) < 0) {
+			setEventMessages($object->error, $object->errors, 'errors');
+		}
+		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
+		exit;
+	}
+
+	if ($action == 'save_date_planned' && $id > 0 && $permissiontoadd) {
+		$object->date_planned = dol_mktime(
+			GETPOSTINT('date_plannedhour'), GETPOSTINT('date_plannedmin'), 0,
+			GETPOSTINT('date_plannedmonth'), GETPOSTINT('date_plannedday'), GETPOSTINT('date_plannedyear')
+		);
+		if ($object->update($user) < 0) {
+			setEventMessages($object->error, $object->errors, 'errors');
+		}
+		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
+		exit;
+	}
+
+	if ($action == 'save_fk_conducteur' && $id > 0 && $permissiontoadd) {
+		$object->fk_conducteur = GETPOSTINT('fk_conducteur') ?: null;
+		if ($object->update($user) < 0) {
+			setEventMessages($object->error, $object->errors, 'errors');
+		}
+		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
+		exit;
+	}
+
+	if ($action == 'save_km' && $id > 0 && $permissiontoadd) {
+		$object->km = price2num(GETPOST('km', 'alpha'));
+		if ($object->update($user) < 0) {
+			setEventMessages($object->error, $object->errors, 'errors');
+		}
+		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
+		exit;
+	}
+
+	if ($action == 'save_check_or' && $id > 0 && $user->admin) {
+		$object->check_or = GETPOSTINT('check_or');
+		if ($object->update($user) < 0) {
+			setEventMessages($object->error, $object->errors, 'errors');
+		}
+		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
+		exit;
+	}
 }
 
 
@@ -496,6 +548,294 @@ if ($id > 0) {
 
 	// ── Bandeau ──────────────────────────────────────────────────────────────
 	dol_banner_tab($object, 'ref', $linkback, 1, 'ref', 'ref', $morehtmlref, '', $object->getLibStatut(4));
+
+	// ── Chargement du véhicule pour la colonne droite ─────────────────────
+	$vehiculeObj = null;
+	if ($object->fk_vehicule > 0) {
+		$vehiculeObj = new Vehicule($db);
+		if ($vehiculeObj->fetch($object->fk_vehicule) <= 0) {
+			$vehiculeObj = null;
+		}
+	}
+
+	// ── Labels check_or ───────────────────────────────────────────────────
+	$checkOrLabels = array(
+		0 => $langs->trans('CheckORNonVerifie'),
+		1 => $langs->trans('CheckOREnCours'),
+		2 => $langs->trans('CheckORVerifieOK'),
+		3 => $langs->trans('CheckORVerifieReserves'),
+	);
+	$checkOrColors = array(
+		0 => 'status0',
+		1 => 'status4',
+		2 => 'status6',
+		3 => 'status8',
+	);
+
+	// ── Layout deux colonnes ───────────────────────────────────────────────
+	print '<div class="fichecenter">';
+	print '<div class="fichehalfleft">';
+
+	// ── Colonne gauche : informations de l'OR ─────────────────────────────
+	print '<table class="border centpercent tableforfield">'."\n";
+
+	// ── Date création (calculée !) ────────────────────────────────────────
+	print '<tr><td class="titlefield">'.$langs->trans('DateCreation').'</td>';
+	print '<td>';
+	print dol_print_date($object->date_creation, 'dayhour');
+	print '</td></tr>'."\n";
+
+	// ── Date OR (date_valid) — éditable * ─────────────────────────────────
+	print '<tr><td>';
+	print $form->editfieldkey($langs->trans('DateOR'), 'date_or', $object->date_valid, $object, $permissiontoadd);
+	print '</td><td>';
+	if ($action == 'editdate_or' && $permissiontoadd) {
+		print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'">';
+		print '<input type="hidden" name="token" value="'.newToken().'">';
+		print '<input type="hidden" name="action" value="save_date_or">';
+		print '<input type="hidden" name="id" value="'.$object->id.'">';
+		print $form->selectDate($object->date_valid ?: -1, 'date_or', 1, 1, 0, '', 1, 1);
+		print ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
+		print ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
+		print '</form>';
+	} else {
+		print $form->editfieldval($langs->trans('DateOR'), 'date_or', $object->date_valid, $object, $permissiontoadd, 'dayhour');
+	}
+	print '</td></tr>'."\n";
+
+	// ── Date planification — éditable * ───────────────────────────────────
+	print '<tr><td>';
+	print $form->editfieldkey($langs->trans('DatePlanned'), 'date_planned', $object->date_planned, $object, $permissiontoadd);
+	print '</td><td>';
+	if ($action == 'editdate_planned' && $permissiontoadd) {
+		print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'">';
+		print '<input type="hidden" name="token" value="'.newToken().'">';
+		print '<input type="hidden" name="action" value="save_date_planned">';
+		print '<input type="hidden" name="id" value="'.$object->id.'">';
+		print $form->selectDate($object->date_planned ?: -1, 'date_planned', 1, 1, 0, '', 1, 1);
+		print ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
+		print ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
+		print '</form>';
+	} else {
+		print $form->editfieldval($langs->trans('DatePlanned'), 'date_planned', $object->date_planned, $object, $permissiontoadd, 'dayhour');
+	}
+	print '</td></tr>'."\n";
+
+	// ── Temps d'immobilisation théorique (calculé !) ───────────────────────
+	print '<tr><td class="titlefield">'.$langs->trans('TempsImmobilisationTheo').'</td>';
+	print '<td>';
+	if (!empty($object->temps_immobilisation)) {
+		print number_format((float) $object->temps_immobilisation, 2).' '.$langs->trans('Hours');
+	} else {
+		print '<span class="opacitymedium">'.$langs->trans('NA').'</span>';
+	}
+	print '</td></tr>'."\n";
+
+	// ── Mécanicien (calculé !) ────────────────────────────────────────────
+	print '<tr><td class="titlefield">'.$langs->trans('Mechanic').'</td>';
+	print '<td>';
+	if ($object->fk_user_assign > 0) {
+		$mechUser = new User($db);
+		if ($mechUser->fetch($object->fk_user_assign) > 0) {
+			print $mechUser->getNomUrl(1);
+		} else {
+			print $object->fk_user_assign;
+		}
+	} else {
+		print '<span class="opacitymedium">'.$langs->trans('None').'</span>';
+	}
+	print '</td></tr>'."\n";
+
+	// ── Totaux HT (calculés !) ────────────────────────────────────────────
+	print '<tr><td class="titlefield">'.$langs->trans('TotalHTMO').'</td>';
+	print '<td>'.price($object->total_ht_mo).'</td></tr>'."\n";
+
+	print '<tr><td class="titlefield">'.$langs->trans('TotalHTPart').'</td>';
+	print '<td>'.price($object->total_ht_part).'</td></tr>'."\n";
+
+	print '<tr><td class="titlefield">'.$langs->trans('TotalHTService').'</td>';
+	print '<td>'.price($object->total_ht_service).'</td></tr>'."\n";
+
+	print '<tr><td class="titlefield">'.$langs->trans('TotalHTExternal').'</td>';
+	print '<td>'.price($object->total_ht_external).'</td></tr>'."\n";
+
+	print '<tr><td class="titlefield">'.$langs->trans('TotalHTRefund').'</td>';
+	print '<td>'.price($object->total_ht_refund).'</td></tr>'."\n";
+
+	print '<tr><td class="titlefield"><strong>'.$langs->trans('TotalHT').'</strong></td>';
+	print '<td><strong>'.price($object->total_ht).'</strong></td></tr>'."\n";
+
+	// ── Statut du Check OR (++ : éditable par admin uniquement) ───────────
+	print '<tr><td class="titlefield">'.$langs->trans('CheckOR');
+	if ($user->admin) {
+		print ' <a class="editfielda" href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'&action=editcheck_or">'.img_edit().'</a>';
+	}
+	print '</td><td>';
+	if ($action == 'editcheck_or' && $user->admin) {
+		print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'">';
+		print '<input type="hidden" name="token" value="'.newToken().'">';
+		print '<input type="hidden" name="action" value="save_check_or">';
+		print '<input type="hidden" name="id" value="'.$object->id.'">';
+		print $form->selectarray('check_or', $checkOrLabels, (int) $object->check_or, 0);
+		print ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
+		print ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
+		print '</form>';
+	} else {
+		$checkOrVal = (int) $object->check_or;
+		$checkOrLabel = isset($checkOrLabels[$checkOrVal]) ? $checkOrLabels[$checkOrVal] : $checkOrLabels[0];
+		$checkOrColor = isset($checkOrColors[$checkOrVal]) ? $checkOrColors[$checkOrVal] : 'status0';
+		print dolGetStatus($checkOrLabel, $checkOrLabel, '', $checkOrColor, 0);
+	}
+	print '</td></tr>'."\n";
+
+	print '</table>'."\n";
+	print '</div>'; // fichehalfleft
+
+	// ── Colonne droite : informations du véhicule ─────────────────────────
+	print '<div class="fichehalfright">';
+	print '<table class="border centpercent tableforfield">'."\n";
+
+	if ($vehiculeObj) {
+
+		// ── Opérations disponibles (calculé !) ───────────────────────────
+		print '<tr><td class="titlefield">'.$langs->trans('OperationsDisponibles').'</td>';
+		print '<td>';
+		dol_include_once('/workshop/class/vehiculeOperation.class.php');
+		$vehiculeObj->getOperations();
+		if (!empty($vehiculeObj->operations)) {
+			$opLabels = array();
+			foreach ($vehiculeObj->operations as $ope) {
+				if (!empty($ope->fk_product)) {
+					require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
+					$prod = new Product($db);
+					if ($prod->fetch($ope->fk_product) > 0) {
+						$opLabels[] = $prod->getNomUrl(1);
+					}
+				}
+			}
+			if ($opLabels) {
+				print implode(', ', $opLabels);
+			} else {
+				print '<span class="opacitymedium">'.$langs->trans('None').'</span>';
+			}
+		} else {
+			print '<span class="opacitymedium">'.$langs->trans('None').'</span>';
+		}
+		print '</td></tr>'."\n";
+
+		// ── Date première mise en circulation (calculé !) ─────────────────
+		print '<tr><td class="titlefield">'.$langs->trans('immatriculation_date').'</td>';
+		print '<td>';
+		print dol_print_date($vehiculeObj->date_immat, 'day');
+		print '</td></tr>'."\n";
+
+		// ── Type de véhicule (calculé !) ──────────────────────────────────
+		print '<tr><td class="titlefield">'.$langs->trans('vehiculeType').'</td>';
+		print '<td>';
+		print $vehiculeObj->showOutputField($vehiculeObj->fields['fk_vehicule_type'], 'fk_vehicule_type', $vehiculeObj->fk_vehicule_type, '');
+		print '</td></tr>'."\n";
+
+		// ── Marque du véhicule (calculé !) ────────────────────────────────
+		print '<tr><td class="titlefield">'.$langs->trans('vehiculeMark').'</td>';
+		print '<td>';
+		print $vehiculeObj->showOutputField($vehiculeObj->fields['fk_vehicule_mark'], 'fk_vehicule_mark', $vehiculeObj->fk_vehicule_mark, '');
+		print '</td></tr>'."\n";
+
+		// ── Modèle (calculé !) ────────────────────────────────────────────
+		print '<tr><td class="titlefield">'.$langs->trans('modele').'</td>';
+		print '<td>';
+		print dol_escape_htmltag((string) $vehiculeObj->modele);
+		print '</td></tr>'."\n";
+
+		// ── Type de contrat (calculé !) ───────────────────────────────────
+		print '<tr><td class="titlefield">'.$langs->trans('contractType').'</td>';
+		print '<td>';
+		print $vehiculeObj->showOutputField($vehiculeObj->fields['fk_contract_type'], 'fk_contract_type', $vehiculeObj->fk_contract_type, '');
+		print '</td></tr>'."\n";
+
+		// ── Véhicule lié (calculé !) ──────────────────────────────────────
+		print '<tr><td class="titlefield">'.$langs->trans('VehiculeLie').'</td>';
+		print '<td>';
+		$linkedVehicules = $vehiculeObj->getLinkedVehicules();
+		if (is_array($linkedVehicules) && !empty($linkedVehicules)) {
+			$lv = reset($linkedVehicules); // Véhicule lié courant
+			$linkedVeh = new Vehicule($db);
+			if ($linkedVeh->fetch($lv->fk_vehicule_linked) > 0) {
+				print $linkedVeh->getNomUrl(1);
+			}
+		} else {
+			print '<span class="opacitymedium">'.$langs->trans('None').'</span>';
+		}
+		print '</td></tr>'."\n";
+
+	} else {
+		print '<tr><td colspan="2"><span class="opacitymedium">'.$langs->trans('NoVehiculeLinked').'</span></td></tr>'."\n";
+	}
+
+	// ── Conducteur (depuis l'OR) — éditable * ────────────────────────────
+	print '<tr><td class="titlefield">';
+	print $form->editfieldkey($langs->trans('Conducteur'), 'fk_conducteur', $object->fk_conducteur, $object, $permissiontoadd);
+	print '</td><td>';
+	if ($action == 'editfk_conducteur' && $permissiontoadd) {
+		print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'">';
+		print '<input type="hidden" name="token" value="'.newToken().'">';
+		print '<input type="hidden" name="action" value="save_fk_conducteur">';
+		print '<input type="hidden" name="id" value="'.$object->id.'">';
+		print $object->showInputField($object->fields['fk_conducteur'], 'fk_conducteur', $object->fk_conducteur, '', '', '', 'maxwidth300');
+		print ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
+		print ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
+		print '</form>';
+	} else {
+		if ($object->fk_conducteur > 0) {
+			$conducteurObj = new Conducteur($db);
+			if ($conducteurObj->fetch($object->fk_conducteur) > 0) {
+				print $conducteurObj->getNomUrl(1);
+			} else {
+				print $object->fk_conducteur;
+			}
+		} else {
+			print '<span class="opacitymedium">'.$langs->trans('None').'</span>';
+		}
+		if ($permissiontoadd) {
+			print ' <a class="editfielda" href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'&action=editfk_conducteur">'.img_edit().'</a>';
+		}
+	}
+	print '</td></tr>'."\n";
+
+	// ── Kilométrage à la création de l'OR — éditable * ───────────────────
+	print '<tr><td class="titlefield">';
+	print $form->editfieldkey($langs->trans('KmCreationOR'), 'km', $object->km, $object, $permissiontoadd);
+	print '</td><td>';
+	if ($action == 'editkm' && $permissiontoadd) {
+		print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'">';
+		print '<input type="hidden" name="token" value="'.newToken().'">';
+		print '<input type="hidden" name="action" value="save_km">';
+		print '<input type="hidden" name="id" value="'.$object->id.'">';
+		print '<input type="text" name="km" class="maxwidth100" value="'.dol_escape_htmltag((string) $object->km).'">';
+		print ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
+		print ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
+		print '</form>';
+	} else {
+		print (!empty($object->km) ? dol_escape_htmltag(number_format((float) $object->km, 0, ',', ' ')).' km' : '<span class="opacitymedium">'.$langs->trans('NA').'</span>');
+		if ($permissiontoadd) {
+			print ' <a class="editfielda" href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'&action=editkm">'.img_edit().'</a>';
+		}
+	}
+	print '</td></tr>'."\n";
+
+	// ── Date de clôture (calculé !) ───────────────────────────────────────
+	print '<tr><td class="titlefield">'.$langs->trans('DateCloture').'</td>';
+	print '<td>';
+	if ($object->date_end) {
+		print dol_print_date($object->date_end, 'dayhour');
+	} else {
+		print '<span class="opacitymedium">'.$langs->trans('NA').'</span>';
+	}
+	print '</td></tr>'."\n";
+
+	print '</table>'."\n";
+	print '</div>'; // fichehalfright
+	print '</div>'; // fichecenter
 
 	print dol_get_fiche_end();
 
