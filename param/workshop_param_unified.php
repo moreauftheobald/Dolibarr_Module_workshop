@@ -251,8 +251,14 @@ $title = $langs->trans($objConfig['tab_label']);
 
 llxHeader('', $title, '');
 
-$head = workshopUnifiedParamPrepareHead($context);
-print dol_get_fiche_head($head, $tab, $langs->trans('WorkshopUnifiedParamTitle'), -1, 'fontawesome_fa-tools');
+// Use the Objets Annexes head (all annexes tabs) when called in atelier context
+// so the navigation is consistent with the vh_setup_* pages.
+if ($context === 'atelier') {
+	$head = workshopObjetsAnnexesPrepareHead();
+} else {
+	$head = workshopUnifiedParamPrepareHead($context);
+}
+print dol_get_fiche_head($head, $tab, $langs->trans('WorkshopAdminTabObjetsAnnexes'), -1, 'fontawesome_fa-tools');
 
 // Build the URL fragment that must survive across all navigation links
 $tabParam = 'tab='.urlencode($tab);

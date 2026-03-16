@@ -111,6 +111,16 @@ function workshopObjetsAnnexesPrepareHead(): array
 	$head[$h][2] = 'service_type';
 	$h++;
 
+	$head[$h][0] = dol_buildpath("/workshop/param/workshop_param_unified.php", 1).'?context=atelier&tab=job_type';
+	$head[$h][1] = $langs->trans("JobTypeList");
+	$head[$h][2] = 'job_type';
+	$h++;
+
+	$head[$h][0] = dol_buildpath("/workshop/param/workshop_param_unified.php", 1).'?context=atelier&tab=tag';
+	$head[$h][1] = $langs->trans("TagList");
+	$head[$h][2] = 'tag';
+	$h++;
+
 	complete_head_from_modules($conf, $langs, null, $head, $h, 'workshopobjetsannexes@workshop');
 	complete_head_from_modules($conf, $langs, null, $head, $h, 'workshopobjetsannexes@workshop', 'remove');
 
