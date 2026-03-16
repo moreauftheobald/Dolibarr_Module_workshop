@@ -665,6 +665,13 @@ if ($id > 0) {
 	print '<tr><td class="titlefield"><strong>'.$langs->trans('TotalHT').'</strong></td>';
 	print '<td><strong>'.price($object->total_ht).'</strong></td></tr>'."\n";
 
+	print '</table>'."\n";
+	print '</div>'; // fichehalfleft
+
+	// ── Colonne droite : informations du véhicule ─────────────────────────
+	print '<div class="fichehalfright">';
+	print '<table class="border centpercent tableforfield">'."\n";
+
 	// ── Statut du Check OR (++ : éditable par admin uniquement) ───────────
 	print '<tr><td class="titlefield">'.$langs->trans('CheckOR');
 	if ($user->admin) {
@@ -687,13 +694,6 @@ if ($id > 0) {
 		print dolGetBadge($checkOrLabel, '', $checkOrBadge);
 	}
 	print '</td></tr>'."\n";
-
-	print '</table>'."\n";
-	print '</div>'; // fichehalfleft
-
-	// ── Colonne droite : informations du véhicule ─────────────────────────
-	print '<div class="fichehalfright">';
-	print '<table class="border centpercent tableforfield">'."\n";
 
 	if ($vehiculeObj) {
 
