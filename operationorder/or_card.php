@@ -565,11 +565,11 @@ if ($id > 0) {
 		2 => $langs->trans('CheckORVerifieOK'),
 		3 => $langs->trans('CheckORVerifieReserves'),
 	);
-	$checkOrColors = array(
-		0 => 'status0',
-		1 => 'status4',
-		2 => 'status6',
-		3 => 'status8',
+	$checkOrBadgeTypes = array(
+		0 => 'secondary',
+		1 => 'warning',
+		2 => 'success',
+		3 => 'info',
 	);
 
 	// ── Layout deux colonnes ───────────────────────────────────────────────
@@ -690,8 +690,8 @@ if ($id > 0) {
 	} else {
 		$checkOrVal = (int) $object->check_or;
 		$checkOrLabel = isset($checkOrLabels[$checkOrVal]) ? $checkOrLabels[$checkOrVal] : $checkOrLabels[0];
-		$checkOrColor = isset($checkOrColors[$checkOrVal]) ? $checkOrColors[$checkOrVal] : 'status0';
-		print dolGetStatus($checkOrLabel, $checkOrLabel, '', $checkOrColor, 0);
+		$checkOrBadge = isset($checkOrBadgeTypes[$checkOrVal]) ? $checkOrBadgeTypes[$checkOrVal] : 'secondary';
+		print dolGetBadge($checkOrLabel, '', $checkOrBadge);
 	}
 	print '</td></tr>'."\n";
 
