@@ -28,5 +28,7 @@ CREATE TABLE llx_workshop_operationorder (
   total_ht_external      double  NOT NULL DEFAULT 0,
   total_ht_refund        double  NOT NULL DEFAULT 0,
   import_key             varchar(255)     DEFAULT NULL,
-  status                 integer NOT NULL DEFAULT 0
+  status                 integer NOT NULL DEFAULT 0,
+  temps_immobilisation   double           DEFAULT 0,
+  check_or               integer          DEFAULT 0
 ) ENGINE=innodb;

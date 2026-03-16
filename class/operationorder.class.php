@@ -84,7 +84,7 @@ class Operationorder extends CommonObject
 		'fk_conducteur'  => array('type' => 'integer:Conducteur:workshop/class/Conducteur.class.php', 'label' => 'Conducteur', 'picto' => 'fa-id-card', 'enabled' => 1, 'position' => 45, 'notnull' => 0, 'visible' => 1, 'css' => 'maxwidth500 widthcentpercentminusxx', 'csslist' => 'tdoverflowmax150'),
 		'km'             => array('type' => 'double',        'label' => 'Km',             'enabled' => 1, 'position' => 50,  'notnull' => 0, 'visible' => 1),
 		'date_planned'   => array('type' => 'datetime',      'label' => 'DatePlanned',    'enabled' => 1, 'position' => 60,  'notnull' => 0, 'visible' => 1),
-		'date_valid'     => array('type' => 'datetime',      'label' => 'DateValidation', 'enabled' => 1, 'position' => 70,  'notnull' => 0, 'visible' => -1),
+		'date_valid'     => array('type' => 'datetime',      'label' => 'DateOR',         'enabled' => 1, 'position' => 70,  'notnull' => 0, 'visible' => 1),
 		'date_start'     => array('type' => 'datetime',      'label' => 'DateStart',      'enabled' => 1, 'position' => 80,  'notnull' => 0, 'visible' => -1),
 		'date_end'       => array('type' => 'datetime',      'label' => 'DateEnd',        'enabled' => 1, 'position' => 90,  'notnull' => 0, 'visible' => -1),
 		'fk_user_assign' => array('type' => 'integer:User:user/class/user.class.php',     'label' => 'Mechanic',       'picto' => 'user', 'enabled' => 1, 'position' => 100, 'notnull' => 0, 'visible' => 1, 'csslist' => 'tdoverflowmax150'),
@@ -94,6 +94,15 @@ class Operationorder extends CommonObject
 		'total_ht_service' => array('type' => 'double',      'label' => 'TotalHTService', 'enabled' => 1, 'position' => 230, 'notnull' => 1, 'visible' => -1),
 		'total_ht_external' => array('type' => 'double',     'label' => 'TotalHTExternal', 'enabled' => 1, 'position' => 240, 'notnull' => 1, 'visible' => -1),
 		'total_ht_refund' => array('type' => 'double', 'label' => 'TotalHTRefund', 'enabled' => 1, 'position' => 250, 'notnull' => 1, 'visible' => -1),
+		'temps_immobilisation' => array('type' => 'double', 'label' => 'TempsImmobilisationTheo', 'enabled' => 1, 'position' => 260, 'notnull' => 0, 'visible' => -1),
+		'check_or'       => array('type' => 'integer', 'label' => 'CheckOR', 'enabled' => 1, 'position' => 270, 'notnull' => 0, 'visible' => -1,
+			'arrayofkeyval' => array(
+				0 => 'CheckORNonVerifie',
+				1 => 'CheckOREnCours',
+				2 => 'CheckORVerifieOK',
+				3 => 'CheckORVerifieReserves',
+			),
+		),
 		'note_public'    => array('type' => 'html',          'label' => 'NotePublic',     'enabled' => 1, 'position' => 300, 'notnull' => 0, 'visible' => 0, 'cssview' => 'wordbreak'),
 		'note_private'   => array('type' => 'html',          'label' => 'NotePrivate',    'enabled' => 1, 'position' => 310, 'notnull' => 0, 'visible' => 0, 'cssview' => 'wordbreak'),
 		'model_pdf'      => array('type' => 'varchar(255)',   'label' => 'ModelPdf',       'enabled' => 1, 'position' => 400, 'notnull' => 0, 'visible' => 0),
@@ -139,6 +148,8 @@ class Operationorder extends CommonObject
 	public $tms;
 	public $import_key;
 	public $status;
+	public $temps_immobilisation;
+	public $check_or;
 
 	/**
 	 * @var Operationorder_jobs[] Array of job lines

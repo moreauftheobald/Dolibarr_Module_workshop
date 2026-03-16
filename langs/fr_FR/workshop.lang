@@ -221,6 +221,30 @@ ORStatusShortClosed=Clôturé
 ORStatusShortCancelled=Annulé
 
 #
+# OR Card — champs de la vue standard
+#
+DateOR=Date ordre de réparation
+DatePlanned=Date de planification
+TempsImmobilisationTheo=Temps d'immobilisation théorique
+TotalHTMO=Total HT Main d'œuvre
+TotalHTPart=Total HT Pièces
+TotalHTService=Total HT Service
+TotalHTExternal=Total HT Externe
+TotalHTRefund=Total HT Remboursement
+CheckOR=Statut du Check OR
+CheckORNonVerifie=Non vérifié
+CheckOREnCours=En cours de vérification
+CheckORVerifieOK=Vérifié OK
+CheckORVerifieReserves=Vérifié avec réserves
+OperationsDisponibles=Opérations disponibles
+KmCreationOR=Kilométrage à la création de l'OR
+VehiculeLie=Véhicule lié
+NoVehiculeLinked=Aucun véhicule lié
+DateCloture=Date de clôture
+Hours=heures
+NA=N/A
+
+#
 # Vehicule Param pages
 #
 VhSetupMarque=Parametrages des marques
