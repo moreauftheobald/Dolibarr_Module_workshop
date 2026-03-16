@@ -56,6 +56,8 @@ WorkshopAdminTabOR=Ordres de réparation
 WorkshopAdminTabDivers=Divers
 WorkshopAdminTabPartageEntites=Partage entre entités
 WorkshopAdminTabObjetsAnnexes=Objets Annexes
+WorkshopAdminTabDictVehicule=Dictionn. véhicules
+WorkshopAdminTabDictAtelier=Dictionn. atelier
 # Onglet Partage entre entités (multicompany)
 Multicompany=Multicompany
 MulticompanyConfiguration=Configuration Multicompany
@@ -525,6 +527,15 @@ ErrConducteurPrenomRequired=Le prénom du conducteur est obligatoire
 ReadConducteurs=Consulter les conducteurs
 WriteConducteurs=Créer/modifier les conducteurs
 DeleteConducteurs=Supprimer les conducteurs
+
+#
+# Service Type (types de service MO / Pièce / Divers…)
+#
+WorkshopSetupServiceType=Types de service
+ServiceTypeList=Types de service
+GroupType=Groupe
+PrixMO=Taux MO (€/h)
+TauxHoraireHTParH=Taux horaire HT par heure
 
 #
 # Job Type (type de job pour les ordres de réparation)

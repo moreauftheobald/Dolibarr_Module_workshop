@@ -130,6 +130,8 @@ WorkshopAdminTabVehicules=Vehicles
 WorkshopAdminTabOR=Repair orders
 WorkshopAdminTabDivers=Miscellaneous
 WorkshopAdminTabPartageEntites=Entity sharing
+WorkshopAdminTabDictVehicule=Vehicle dicts.
+WorkshopAdminTabDictAtelier=Workshop dicts.
 # Vehicles tab - parameters
 WorkshopTractorVehicleTypes=Tractor vehicle type
 WorkshopTractorVehicleTypesHelp=Select vehicle types considered as motor vehicles (tractors). Hold Ctrl for multiple selection.
@@ -417,6 +419,15 @@ ErrConducteurPrenomRequired=Driver first name is required
 ReadConducteurs=Read drivers
 WriteConducteurs=Create/edit drivers
 DeleteConducteurs=Delete drivers
+
+#
+# Service Type (MO / Parts / Misc types)
+#
+WorkshopSetupServiceType=Service types
+ServiceTypeList=Service types
+GroupType=Group
+PrixMO=Labour rate (€/h)
+TauxHoraireHTParH=Hourly rate excl. tax per hour
 
 #
 # Job Type (job type for repair orders)

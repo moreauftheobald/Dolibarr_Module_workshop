@@ -45,6 +45,9 @@ class WorkshopJobType extends dictionary
 	/** @var int $plannable Whether this job type is usable in vehicle maintenance planning */
 	public $plannable;
 
+	/** @var int $fk_soc Default billing third-party (e.g. manufacturer for warranty jobs) */
+	public $fk_soc;
+
 	public $fields = array(
 		'rowid' => array(
 			'type'     => 'integer',
@@ -89,6 +92,15 @@ class WorkshopJobType extends dictionary
 				0 => 'No',
 				1 => 'Yes',
 			),
+		),
+		'fk_soc' => array(
+			'type'     => 'integer:Societe:societe/class/societe.class.php',
+			'label'    => 'BillingThirdParty',
+			'enabled'  => 1,
+			'visible'  => 1,
+			'notnull'  => 0,
+			'position' => 35,
+			'css'      => 'maxwidth500 widthcentpercentminusxx',
 		),
 		'active' => array(
 			'type'          => 'integer',
