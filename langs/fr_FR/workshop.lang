@@ -527,6 +527,18 @@ WriteConducteurs=Créer/modifier les conducteurs
 DeleteConducteurs=Supprimer les conducteurs
 
 #
+# Job Type (type de job pour les ordres de réparation)
+#
+JobTypeList=Types de jobs
+NewJobType=Nouveau type de job
+ShowJobType=Voir le type de job
+JobTypePlannable=Planifiable
+JobTypePlannableYes=Oui
+JobTypePlannableNo=Non
+JobType=Type de job
+BillingThirdParty=Tiers de facturation
+
+#
 # Tag (catégorisation des OR)
 #
 TagList=Tags OR

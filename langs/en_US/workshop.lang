@@ -419,6 +419,18 @@ WriteConducteurs=Create/edit drivers
 DeleteConducteurs=Delete drivers
 
 #
+# Job Type (job type for repair orders)
+#
+JobTypeList=Job Types
+NewJobType=New job type
+ShowJobType=Show job type
+JobTypePlannable=Plannable
+JobTypePlannableYes=Yes
+JobTypePlannableNo=No
+JobType=Job type
+BillingThirdParty=Billing third party
+
+#
 # Tag (repair order categorisation)
 #
 TagList=OR Tags
