@@ -314,7 +314,10 @@ DeletePneuQuestion=Etes vous sur de vouloir supprimer un type de pneu ?
 NewPneu=Créer un type de pneu
 EditPneu=Editer un type de pneu
 pneulabel=Nom du type de pneu
-AllMarks=Toute marques
+AllMarks=Toutes marques
+AllTypes=Tous types
+MaintenanceOperationList=Opérations de maintenance
+NewMaintenanceOperation=Nouvelle opération de maintenance
 VehiculeMarkId=Marque associée
 WorkshopUnifiedParamTitle=Paramètres
 WorkshopUnifiedParam=Paramètres OR
@@ -554,6 +557,14 @@ JobTypePlannableYes=Oui
 JobTypePlannableNo=Non
 JobType=Type de job
 BillingThirdParty=Tiers de facturation
+
+# Fusion ServiceType + JobType — nouveaux champs
+TvaTxMO=TVA main d'œuvre (%)
+TvaTxST=TVA sous-traitance (%)
+RemiseMO=Remise MO
+RemisePercent=Remise (%)
+QtyMOMoRemise=Qté MO / Taux / Remise
+JobTypeLegacy=Type de job (legacy)
 
 #
 # Tag (catégorisation des OR)

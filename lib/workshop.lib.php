@@ -266,6 +266,33 @@ function getWorkshopParamObjects(): array
 				'fk_soc' => array('type' => 'societe', 'label' => 'ConducteurSociete'),
 			),
 		),
+		'maintenance_op' => array(
+			'class_file' => '/workshop/class/vehiculemaintenanceoperation.class.php',
+			'class_name' => 'VehiculeMaintenanceOperation',
+			'context'    => 'vehicule',
+			'tab_label'  => 'MaintenanceOperationList',
+			'fields'     => array(
+				'code'             => array('type' => 'text',   'label' => 'Code',         'required' => true),
+				'label'            => array('type' => 'text',   'label' => 'Label',        'required' => true),
+				'fk_vehicule_type' => array(
+					'type'          => 'related_select',
+					'label'         => 'VehiculeType',
+					'related_class' => 'VehiculeType',
+					'related_file'  => '/workshop/class/vehiculetype.class.php',
+					'allow_null'    => true,
+					'null_label'    => 'AllTypes',
+				),
+				'fk_vehicule_mark' => array(
+					'type'          => 'related_select',
+					'label'         => 'VehiculeMarkId',
+					'related_class' => 'VehiculeMark',
+					'related_file'  => '/workshop/class/vehiculemark.class.php',
+					'allow_null'    => true,
+					'null_label'    => 'AllMarks',
+				),
+				'active'           => array('type' => 'select', 'label' => 'active', 'values' => array('0' => 'Non', '1' => 'Oui'), 'default' => '1'),
+			),
+		),
 		// ── Atelier / OR context ─────────────────────────────────────────────
 		'service_type' => array(
 			'class_file' => '/workshop/class/servicetype.class.php',
@@ -273,31 +300,14 @@ function getWorkshopParamObjects(): array
 			'context'    => 'atelier',
 			'tab_label'  => 'WorkshopSetupServiceType',
 			'fields'     => array(
-				'code'       => array('type' => 'text',   'label' => 'Code',      'required' => true),
-				'label'      => array('type' => 'text',   'label' => 'Label',     'required' => true),
-				'fk_job_type' => array(
-					'type'          => 'related_select',
-					'label'         => 'JobType',
-					'related_class' => 'WorkshopJobType',
-					'related_file'  => '/workshop/class/workshopjobtype.class.php',
-					'allow_null'    => true,
-					'null_label'    => 'None',
-				),
-				'prix_mo'    => array('type' => 'number', 'label' => 'PrixMO'),
-				'active'     => array('type' => 'select', 'label' => 'active', 'values' => array('0' => 'Non', '1' => 'Oui'), 'default' => '1'),
-			),
-		),
-		'job_type' => array(
-			'class_file' => '/workshop/class/workshopjobtype.class.php',
-			'class_name' => 'WorkshopJobType',
-			'context'    => 'atelier',
-			'tab_label'  => 'JobTypeList',
-			'fields'     => array(
-				'code'      => array('type' => 'text',   'label' => 'Code',            'required' => true),
-				'label'     => array('type' => 'text',   'label' => 'Label',           'required' => true),
-				'plannable' => array('type' => 'select', 'label' => 'JobTypePlannable', 'values' => array('0' => 'No', '1' => 'Yes'), 'default' => '0'),
+				'code'      => array('type' => 'text',   'label' => 'Code',               'required' => true),
+				'label'     => array('type' => 'text',   'label' => 'Label',              'required' => true),
 				'fk_soc'    => array('type' => 'societe', 'label' => 'BillingThirdParty'),
-				'active'    => array('type' => 'select', 'label' => 'active',           'values' => array('0' => 'Non', '1' => 'Oui'), 'default' => '1'),
+				'prix_mo'   => array('type' => 'number', 'label' => 'PrixMO'),
+				'tva_tx_mo' => array('type' => 'tva',    'label' => 'TvaTxMO'),
+				'tva_tx_st' => array('type' => 'tva',    'label' => 'TvaTxST'),
+				'plannable' => array('type' => 'select', 'label' => 'JobTypePlannable',   'values' => array('0' => 'No', '1' => 'Yes'), 'default' => '0'),
+				'active'    => array('type' => 'select', 'label' => 'active',             'values' => array('0' => 'Non', '1' => 'Oui'), 'default' => '1'),
 			),
 		),
 		'tag' => array(
@@ -378,6 +388,31 @@ function getWorkshopColorPalette(): array
 		'#343a40' => 'Gris foncé',
 		'#212529' => 'Noir',
 	);
+}
+
+
+/**
+ * Load active VAT rates from Dolibarr dictionary (llx_c_tva).
+ * Returns an array suitable for a select : '' => '—' + 'rate' => 'rate %'.
+ *
+ * @param  DoliDB $db  Database handler
+ * @return array<string,string>
+ */
+function getWorkshopVatRateOptions(DoliDB $db): array
+{
+	$options = array('' => '—');
+	$sql  = 'SELECT DISTINCT taux FROM '.MAIN_DB_PREFIX.'c_tva';
+	$sql .= ' WHERE active = 1';
+	$sql .= ' ORDER BY taux ASC';
+	$resql = $db->query($sql);
+	if ($resql) {
+		while ($obj = $db->fetch_object($resql)) {
+			$rate = price2num($obj->taux);
+			$options[(string) $rate] = $rate.' %';
+		}
+		$db->free($resql);
+	}
+	return $options;
 }
 
 
@@ -478,6 +513,21 @@ function workshopBuildParamFormQuestion(string $fieldName, array $fieldConfig, $
 		);
 	}
 
+	if ($fieldConfig['type'] === 'tva') {
+		$vatOptions = getWorkshopVatRateOptions($db);
+		// Current value: stored as float or null
+		$currentRate = ($dataEdit !== null && $dataEdit->$fieldName !== null && $dataEdit->$fieldName !== '')
+			? (string) price2num($dataEdit->$fieldName)
+			: '';
+		return array(
+			'type'    => 'select',
+			'label'   => $langs->trans($fieldConfig['label']),
+			'name'    => $fieldName,
+			'values'  => $vatOptions,
+			'default' => $currentRate,
+		);
+	}
+
 	return array();
 }
 
@@ -543,13 +593,22 @@ function workshopRenderParamFieldValue(string $fieldName, array $fieldConfig, $d
 		return '-';
 	}
 
+	if ($fieldConfig['type'] === 'tva') {
+		if ($value === null || $value === '') {
+			return '-';
+		}
+		return dol_escape_htmltag(price2num($value)).' %';
+	}
+
 	return dol_escape_htmltag($value);
 }
 
 
 /**
- * Prepare array of tabs for Vehicule Setup screen
- * @return    array                    Array of tabs
+ * Prepare array of tabs for Workshop Setup (Atelier / OR section).
+ * Points to the unified parameter page filtered on the 'atelier' context.
+ *
+ * @return array
  */
 function workshopSetupPrepareHead(): array
 {
@@ -557,17 +616,15 @@ function workshopSetupPrepareHead(): array
 
 	$langs->load("workshop@workshop");
 
-	$h = 0;
+	$h    = 0;
 	$head = array();
 
-	$head[$h][0] = dol_buildpath("/workshop/operationorder/param/operationorder_setup_service_type.php", 1);
-	$head[$h][1] = $langs->trans("WorkshopSetupServiceType");
+	$head[$h][0] = dol_buildpath('/workshop/param/workshop_param_unified.php', 1).'?context=atelier&tab=service_type';
+	$head[$h][1] = $langs->trans('WorkshopSetupServiceType');
 	$head[$h][2] = 'service_type';
 	$h++;
 
-
-	complete_head_from_modules($conf, $langs,null, $head, $h, 'workshopsetup@workshop');
-
+	complete_head_from_modules($conf, $langs, null, $head, $h, 'workshopsetup@workshop');
 	complete_head_from_modules($conf, $langs, null, $head, $h, 'workshopsetup@workshop', 'remove');
 
 	return $head;

@@ -18,13 +18,14 @@
 /**
  * \file        class/servicetype.class.php
  * \ingroup     workshop
- * \brief       Dictionary class for ServiceType (MO, Pieces, Forfaits…)
+ * \brief       Dictionnaire unifié des types de service (fusion ServiceType + JobType).
+ *              Contient : code, libellé, tiers de facturation, taux MO, TVA MO, TVA ST, plannable.
  */
 
 dol_include_once('/workshop/class/dictionary.class.php');
 
 /**
- * Class for ServiceType
+ * Class ServiceType — dictionnaire unifié type de service atelier
  */
 class ServiceType extends dictionary
 {
@@ -37,17 +38,24 @@ class ServiceType extends dictionary
 	/** @var string Picto */
 	public $picto = 'fa-file';
 
-	/** @var int $fk_job_type FK to llx_workshop_job_type */
+	/** @var int|null $fk_job_type FK legacy vers llx_workshop_job_type (conservé pour migration) */
 	public $fk_job_type;
 
-	/** @var float $prix_mo Hourly rate HT/h */
+	/** @var float $prix_mo Taux horaire HT (€/h) */
 	public $prix_mo;
 
-	/**
-	 * Override $fields to match the actual table schema.
-	 * workshop_c_servicetype has no 'entity' column →
-	 * ismultientitymanaged is set to 0 in the constructor.
-	 */
+	/** @var int|null $fk_soc Tiers de facturation par défaut pour ce type de service */
+	public $fk_soc;
+
+	/** @var int $plannable 1 = utilisable dans la planification des entretiens véhicule */
+	public $plannable;
+
+	/** @var float|null $tva_tx_mo Taux de TVA applicable sur la main d'œuvre */
+	public $tva_tx_mo;
+
+	/** @var float|null $tva_tx_st Taux de TVA applicable sur la sous-traitance */
+	public $tva_tx_st;
+
 	public $fields = array(
 		'rowid' => array(
 			'type'     => 'integer',
@@ -96,9 +104,9 @@ class ServiceType extends dictionary
 			'csslist'        => 'tdoverflowmax150',
 			'showoncombobox' => 0,
 		),
-		'fk_job_type' => array(
-			'type'     => 'integer:WorkshopJobType:workshop/class/workshopjobtype.class.php',
-			'label'    => 'JobType',
+		'fk_soc' => array(
+			'type'     => 'integer:Societe:societe/class/societe.class.php',
+			'label'    => 'BillingThirdParty',
 			'enabled'  => 1,
 			'visible'  => 1,
 			'notnull'  => 0,
@@ -115,6 +123,47 @@ class ServiceType extends dictionary
 			'help'     => 'TauxHoraireHTParH',
 			'css'      => 'maxwidth100',
 			'default'  => 0,
+		),
+		'tva_tx_mo' => array(
+			'type'     => 'double',
+			'label'    => 'TvaTxMO',
+			'enabled'  => 1,
+			'visible'  => 1,
+			'notnull'  => 0,
+			'position' => 55,
+			'css'      => 'maxwidth100',
+			'default'  => null,
+		),
+		'tva_tx_st' => array(
+			'type'     => 'double',
+			'label'    => 'TvaTxST',
+			'enabled'  => 1,
+			'visible'  => 1,
+			'notnull'  => 0,
+			'position' => 60,
+			'css'      => 'maxwidth100',
+			'default'  => null,
+		),
+		'plannable' => array(
+			'type'          => 'integer',
+			'label'         => 'JobTypePlannable',
+			'enabled'       => 1,
+			'visible'       => 1,
+			'notnull'       => 1,
+			'default'       => 0,
+			'position'      => 65,
+			'arrayofkeyval' => array(
+				0 => 'No',
+				1 => 'Yes',
+			),
+		),
+		'fk_job_type' => array(
+			'type'     => 'integer:WorkshopJobType:workshop/class/workshopjobtype.class.php',
+			'label'    => 'JobTypeLegacy',
+			'enabled'  => 1,
+			'visible'  => 0, // caché — conservé uniquement pour migration
+			'notnull'  => 0,
+			'position' => 900,
 		),
 	);
 
@@ -133,7 +182,6 @@ class ServiceType extends dictionary
 
 		parent::__construct($db);
 
-		// Translate arrayofkeyval entries
 		if (is_object($langs)) {
 			foreach ($this->fields as $key => $val) {
 				if (!empty($val['arrayofkeyval']) && is_array($val['arrayofkeyval'])) {
@@ -146,17 +194,42 @@ class ServiceType extends dictionary
 	}
 
 	/**
-	 * Return a link to the object card (with optionally the picto)
+	 * Return a label/link for this object
 	 *
-	 * @param  int    $withpicto             Include picto (0=No, 1=Yes, 2=Only picto)
-	 * @param  string $option                Link target option ('nolink', …)
-	 * @param  int    $notooltip             1=Disable tooltip
-	 * @param  string $morecss               Additional CSS classes
-	 * @param  int    $save_lastsearch_value -1=Auto, 0=No, 1=Yes
-	 * @return string                        HTML link
+	 * @param  int    $withpicto Include picto
+	 * @param  string $option    Link option
+	 * @param  int    $notooltip 1=No tooltip
+	 * @param  string $morecss   Extra CSS
+	 * @param  int    $save_lastsearch_value -1=Auto
+	 * @return string HTML
 	 */
 	public function getNomUrl($withpicto = 0, $option = '', $notooltip = 0, $morecss = '', $save_lastsearch_value = -1)
 	{
 		return dol_escape_htmltag($this->label ?: $this->code);
+	}
+
+	/**
+	 * Retourne un tableau pour un select dropdown : rowid => label (+ taux)
+	 *
+	 * @return array<int,string>|int  array rowid => label, ou -1 si erreur
+	 */
+	public function getSelectList()
+	{
+		$sql  = 'SELECT rowid, label, prix_mo FROM '.$this->db->prefix().$this->table_element;
+		$sql .= ' WHERE active = 1 ORDER BY label ASC';
+
+		$resql = $this->db->query($sql);
+		if (!$resql) {
+			$this->error = $this->db->lasterror();
+			return -1;
+		}
+
+		$ret = array();
+		while ($obj = $this->db->fetch_object($resql)) {
+			$suffix = $obj->prix_mo > 0 ? ' ('.price2num($obj->prix_mo, 2).' €/h)' : '';
+			$ret[(int) $obj->rowid] = $obj->label.$suffix;
+		}
+		$this->db->free($resql);
+		return $ret;
 	}
 }

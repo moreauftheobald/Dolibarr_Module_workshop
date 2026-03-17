@@ -491,6 +491,9 @@ WorkshopSetupType=Vehicle type setup
 WorkshopSetupTypeCt=Contract type setup
 WorkshopSetupPneu=Tyre dimension setup
 AllMarks=All brands
+AllTypes=All types
+MaintenanceOperationList=Maintenance operations
+NewMaintenanceOperation=New maintenance operation
 VehiculeMarkId=Associated brand
 code=Code
 label=Label
@@ -508,3 +511,12 @@ UpdateSucces=Updated successfully
 DeleteSucces=Deleted successfully
 MissingCode=Missing code
 Missinglabel=Missing label
+
+# ServiceType unified fields
+TvaTxMO=Labour VAT rate (%)
+TvaTxST=Subcontracting VAT rate (%)
+RemiseMO=Labour discount
+RemisePercent=Discount (%)
+QtyMOMoRemise=Qty MO / Rate / Discount
+JobTypeLegacy=Job type (legacy)
+BillingThirdParty=Billing third party

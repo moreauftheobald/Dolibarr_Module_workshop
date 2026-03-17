@@ -70,11 +70,14 @@ class Operationorder_jobs extends CommonObject
 		'label'             => array('type' => 'varchar(255)', 'label' => 'Label',        'enabled' => 1, 'position' => 20,  'notnull' => 0, 'visible' => 1, 'searchall' => 1, 'showoncombobox' => 1, 'css' => 'minwidth300', 'autofocusoncreate' => 1),
 		'description'       => array('type' => 'html',        'label' => 'Description',  'enabled' => 1, 'position' => 30,  'notnull' => 0, 'visible' => 3, 'cssview' => 'wordbreak'),
 		'fk_service_type'   => array('type' => 'integer:ServiceType:workshop/class/servicetype.class.php', 'label' => 'ServiceType', 'enabled' => 1, 'position' => 40, 'notnull' => 0, 'visible' => 1, 'css' => 'maxwidth500 widthcentpercentminusxx'),
-		'fk_job_type'       => array('type' => 'integer:WorkshopJobType:workshop/class/workshopjobtype.class.php', 'label' => 'JobType', 'enabled' => 1, 'position' => 42, 'notnull' => 0, 'visible' => 1, 'css' => 'maxwidth300'),
+		'fk_job_type'       => array('type' => 'integer:WorkshopJobType:workshop/class/workshopjobtype.class.php', 'label' => 'JobType', 'enabled' => 1, 'position' => 42, 'notnull' => 0, 'visible' => 0),
 		'fk_soc'            => array('type' => 'integer:Societe:societe/class/societe.class.php:1', 'label' => 'BillingThirdParty', 'enabled' => 1, 'position' => 44, 'notnull' => 0, 'visible' => -1, 'css' => 'maxwidth500'),
 		'fk_user_assign'    => array('type' => 'integer:User:user/class/user.class.php', 'label' => 'AssignedTo', 'picto' => 'user', 'enabled' => 1, 'position' => 50, 'notnull' => 0, 'visible' => 1, 'csslist' => 'tdoverflowmax150'),
 		'qty_mo'            => array('type' => 'double',      'label' => 'QtyMO',        'enabled' => 1, 'position' => 55, 'notnull' => 0, 'visible' => 1, 'default' => 0, 'css' => 'maxwidth100'),
 		'prix_mo'           => array('type' => 'double',      'label' => 'PrixMO',       'enabled' => 1, 'position' => 56, 'notnull' => 0, 'visible' => 1, 'default' => 0, 'css' => 'maxwidth100'),
+		'remise_percent'    => array('type' => 'double',      'label' => 'RemisePercent', 'enabled' => 1, 'position' => 57, 'notnull' => 1, 'visible' => 1, 'default' => 0, 'css' => 'maxwidth75'),
+		'tva_tx_mo'         => array('type' => 'double',      'label' => 'TvaTxMO',      'enabled' => 1, 'position' => 58, 'notnull' => 0, 'visible' => 1, 'default' => null, 'css' => 'maxwidth75'),
+		'tva_tx_st'         => array('type' => 'double',      'label' => 'TvaTxST',      'enabled' => 1, 'position' => 59, 'notnull' => 0, 'visible' => 1, 'default' => null, 'css' => 'maxwidth75'),
 		'rang'              => array('type' => 'integer',     'label' => 'Rang',         'enabled' => 1, 'position' => 60,  'notnull' => 0, 'visible' => 0, 'default' => 0),
 		'time_planned'      => array('type' => 'duration',    'label' => 'TimePlanned',  'enabled' => 1, 'position' => 70,  'notnull' => 0, 'visible' => 1),
 		'time_spent'        => array('type' => 'duration',    'label' => 'TimeSpent',    'enabled' => 1, 'position' => 80,  'notnull' => 0, 'visible' => 1),
@@ -105,6 +108,9 @@ class Operationorder_jobs extends CommonObject
 	public $fk_user_assign;
 	public $qty_mo;
 	public $prix_mo;
+	public $remise_percent;
+	public $tva_tx_mo;
+	public $tva_tx_st;
 	public $rang;
 	public $time_planned;
 	public $time_spent;
@@ -231,6 +237,49 @@ class Operationorder_jobs extends CommonObject
 	}
 
 	/**
+	 * Recompute remise_percent on all jobs of an OR from the OR's third-party discount.
+	 * Called when the billing third-party of an OR changes.
+	 *
+	 * @param  int  $fk_operationorder  OR id
+	 * @param  float $remise_percent    New discount rate (from societe.remise_percent)
+	 * @param  User $user               User performing the update
+	 * @return int                      <0 if KO, number of updated jobs if OK
+	 */
+	public function updateRemiseForOR(int $fk_operationorder, float $remise_percent, User $user): int
+	{
+		$jobs = $this->fetchAllByOperationorder($fk_operationorder);
+		if (!is_array($jobs)) {
+			return -1;
+		}
+
+		$updated = 0;
+		foreach ($jobs as $job) {
+			$job->remise_percent = $remise_percent;
+			$job->computeMO();
+			// Recalculate total_ht including parts/services already in DB
+			$sqlTot  = 'SELECT';
+			$sqlTot .= '  COALESCE(SUM(total_ht_part), 0)   AS total_ht_part,';
+			$sqlTot .= '  COALESCE(SUM(total_ht_service), 0) AS total_ht_service,';
+			$sqlTot .= '  COALESCE(SUM(total_ht_refund), 0)  AS total_ht_refund';
+			$sqlTot .= ' FROM '.$this->db->prefix().'workshop_operationorderdet';
+			$sqlTot .= ' WHERE fk_operationorder_jobs = '.((int) $job->id);
+			$resTot = $this->db->query($sqlTot);
+			if ($resTot) {
+				$objTot = $this->db->fetch_object($resTot);
+				$job->total_ht_part    = (float) $objTot->total_ht_part;
+				$job->total_ht_service = (float) $objTot->total_ht_service;
+				$job->total_ht_refund  = (float) $objTot->total_ht_refund;
+				$this->db->free($resTot);
+			}
+			$job->total_ht = $job->total_ht_mo + $job->total_ht_part + $job->total_ht_service + (float) $job->total_ht_external + $job->total_ht_refund;
+			if ($job->updateCommon($user, 1) > 0) {
+				$updated++;
+			}
+		}
+		return $updated;
+	}
+
+	/**
 	 * Load list of objects in memory from the database.
 	 *
 	 * @param  string $sortorder  Sort Order
@@ -330,14 +379,15 @@ class Operationorder_jobs extends CommonObject
 	}
 
 	/**
-	 * Compute total_ht_mo from qty_mo * prix_mo.
+	 * Compute total_ht_mo from qty_mo * prix_mo * (1 - remise_percent/100).
 	 * Called automatically by create() and update().
 	 *
 	 * @return void
 	 */
 	public function computeMO()
 	{
-		$this->total_ht_mo = (float) $this->qty_mo * (float) $this->prix_mo;
+		$remise = max(0.0, min(100.0, (float) $this->remise_percent));
+		$this->total_ht_mo = (float) price2num((float) $this->qty_mo * (float) $this->prix_mo * (1 - $remise / 100), 'MT');
 	}
 
 	/**

@@ -361,6 +361,16 @@ if (empty($reshook)) {
 		$object->fk_soc = GETPOSTINT('fk_soc');
 		if ($object->update($user) < 0) {
 			setEventMessages($object->error, $object->errors, 'errors');
+		} else {
+			// Recalculate job discounts from new third-party remise_percent
+			if ($object->fk_soc > 0) {
+				$socObj = new Societe($db);
+				if ($socObj->fetch($object->fk_soc) > 0) {
+					$jobsObj = new Operationorder_jobs($db);
+					$jobsObj->updateRemiseForOR($id, (float) $socObj->remise_percent, $user);
+					$object->updateTotals($user);
+				}
+			}
 		}
 		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
 		exit;
@@ -386,6 +396,16 @@ if (empty($reshook)) {
 		}
 		if ($object->update($user) < 0) {
 			setEventMessages($object->error, $object->errors, 'errors');
+		} else {
+			// Recalculate job discounts from new third-party remise_percent
+			if ($object->fk_soc > 0) {
+				$socObj = new Societe($db);
+				if ($socObj->fetch($object->fk_soc) > 0) {
+					$jobsObj = new Operationorder_jobs($db);
+					$jobsObj->updateRemiseForOR($id, (float) $socObj->remise_percent, $user);
+					$object->updateTotals($user);
+				}
+			}
 		}
 		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
 		exit;
@@ -449,6 +469,7 @@ if (empty($reshook)) {
 		$fk_service_type = GETPOSTINT('job_fk_service_type');
 		$description     = GETPOST('job_description', 'restricthtml');
 		$qty_mo          = (float) price2num(str_replace(',', '.', GETPOST('job_qty_mo', 'alpha')), 'MU');
+		$remise_percent  = (float) price2num(str_replace(',', '.', GETPOST('job_remise_percent', 'alpha')), 'MU');
 
 		if ($fk_service_type <= 0) {
 			setEventMessages($langs->trans('ErrorFieldRequired', $langs->transnoentitiesnoconv('ServiceType')), null, 'errors');
@@ -468,12 +489,21 @@ if (empty($reshook)) {
 		}
 
 		if (!$error) {
-			// Resolve billing third-party from the linked job type
-			$fk_soc_job = null;
-			if (!empty($serviceType->fk_job_type)) {
+			// Billing third-party : from service type, or fallback to OR's third-party
+			$fk_soc_job = !empty($serviceType->fk_soc) ? (int) $serviceType->fk_soc : null;
+			// Legacy fallback: if still empty, try the old fk_job_type
+			if (empty($fk_soc_job) && !empty($serviceType->fk_job_type)) {
 				$jobType = new WorkshopJobType($db);
 				if ($jobType->fetch((int) $serviceType->fk_job_type) > 0 && !empty($jobType->fk_soc)) {
 					$fk_soc_job = (int) $jobType->fk_soc;
+				}
+			}
+
+			// Default remise from OR's third-party when not explicitly provided
+			if ($remise_percent == 0 && $object->fk_soc > 0) {
+				$socDefault = new Societe($db);
+				if ($socDefault->fetch($object->fk_soc) > 0 && $socDefault->remise_percent > 0) {
+					$remise_percent = (float) $socDefault->remise_percent;
 				}
 			}
 
@@ -486,23 +516,30 @@ if (empty($reshook)) {
 				$nextRang = max(1, (int) $objRang->maxrang + 1);
 			}
 
-			$job                  = new Operationorder_jobs($db);
+			$prixMO        = (float) $serviceType->prix_mo;
+			$remiseFactor  = 1 - max(0.0, min(100.0, $remise_percent)) / 100;
+			$totalHtMO     = (float) price2num($qty_mo * $prixMO * $remiseFactor, 'MT');
+
+			$job                    = new Operationorder_jobs($db);
 			$job->fk_operationorder = (int) $id;
-			$job->fk_service_type = (int) $fk_service_type;
-			$job->fk_job_type     = !empty($serviceType->fk_job_type) ? (int) $serviceType->fk_job_type : null;
-			$job->label           = $serviceType->label;
-			$job->description     = $description;
-			$job->qty_mo          = $qty_mo;
-			$job->prix_mo         = (float) $serviceType->prix_mo;
-			$job->fk_soc          = $fk_soc_job;
-			$job->time_spent      = 0;
-			$job->rang            = $nextRang;
-			$job->total_ht_mo     = (float) price2num($qty_mo * (float) $serviceType->prix_mo, 'MT');
-			$job->total_ht_part   = 0;
-			$job->total_ht_service = 0;
+			$job->fk_service_type   = (int) $fk_service_type;
+			$job->fk_job_type       = !empty($serviceType->fk_job_type) ? (int) $serviceType->fk_job_type : null;
+			$job->label             = $serviceType->label;
+			$job->description       = $description;
+			$job->qty_mo            = $qty_mo;
+			$job->prix_mo           = $prixMO;
+			$job->remise_percent    = $remise_percent;
+			$job->tva_tx_mo         = isset($serviceType->tva_tx_mo) ? (float) $serviceType->tva_tx_mo : null;
+			$job->tva_tx_st         = isset($serviceType->tva_tx_st) ? (float) $serviceType->tva_tx_st : null;
+			$job->fk_soc            = $fk_soc_job;
+			$job->time_spent        = 0;
+			$job->rang              = $nextRang;
+			$job->total_ht_mo       = $totalHtMO;
+			$job->total_ht_part     = 0;
+			$job->total_ht_service  = 0;
 			$job->total_ht_external = 0;
-			$job->total_ht_refund = 0;
-			$job->total_ht        = $job->total_ht_mo;
+			$job->total_ht_refund   = 0;
+			$job->total_ht          = $totalHtMO;
 
 			$newJobId = $job->create($user);
 			if ($newJobId > 0) {
@@ -1116,19 +1153,37 @@ if ($id > 0) {
 
 	// ── Dialog : Ajouter un Job ───────────────────────────────────────────
 	if ($action === 'add_job' || $action === 'confirm_add_job') {
-		$sqlST  = 'SELECT rowid, label, prix_mo FROM '.MAIN_DB_PREFIX.'workshop_c_servicetype';
+		// Remise par défaut depuis le tiers de l'OR
+		$defaultRemise = 0;
+		if ($object->fk_soc > 0) {
+			$socDefObj = new Societe($db);
+			if ($socDefObj->fetch($object->fk_soc) > 0 && $socDefObj->remise_percent > 0) {
+				$defaultRemise = (float) $socDefObj->remise_percent;
+			}
+		}
+
+		$sqlST  = 'SELECT rowid, label, prix_mo, tva_tx_mo, tva_tx_st FROM '.MAIN_DB_PREFIX.'workshop_c_servicetype';
 		$sqlST .= ' WHERE active = 1 ORDER BY label ASC';
 		$resST  = $db->query($sqlST);
+
 		$htmlSTSelect  = '<select name="job_fk_service_type" id="job_fk_service_type" class="flat maxwidth300" required>';
 		$htmlSTSelect .= '<option value="0">— '.$langs->trans('SelectServiceType').' —</option>';
 		if ($resST) {
 			while ($objST = $db->fetch_object($resST)) {
 				$selected = (GETPOSTINT('job_fk_service_type') == $objST->rowid) ? ' selected' : '';
 				$stLabel  = $objST->label.($objST->prix_mo > 0 ? ' ('.price2num($objST->prix_mo, 2).' €/h)' : '');
-				$htmlSTSelect .= '<option value="'.(int) $objST->rowid.'"'.$selected.'>'.dol_escape_htmltag($stLabel).'</option>';
+				$tvaMoInfo = $objST->tva_tx_mo !== null ? ' TVA MO:'.price2num($objST->tva_tx_mo, 2).'%' : '';
+				$tvaStInfo = $objST->tva_tx_st !== null ? ' TVA ST:'.price2num($objST->tva_tx_st, 2).'%' : '';
+				$htmlSTSelect .= '<option value="'.(int) $objST->rowid.'"'.$selected
+					.' data-tva-mo="'.dol_escape_htmltag((string) $objST->tva_tx_mo).'"'
+					.' data-tva-st="'.dol_escape_htmltag((string) $objST->tva_tx_st).'"'
+					.'>'.dol_escape_htmltag($stLabel.$tvaMoInfo.$tvaStInfo).'</option>';
 			}
+			$db->free($resST);
 		}
 		$htmlSTSelect .= '</select>';
+
+		$remiseVal = GETPOST('job_remise_percent', 'alpha') !== '' ? GETPOST('job_remise_percent', 'alpha') : price2num($defaultRemise, 2);
 
 		$fq = array(
 			array(
@@ -1151,6 +1206,13 @@ if ($id > 0) {
 				'name'  => 'job_qty_mo',
 				'value' => GETPOST('job_qty_mo', 'alpha') ?: '1.00',
 				'size'  => 10,
+			),
+			array(
+				'type'  => 'text',
+				'label' => $langs->trans('RemiseMO').' (%)',
+				'name'  => 'job_remise_percent',
+				'value' => $remiseVal,
+				'size'  => 8,
 			),
 		);
 		print $form->formconfirm(
@@ -1184,20 +1246,13 @@ if ($id > 0) {
 		$jobsList = array();
 	}
 
-	// ── Pre-load ServiceType and WorkshopJobType labels for display ───────
+	// ── Pre-load ServiceType labels for display ──────────────────────────
 	$serviceTypeCache = array();
-	$jobTypeCache     = array();
 	foreach ($jobsList as $j) {
 		if (!empty($j->fk_service_type) && !isset($serviceTypeCache[$j->fk_service_type])) {
 			$st = new ServiceType($db);
 			if ($st->fetch((int) $j->fk_service_type) > 0) {
 				$serviceTypeCache[$j->fk_service_type] = $st;
-			}
-		}
-		if (!empty($j->fk_job_type) && !isset($jobTypeCache[$j->fk_job_type])) {
-			$jt = new WorkshopJobType($db);
-			if ($jt->fetch((int) $j->fk_job_type) > 0) {
-				$jobTypeCache[$j->fk_job_type] = $jt;
 			}
 		}
 	}
@@ -1207,9 +1262,12 @@ if ($id > 0) {
 
 	// Header — 6 columns
 	print '<tr class="liste_titre workshop-jobs-table__header">'."\n";
-	print '  <th class="wrapcolumntitle workshop-jobs-col-type">'.$langs->trans('JobType').'</th>'."\n";
+	print '  <th class="wrapcolumntitle workshop-jobs-col-type">'.$langs->trans('ServiceType').'</th>'."\n";
 	print '  <th class="workshop-jobs-col-label">'.$langs->trans('Label').'</th>'."\n";
 	print '  <th class="workshop-jobs-col-desc">'.$langs->trans('Description').'</th>'."\n";
+	print '  <th class="right workshop-jobs-col-mo nowraponall" title="'.dol_escape_htmltag($langs->trans('QtyMOMoRemise')).'">';
+	print '<i class="fa fa-wrench valignmiddle"></i>';
+	print '</th>'."\n";
 	print '  <th class="right workshop-jobs-col-time" title="'.dol_escape_htmltag($langs->trans('TimeSpent')).' / '.$langs->trans('QtyMO').'">';
 	print '<i class="fa fa-stopwatch valignmiddle" title="'.dol_escape_htmltag($langs->trans('TimeSpent')).'"></i>';
 	print '</th>'."\n";
@@ -1218,17 +1276,18 @@ if ($id > 0) {
 	print '</tr>'."\n";
 
 	if (empty($jobsList)) {
-		print '<tr class="oddeven"><td colspan="6" class="opacitymedium center">'.$langs->trans('NoJobYet').'</td></tr>'."\n";
+		print '<tr class="oddeven"><td colspan="7" class="opacitymedium center">'.$langs->trans('NoJobYet').'</td></tr>'."\n";
 	} else {
 		$ii = 0;
 		foreach ($jobsList as $job) {
 			$trClass = ($ii % 2 == 0) ? 'oddeven' : 'oddeven';
 			$ii++;
 
-			$jobTypeBadge = '';
-			if (!empty($job->fk_job_type) && isset($jobTypeCache[$job->fk_job_type])) {
-				$jt = $jobTypeCache[$job->fk_job_type];
-				$jobTypeBadge = '<span class="badge badge-status4 badge-status">'.dol_escape_htmltag($jt->label).'</span>';
+			// Badge type de service
+			$serviceTypeBadge = '';
+			if (!empty($job->fk_service_type) && isset($serviceTypeCache[$job->fk_service_type])) {
+				$st = $serviceTypeCache[$job->fk_service_type];
+				$serviceTypeBadge = '<span class="badge badge-status4 badge-status">'.dol_escape_htmltag($st->label).'</span>';
 			}
 
 			$billingHtml = '';
@@ -1239,24 +1298,45 @@ if ($id > 0) {
 				}
 			}
 
+			// MO : qty × taux avec remise
+			$prixMO     = (float) $job->prix_mo;
+			$qtyMO      = (float) $job->qty_mo;
+			$remise     = (float) $job->remise_percent;
+			$moHtml     = price2num($qtyMO, 2).'h × '.price($prixMO);
+			if ($remise > 0) {
+				$moHtml .= ' <span class="badge badge-status1" title="'.dol_escape_htmltag($langs->trans('RemiseMO')).'">-'.price2num($remise, 2).'%</span>';
+			}
+			// TVA info
+			$tvaInfoParts = array();
+			if ($job->tva_tx_mo !== null && $job->tva_tx_mo !== '') {
+				$tvaInfoParts[] = 'MO '.price2num($job->tva_tx_mo, 2).'%';
+			}
+			if ($job->tva_tx_st !== null && $job->tva_tx_st !== '') {
+				$tvaInfoParts[] = 'ST '.price2num($job->tva_tx_st, 2).'%';
+			}
+			if (!empty($tvaInfoParts)) {
+				$moHtml .= '<br><span class="opacitymedium small">TVA: '.implode(' / ', $tvaInfoParts).'</span>';
+			}
+
 			// Temps pointé vs prévu
-			$tsTotal  = (float) $job->time_spent; // secondes
-			$tsH      = (int) floor($tsTotal / 3600);
-			$tsM      = (int) floor(($tsTotal % 3600) / 60);
+			$tsTotal   = (float) $job->time_spent; // secondes
+			$tsH       = (int) floor($tsTotal / 3600);
+			$tsM       = (int) floor(($tsTotal % 3600) / 60);
 			$tsDisplay = $tsH.'h'.($tsM > 0 ? str_pad((string) $tsM, 2, '0', STR_PAD_LEFT) : '');
-			$qtyH     = price2num((float) $job->qty_mo, 2);
-			$timeHtml = '<span title="'.dol_escape_htmltag($langs->trans('TimeSpent')).'">'.dol_escape_htmltag($tsDisplay).'</span>'
+			$qtyH      = price2num($qtyMO, 2);
+			$timeHtml  = '<span title="'.dol_escape_htmltag($langs->trans('TimeSpent')).'">'.dol_escape_htmltag($tsDisplay).'</span>'
 				.'<span class="opacitymedium"> / '.$qtyH.' h</span>';
 
 			// ── Ligne haute : infos du job ───────────────────────────
 			print '<tr class="'.$trClass.' workshop-job-row" id="job_'.(int) $job->id.'">'."\n";
 			print '  <td class="workshop-jobs-col-type">';
-			print $jobTypeBadge ?: '<span class="opacitymedium">—</span>';
+			print $serviceTypeBadge ?: '<span class="opacitymedium">—</span>';
 			print '</td>'."\n";
 			print '  <td class="workshop-jobs-col-label"><strong>'.dol_escape_htmltag((string) $job->label).'</strong></td>'."\n";
 			print '  <td class="workshop-jobs-col-desc">';
 			print !empty($job->description) ? dol_htmlentitiesbr(dol_string_nohtmltag($job->description, 1)) : '<span class="opacitymedium">—</span>';
 			print '</td>'."\n";
+			print '  <td class="right workshop-jobs-col-mo nowraponall">'.$moHtml.'</td>'."\n";
 			print '  <td class="right workshop-jobs-col-time nowraponall">'.$timeHtml.'</td>'."\n";
 			print '  <td class="workshop-jobs-col-billing">'.$billingHtml.'</td>'."\n";
 			print '  <td class="right workshop-jobs-col-actions nowraponall">'."\n";
@@ -1280,7 +1360,7 @@ if ($id > 0) {
 				array('fa-calculator bold',   $langs->trans('TotalHT'),         (float) $job->total_ht),
 			);
 			print '<tr class="'.$trClass.' workshop-job-totals-row">'."\n";
-			print '  <td colspan="6" class="workshop-job-totals-bar">'."\n";
+			print '  <td colspan="7" class="workshop-job-totals-bar">'."\n";
 			print '    <div class="workshop-job-totals-inner">'."\n";
 			foreach ($totItems as $idx => $item) {
 				[$faClass, $lbl, $val] = $item;

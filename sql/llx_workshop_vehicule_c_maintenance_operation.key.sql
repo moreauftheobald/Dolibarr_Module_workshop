@@ -1,0 +1,3 @@
+ALTER TABLE llx_workshop_vehicule_c_maintenance_operation ADD INDEX idx_maintenance_op_type (fk_vehicule_type);
+ALTER TABLE llx_workshop_vehicule_c_maintenance_operation ADD INDEX idx_maintenance_op_mark (fk_vehicule_mark);
+ALTER TABLE llx_workshop_vehicule_c_maintenance_operation ADD UNIQUE INDEX uk_maintenance_op_code (code, entity);

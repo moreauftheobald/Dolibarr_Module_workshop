@@ -128,9 +128,11 @@ foreach ($objConfig['fields'] as $fieldName => $fieldConfig) {
 		$postValues[$fieldName] = GETPOST($fieldName, 'int');
 	} elseif ($fieldConfig['type'] === 'number') {
 		$postValues[$fieldName] = price2num(GETPOST($fieldName, 'alphanohtml'));
+	} elseif ($fieldConfig['type'] === 'tva') {
+		// TVA rate submitted as a decimal string (e.g. "20" or "5.5") or empty string for NULL
+		$raw = GETPOST($fieldName, 'alphanohtml');
+		$postValues[$fieldName] = ($raw !== '' && $raw !== null) ? price2num($raw) : null;
 	} elseif ($fieldConfig['type'] === 'color') {
-		// The colour is submitted as a hex code chosen from a palette <select>.
-		// Use 'nohtml' to preserve '#', then whitelist against the palette for security.
 		$raw = GETPOST($fieldName, 'nohtml');
 		$palette = getWorkshopColorPalette();
 		$postValues[$fieldName] = isset($palette[$raw]) ? $raw : '';
