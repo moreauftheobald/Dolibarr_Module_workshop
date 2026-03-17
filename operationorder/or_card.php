@@ -63,6 +63,9 @@ dol_include_once('/workshop/class/Tag.class.php');
 dol_include_once('/workshop/class/OperationorderTag.class.php');
 dol_include_once('/workshop/lib/workshop_operationorder.lib.php');
 dol_include_once('/workshop/lib/workshop.lib.php');
+dol_include_once('/workshop/class/operationorder_jobs.class.php');
+dol_include_once('/workshop/class/servicetype.class.php');
+dol_include_once('/workshop/class/workshopjobtype.class.php');
 
 if (!isModEnabled('workshop')) {
 	accessforbidden();
@@ -439,6 +442,97 @@ if (empty($reshook)) {
 		exit;
 	}
 
+	// ── Création d'un Job ────────────────────────────────────────────────
+	if ($action == 'confirm_add_job' && $confirm == 'yes' && $id > 0 && $permissiontoadd) {
+		$error = 0;
+
+		$fk_service_type = GETPOSTINT('job_fk_service_type');
+		$description     = GETPOST('job_description', 'restricthtml');
+		$qty_mo          = (float) price2num(str_replace(',', '.', GETPOST('job_qty_mo', 'alpha')), 'MU');
+
+		if ($fk_service_type <= 0) {
+			setEventMessages($langs->trans('ErrorFieldRequired', $langs->transnoentitiesnoconv('ServiceType')), null, 'errors');
+			$error++;
+		}
+		if ($qty_mo < 0) {
+			setEventMessages($langs->trans('ErrorFieldRequired', $langs->transnoentitiesnoconv('QtyMO')), null, 'errors');
+			$error++;
+		}
+
+		if (!$error) {
+			$serviceType = new ServiceType($db);
+			if ($serviceType->fetch($fk_service_type) <= 0) {
+				setEventMessages($langs->trans('RecordNotFound'), null, 'errors');
+				$error++;
+			}
+		}
+
+		if (!$error) {
+			// Resolve billing third-party from the linked job type
+			$fk_soc_job = null;
+			if (!empty($serviceType->fk_job_type)) {
+				$jobType = new WorkshopJobType($db);
+				if ($jobType->fetch((int) $serviceType->fk_job_type) > 0 && !empty($jobType->fk_soc)) {
+					$fk_soc_job = (int) $jobType->fk_soc;
+				}
+			}
+
+			// Determine next rang
+			$sqlRang = 'SELECT MAX(rang) as maxrang FROM '.MAIN_DB_PREFIX.'workshop_operationorder_jobs';
+			$sqlRang .= ' WHERE fk_operationorder = '.(int) $id;
+			$resRang = $db->query($sqlRang);
+			$nextRang = 1;
+			if ($resRang && ($objRang = $db->fetch_object($resRang))) {
+				$nextRang = max(1, (int) $objRang->maxrang + 1);
+			}
+
+			$job                  = new Operationorder_jobs($db);
+			$job->fk_operationorder = (int) $id;
+			$job->fk_service_type = (int) $fk_service_type;
+			$job->fk_job_type     = !empty($serviceType->fk_job_type) ? (int) $serviceType->fk_job_type : null;
+			$job->label           = $serviceType->label;
+			$job->description     = $description;
+			$job->qty_mo          = $qty_mo;
+			$job->prix_mo         = (float) $serviceType->prix_mo;
+			$job->fk_soc          = $fk_soc_job;
+			$job->time_spent      = 0;
+			$job->rang            = $nextRang;
+			$job->total_ht_mo     = (float) price2num($qty_mo * (float) $serviceType->prix_mo, 'MT');
+			$job->total_ht_part   = 0;
+			$job->total_ht_service = 0;
+			$job->total_ht_external = 0;
+			$job->total_ht_refund = 0;
+			$job->total_ht        = $job->total_ht_mo;
+
+			$newJobId = $job->create($user);
+			if ($newJobId > 0) {
+				$object->updateTotals($user);
+				setEventMessage($langs->trans('JobAdded'));
+				header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id.'#job_'.$newJobId);
+				exit;
+			} else {
+				setEventMessages($job->error, $job->errors, 'errors');
+			}
+		}
+		$action = 'add_job'; // réouvre le dialog en cas d'erreur
+	}
+
+	// ── Suppression d'un Job ──────────────────────────────────────────────
+	if ($action == 'delete_job' && $id > 0 && $permissiontoadd) {
+		$jobid = GETPOSTINT('jobid');
+		$job   = new Operationorder_jobs($db);
+		if ($job->fetch($jobid) > 0 && (int) $job->fk_operationorder === (int) $id) {
+			if ($job->delete($user) < 0) {
+				setEventMessages($job->error, $job->errors, 'errors');
+			} else {
+				$object->updateTotals($user);
+				setEventMessage($langs->trans('JobDeleted'));
+			}
+		}
+		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
+		exit;
+	}
+
 	// ── Transition de statut ─────────────────────────────────────────────
 	if ($action == 'setStatus' && $id > 0 && $permissiontoadd) {
 		$fk_status = GETPOSTINT('fk_status');
@@ -464,6 +558,29 @@ if (empty($reshook)) {
 if ($id > 0) {
 
 	llxHeader('', $object->ref.' — '.$langs->trans('OperationOrder'), '', '', 0, 0, array(), array(), '', 'mod-workshop page-orcard');
+
+	print '<style>
+.workshop-job-totals-bar { padding: 2px 4px; }
+.workshop-job-totals-inner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 1.4em;
+    justify-content: flex-end;
+    align-items: center;
+}
+.workshop-job-total-item {
+    white-space: nowrap;
+    font-size: 0.88em;
+    color: var(--colortext, #555);
+}
+.workshop-job-total-item .fa { margin-right: 2px; opacity: .75; }
+.workshop-job-total-item--grand { font-size: 0.95em; }
+.workshop-job-total-item--grand .fa { opacity: 1; }
+.workshop-job-totals-row td { border-top: none !important; padding-top: 0 !important; }
+.workshop-job-row td { padding-bottom: 2px !important; }
+.workshop-job-row { background-color: #f5f5f5 !important; }
+.workshop-job-row:hover td { background-color: #ebebeb !important; }
+</style>'."\n";
 
 	$head = operationorderPrepareHead($object);
 	print dol_get_fiche_head($head, 'card', $langs->trans('OperationOrder'), -1, 'fa-tools', 0, '', '', 0, '', 1);
@@ -945,7 +1062,7 @@ if ($id > 0) {
 	print '<div class="tabsAction">'."\n";
 
 	// Ajouter un JOB
-	$addJobUrl = dol_buildpath('/workshop/operationorder/or_job_card.php', 1).'?fk_operationorder='.$object->id.'&action=create';
+	$addJobUrl = $_SERVER['PHP_SELF'].'?id='.$object->id.'&action=add_job&token='.newToken();
 	if ($canEditAtStatus) {
 		print '<a class="butAction" href="'.dol_escape_htmltag($addJobUrl).'">';
 		print img_picto('', 'fa-plus-circle', 'class="paddingright"').$langs->trans('AddJob');
@@ -994,7 +1111,198 @@ if ($id > 0) {
 		print '</a>'."\n";
 	}
 
-	print '</div>'."\n";
+	print '</div>'."\n"; // close tabsAction
+
+
+	// ── Dialog : Ajouter un Job ───────────────────────────────────────────
+	if ($action === 'add_job' || $action === 'confirm_add_job') {
+		$sqlST  = 'SELECT rowid, label, prix_mo FROM '.MAIN_DB_PREFIX.'workshop_c_servicetype';
+		$sqlST .= ' WHERE active = 1 ORDER BY label ASC';
+		$resST  = $db->query($sqlST);
+		$htmlSTSelect  = '<select name="job_fk_service_type" id="job_fk_service_type" class="flat maxwidth300" required>';
+		$htmlSTSelect .= '<option value="0">— '.$langs->trans('SelectServiceType').' —</option>';
+		if ($resST) {
+			while ($objST = $db->fetch_object($resST)) {
+				$selected = (GETPOSTINT('job_fk_service_type') == $objST->rowid) ? ' selected' : '';
+				$stLabel  = $objST->label.($objST->prix_mo > 0 ? ' ('.price2num($objST->prix_mo, 2).' €/h)' : '');
+				$htmlSTSelect .= '<option value="'.(int) $objST->rowid.'"'.$selected.'>'.dol_escape_htmltag($stLabel).'</option>';
+			}
+		}
+		$htmlSTSelect .= '</select>';
+
+		$fq = array(
+			array(
+				'type'  => 'other',
+				'label' => $langs->trans('ServiceType').' <span class="fieldrequired">*</span>',
+				'name'  => 'job_fk_service_type',
+				'value' => $htmlSTSelect,
+			),
+			array(
+				'type'  => 'textarea',
+				'label' => $langs->trans('Description'),
+				'name'  => 'job_description',
+				'value' => GETPOST('job_description', 'restricthtml'),
+				'cols'  => 60,
+				'rows'  => 3,
+			),
+			array(
+				'type'  => 'text',
+				'label' => $langs->trans('QtyMO').' <span class="fieldrequired">*</span> ('.$langs->trans('Hours').')',
+				'name'  => 'job_qty_mo',
+				'value' => GETPOST('job_qty_mo', 'alpha') ?: '1.00',
+				'size'  => 10,
+			),
+		);
+		print $form->formconfirm(
+			$_SERVER['PHP_SELF'].'?id='.(int) $object->id,
+			$langs->trans('AddJob'),
+			'',
+			'confirm_add_job',
+			$fq,
+			'yes',
+			1,
+			300,
+			500,
+			0,
+			$langs->trans('Add'),
+			$langs->trans('Cancel')
+		);
+	}
+
+	// ═══════════════════════════════════════════════════════════════════════
+	// SECTION JOBS
+	// ═══════════════════════════════════════════════════════════════════════
+
+	print '<div class="workshop-jobs-section fichecenter">'."\n";
+	print '<div class="fichehalfleft" style="width:100%">'."\n";
+	print '<div class="div-table-responsive-no-min">'."\n";
+
+	// ── Load jobs ────────────────────────────────────────────────────────
+	$jobsObj  = new Operationorder_jobs($db);
+	$jobsList = $jobsObj->fetchAllByOperationorder($object->id);
+	if (!is_array($jobsList)) {
+		$jobsList = array();
+	}
+
+	// ── Pre-load ServiceType and WorkshopJobType labels for display ───────
+	$serviceTypeCache = array();
+	$jobTypeCache     = array();
+	foreach ($jobsList as $j) {
+		if (!empty($j->fk_service_type) && !isset($serviceTypeCache[$j->fk_service_type])) {
+			$st = new ServiceType($db);
+			if ($st->fetch((int) $j->fk_service_type) > 0) {
+				$serviceTypeCache[$j->fk_service_type] = $st;
+			}
+		}
+		if (!empty($j->fk_job_type) && !isset($jobTypeCache[$j->fk_job_type])) {
+			$jt = new WorkshopJobType($db);
+			if ($jt->fetch((int) $j->fk_job_type) > 0) {
+				$jobTypeCache[$j->fk_job_type] = $jt;
+			}
+		}
+	}
+
+	// ── Jobs table ───────────────────────────────────────────────────────
+	print '<table class="noborder allwidth workshop-jobs-table">'."\n";
+
+	// Header — 6 columns
+	print '<tr class="liste_titre workshop-jobs-table__header">'."\n";
+	print '  <th class="wrapcolumntitle workshop-jobs-col-type">'.$langs->trans('JobType').'</th>'."\n";
+	print '  <th class="workshop-jobs-col-label">'.$langs->trans('Label').'</th>'."\n";
+	print '  <th class="workshop-jobs-col-desc">'.$langs->trans('Description').'</th>'."\n";
+	print '  <th class="right workshop-jobs-col-time" title="'.dol_escape_htmltag($langs->trans('TimeSpent')).' / '.$langs->trans('QtyMO').'">';
+	print '<i class="fa fa-stopwatch valignmiddle" title="'.dol_escape_htmltag($langs->trans('TimeSpent')).'"></i>';
+	print '</th>'."\n";
+	print '  <th class="workshop-jobs-col-billing">'.$langs->trans('BillingThirdParty').'</th>'."\n";
+	print '  <th class="workshop-jobs-col-actions">&nbsp;</th>'."\n";
+	print '</tr>'."\n";
+
+	if (empty($jobsList)) {
+		print '<tr class="oddeven"><td colspan="6" class="opacitymedium center">'.$langs->trans('NoJobYet').'</td></tr>'."\n";
+	} else {
+		$ii = 0;
+		foreach ($jobsList as $job) {
+			$trClass = ($ii % 2 == 0) ? 'oddeven' : 'oddeven';
+			$ii++;
+
+			$jobTypeBadge = '';
+			if (!empty($job->fk_job_type) && isset($jobTypeCache[$job->fk_job_type])) {
+				$jt = $jobTypeCache[$job->fk_job_type];
+				$jobTypeBadge = '<span class="badge badge-status4 badge-status">'.dol_escape_htmltag($jt->label).'</span>';
+			}
+
+			$billingHtml = '';
+			if (!empty($job->fk_soc)) {
+				$socBill = new Societe($db);
+				if ($socBill->fetch((int) $job->fk_soc) > 0) {
+					$billingHtml = $socBill->getNomUrl(1);
+				}
+			}
+
+			// Temps pointé vs prévu
+			$tsTotal  = (float) $job->time_spent; // secondes
+			$tsH      = (int) floor($tsTotal / 3600);
+			$tsM      = (int) floor(($tsTotal % 3600) / 60);
+			$tsDisplay = $tsH.'h'.($tsM > 0 ? str_pad((string) $tsM, 2, '0', STR_PAD_LEFT) : '');
+			$qtyH     = price2num((float) $job->qty_mo, 2);
+			$timeHtml = '<span title="'.dol_escape_htmltag($langs->trans('TimeSpent')).'">'.dol_escape_htmltag($tsDisplay).'</span>'
+				.'<span class="opacitymedium"> / '.$qtyH.' h</span>';
+
+			// ── Ligne haute : infos du job ───────────────────────────
+			print '<tr class="'.$trClass.' workshop-job-row" id="job_'.(int) $job->id.'">'."\n";
+			print '  <td class="workshop-jobs-col-type">';
+			print $jobTypeBadge ?: '<span class="opacitymedium">—</span>';
+			print '</td>'."\n";
+			print '  <td class="workshop-jobs-col-label"><strong>'.dol_escape_htmltag((string) $job->label).'</strong></td>'."\n";
+			print '  <td class="workshop-jobs-col-desc">';
+			print !empty($job->description) ? dol_htmlentitiesbr(dol_string_nohtmltag($job->description, 1)) : '<span class="opacitymedium">—</span>';
+			print '</td>'."\n";
+			print '  <td class="right workshop-jobs-col-time nowraponall">'.$timeHtml.'</td>'."\n";
+			print '  <td class="workshop-jobs-col-billing">'.$billingHtml.'</td>'."\n";
+			print '  <td class="right workshop-jobs-col-actions nowraponall">'."\n";
+			if ($canEditAtStatus) {
+				$delUrl = $_SERVER['PHP_SELF'].'?id='.$object->id.'&action=delete_job&jobid='.(int) $job->id.'&token='.newToken();
+				print '<a class="reposition" href="'.dol_escape_htmltag($delUrl).'"';
+				print ' onclick="return confirm(\''.dol_escape_js($langs->trans('ConfirmDeleteJob')).'\');">';
+				print img_picto($langs->trans('Delete'), 'delete');
+				print '</a>';
+			}
+			print '  </td>'."\n";
+			print '</tr>'."\n";
+
+			// ── Ligne basse : totaux avec pictogrammes ───────────────
+			$totItems = array(
+				array('fa-wrench',            $langs->trans('TotalHTMO'),       (float) $job->total_ht_mo),
+				array('fa-cogs',              $langs->trans('TotalHTPart'),     (float) $job->total_ht_part),
+				array('fa-tag',               $langs->trans('TotalHTService'),  (float) $job->total_ht_service),
+				array('fa-handshake',         $langs->trans('TotalHTExternal'), (float) $job->total_ht_external),
+				array('fa-undo',              $langs->trans('TotalHTRefund'),   (float) $job->total_ht_refund),
+				array('fa-calculator bold',   $langs->trans('TotalHT'),         (float) $job->total_ht),
+			);
+			print '<tr class="'.$trClass.' workshop-job-totals-row">'."\n";
+			print '  <td colspan="6" class="workshop-job-totals-bar">'."\n";
+			print '    <div class="workshop-job-totals-inner">'."\n";
+			foreach ($totItems as $idx => $item) {
+				[$faClass, $lbl, $val] = $item;
+				$isTotal = ($idx === 5);
+				print '      <span class="workshop-job-total-item'.($isTotal ? ' workshop-job-total-item--grand' : '').'" title="'.dol_escape_htmltag($lbl).'">';
+				print '<i class="fa '.dol_escape_htmltag($faClass).' valignmiddle" aria-hidden="true"></i> ';
+				print $isTotal ? '<strong>'.price($val).'</strong>' : price($val);
+				print '</span>'."\n";
+			}
+			print '    </div>'."\n";
+			print '  </td>'."\n";
+			print '</tr>'."\n";
+		}
+	}
+
+
+	print '</table>'."\n";
+	print '</div>'."\n"; // div-table-responsive
+	print '</div>'."\n"; // fichehalfleft
+
+	print '</div>'."\n"; // workshop-jobs-section
+
 
 	llxFooter();
 	$db->close();
