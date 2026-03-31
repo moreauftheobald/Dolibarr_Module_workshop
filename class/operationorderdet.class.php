@@ -80,7 +80,7 @@ class Operationorderdet extends CommonObject
 		'total_ht_refund'        => array('type' => 'double',        'label' => 'TotalHTRefund',  'enabled' => 1, 'position' => 120, 'notnull' => 1,  'visible' => -1),
 		'pc'                     => array('type' => 'varchar(255)',   'label' => 'PC',             'enabled' => 1, 'position' => 130, 'notnull' => 0,  'visible' => -1),
 		'pr'                     => array('type' => 'double',         'label' => 'PR',             'enabled' => 1, 'position' => 140, 'notnull' => 0,  'visible' => -1),
-		'fk_warehouse'           => array('type' => 'varchar(255)',   'label' => 'Warehouse',      'enabled' => 1, 'position' => 150, 'notnull' => 0,  'visible' => -1),
+		'fk_warehouse'           => array('type' => 'integer:Entrepot:product/class/entrepot.class.php', 'label' => 'Warehouse', 'picto' => 'stock', 'enabled' => 1, 'position' => 150, 'notnull' => 0, 'visible' => 1, 'css' => 'maxwidth300', 'csslist' => 'tdoverflowmax150'),
 		'info_bits'              => array('type' => 'integer',        'label' => 'InfoBits',       'enabled' => 1, 'position' => 160, 'notnull' => 0,  'visible' => 0),
 		'rang'                   => array('type' => 'integer',        'label' => 'Rang',           'enabled' => 1, 'position' => 170, 'notnull' => 0,  'visible' => 0, 'default' => 0),
 		'fk_user_creat'          => array('type' => 'integer:User:user/class/user.class.php', 'label' => 'UserAuthor', 'picto' => 'user', 'enabled' => 1, 'position' => 510, 'notnull' => 1, 'visible' => -2, 'foreignkey' => 'user.rowid', 'csslist' => 'tdoverflowmax150'),

@@ -64,6 +64,7 @@ dol_include_once('/workshop/class/OperationorderTag.class.php');
 dol_include_once('/workshop/lib/workshop_operationorder.lib.php');
 dol_include_once('/workshop/lib/workshop.lib.php');
 dol_include_once('/workshop/class/operationorder_jobs.class.php');
+dol_include_once('/workshop/class/operationorderdet.class.php');
 dol_include_once('/workshop/class/servicetype.class.php');
 dol_include_once('/workshop/class/workshopjobtype.class.php');
 dol_include_once('/workshop/class/vehiculeOperation.class.php');
@@ -100,6 +101,40 @@ if ($id > 0) {
 		dol_print_error($db, $object->error);
 		exit;
 	}
+}
+
+// ── AJAX : entrepôts + stock pour un produit donné (appelé par le dialog d'ajout de ligne) ──
+if ($action == 'get_warehouses_for_product' && $id > 0 && $permissiontoadd) {
+	$product_id = GETPOSTINT('product_id');
+	$result = array();
+	if ($product_id > 0) {
+		$sqlWh  = "SELECT e.rowid, e.ref, COALESCE(ps.reel, 0) as qty, p.fk_default_warehouse";
+		$sqlWh .= " FROM ".MAIN_DB_PREFIX."entrepot e";
+		$sqlWh .= " LEFT JOIN ".MAIN_DB_PREFIX."product_stock ps ON (ps.fk_entrepot = e.rowid AND ps.fk_product = ".(int) $product_id.")";
+		$sqlWh .= " LEFT JOIN ".MAIN_DB_PREFIX."product p ON (p.rowid = ".(int) $product_id.")";
+		$sqlWh .= " WHERE e.entity IN (".getEntity('stock').")";
+		$sqlWh .= " AND e.statut >= 0";
+		$sqlWh .= " ORDER BY";
+		$sqlWh .= "   CASE WHEN e.rowid = p.fk_default_warehouse THEN 0 ELSE 1 END ASC,";
+		$sqlWh .= "   CASE WHEN COALESCE(ps.reel, 0) > 0 THEN 0 ELSE 1 END ASC,";
+		$sqlWh .= "   e.ref ASC";
+		$resWh = $db->query($sqlWh);
+		if ($resWh) {
+			while ($oWh = $db->fetch_object($resWh)) {
+				$result[] = array(
+					'rowid'      => (int) $oWh->rowid,
+					'ref'        => (string) $oWh->ref,
+					'qty'        => (float) $oWh->qty,
+					'is_default' => ((int) $oWh->rowid === (int) $oWh->fk_default_warehouse),
+				);
+			}
+			$db->free($resWh);
+		}
+	}
+	header('Content-Type: application/json');
+	echo json_encode($result);
+	$db->close();
+	exit;
 }
 
 
@@ -570,6 +605,94 @@ if (empty($reshook)) {
 			} else {
 				$object->updateTotals($user);
 				setEventMessage($langs->trans('JobDeleted'));
+			}
+		}
+		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
+		exit;
+	}
+
+	// ── Ajout d'une ligne produit/service dans un Job ────────────────────
+	if ($action == 'confirm_add_det' && $id > 0 && $permissiontoadd) {
+		$error          = 0;
+		$jobid          = GETPOSTINT('jobid');
+		$fk_product     = GETPOSTINT('det_fk_product');
+		$qty            = (float) price2num(str_replace(',', '.', GETPOST('det_qty', 'alpha')), 'MU');
+		$price          = (float) price2num(str_replace(',', '.', GETPOST('det_price', 'alpha')), 'MU');
+		$remise_percent = (float) price2num(str_replace(',', '.', GETPOST('det_remise_percent', 'alpha')), 'MU');
+		$fk_warehouse   = GETPOST('det_fk_warehouse', 'alphanohtml');
+		$description    = GETPOST('det_description', 'restricthtml');
+
+		if ($jobid <= 0 || $fk_product <= 0) {
+			setEventMessages($langs->trans('ErrorFieldRequired'), null, 'errors');
+			$error++;
+		}
+
+		if (!$error) {
+			$detJob = new Operationorder_jobs($db);
+			if ($detJob->fetch($jobid) <= 0 || (int) $detJob->fk_operationorder !== (int) $id) {
+				setEventMessages($langs->trans('ErrorRecordNotFound'), null, 'errors');
+				$error++;
+			}
+		}
+
+		if (!$error) {
+			require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
+			$product = new Product($db);
+			$product_type = Operationorderdet::TYPE_PRODUCT;
+			$product_label = '';
+			if ($product->fetch($fk_product) > 0) {
+				$product_type  = (int) $product->type; // 0=product, 1=service
+				$product_label = $product->label;
+			}
+
+			$sqlRang  = 'SELECT MAX(rang) as maxrang FROM '.MAIN_DB_PREFIX.'workshop_operationorderdet';
+			$sqlRang .= ' WHERE fk_operationorder_jobs = '.((int) $jobid);
+			$resRang  = $db->query($sqlRang);
+			$objRang  = $resRang ? $db->fetch_object($resRang) : null;
+			$nextRang = ($objRang && $objRang->maxrang !== null) ? (int) $objRang->maxrang + 1 : 1;
+
+			$det                       = new Operationorderdet($db);
+			$det->fk_operationorder_jobs = $jobid;
+			$det->fk_product           = $fk_product;
+			$det->label                = $product_label;
+			$det->description          = $description;
+			$det->product_type         = $product_type;
+			$det->qty                  = $qty > 0 ? $qty : 1;
+			$det->price                = $price;
+			$det->remise_percent       = $remise_percent;
+			$det->fk_warehouse         = $fk_warehouse;
+			$det->rang                 = $nextRang;
+			$det->fk_user_creat        = $user->id;
+
+			if ($det->create($user) > 0) {
+				$detJob->updateTotals($user);
+				$object->updateTotals($user);
+				setEventMessage($langs->trans('DetLineAdded'));
+				header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id.'#job_'.$jobid);
+				exit;
+			} else {
+				setEventMessages($det->error, $det->errors, 'errors');
+			}
+		}
+		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
+		exit;
+	}
+
+	// ── Suppression d'une ligne produit/service ───────────────────────────
+	if ($action == 'delete_det' && $id > 0 && $permissiontoadd) {
+		$detid = GETPOSTINT('detid');
+		$det   = new Operationorderdet($db);
+		if ($det->fetch($detid) > 0) {
+			$detJobId = (int) $det->fk_operationorder_jobs;
+			if ($det->delete($user) >= 0) {
+				$detJob2 = new Operationorder_jobs($db);
+				if ($detJob2->fetch($detJobId) > 0 && (int) $detJob2->fk_operationorder === (int) $id) {
+					$detJob2->updateTotals($user);
+					$object->updateTotals($user);
+				}
+				setEventMessage($langs->trans('DetLineDeleted'));
+			} else {
+				setEventMessages($det->error, $det->errors, 'errors');
 			}
 		}
 		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
@@ -1620,6 +1743,59 @@ if ($id > 0) {
 			print '  </td>'."\n";
 			print '</tr>'."\n";
 
+			// ── Lignes de détail (produits / services) ───────────────
+			$detObj  = new Operationorderdet($db);
+			$detList = $detObj->fetchAllByJob($job->id);
+			if (is_array($detList) && !empty($detList)) {
+				foreach ($detList as $det) {
+					$detProductIcon = ($det->product_type == Operationorderdet::TYPE_SERVICE)
+						? '<i class="fa fa-tag opacitymedium" title="'.dol_escape_htmltag($langs->trans('Service')).'"></i>'
+						: '<i class="fa fa-cogs opacitymedium" title="'.dol_escape_htmltag($langs->trans('Product')).'"></i>';
+					$detQtyPrice = price2num($det->qty, 2).' × '.price($det->price);
+					if ((float) $det->remise_percent > 0) {
+						$detQtyPrice .= ' <span class="badge badge-status1">-'.price2num($det->remise_percent, 2).'%</span>';
+					}
+					print '<tr class="'.$trClass.' workshop-det-row">'."\n";
+					print '  <td class="workshop-jobs-col-type" style="padding-left:1.5em">'.$detProductIcon.'</td>'."\n";
+					print '  <td class="workshop-jobs-col-label"><small>'.dol_escape_htmltag($det->label).'</small></td>'."\n";
+					print '  <td class="workshop-jobs-col-desc"><small>';
+					print !empty($det->description) ? dol_htmlentitiesbr(dol_string_nohtmltag($det->description, 1)) : '<span class="opacitymedium">—</span>';
+					print '</small></td>'."\n";
+					print '  <td class="right workshop-jobs-col-mo nowraponall"><small>'.$detQtyPrice.'</small></td>'."\n";
+					print '  <td class="right workshop-jobs-col-time nowraponall"><small><strong>'.price($det->total_ht).'</strong></small></td>'."\n";
+					$whHtml = '';
+				if (!empty($det->fk_warehouse)) {
+					dol_include_once('/product/stock/class/entrepot.class.php');
+					$entrepot = new Entrepot($db);
+					if ($entrepot->fetch((int) $det->fk_warehouse) > 0) {
+						$whHtml = $entrepot->getNomUrl(1);
+					}
+				}
+				print '  <td class="workshop-jobs-col-billing"><small>'.($whHtml ?: '<span class="opacitymedium">—</span>').'</small></td>'."\n";
+					print '  <td class="right workshop-jobs-col-actions nowraponall">'."\n";
+					if ($canEditAtStatus) {
+						$delDetUrl = $_SERVER['PHP_SELF'].'?id='.$object->id.'&action=delete_det&detid='.(int) $det->id.'&token='.newToken();
+						print '<a class="reposition" href="'.dol_escape_htmltag($delDetUrl).'"';
+						print ' onclick="return confirm(\''.dol_escape_js($langs->trans('ConfirmDeleteDetLine')).'\');">';
+						print img_picto($langs->trans('Delete'), 'delete');
+						print '</a>';
+					}
+					print '  </td>'."\n";
+					print '</tr>'."\n";
+				}
+			}
+			// ── Bouton + Ajouter une ligne ────────────────────────────
+			if ($canEditAtStatus) {
+				print '<tr class="'.$trClass.' workshop-det-add-row">'."\n";
+				print '  <td colspan="7" style="padding-left:1.5em;padding-top:2px;padding-bottom:2px">'."\n";
+				print '    <a href="#" class="small" onclick="workshopOpenAddDet('.(int) $job->id.');return false;">';
+				print img_picto($langs->trans('AddDetLine'), 'add', 'class="valignmiddle paddingright"');
+				print dol_escape_htmltag($langs->trans('AddDetLine'));
+				print '</a>'."\n";
+				print '  </td>'."\n";
+				print '</tr>'."\n";
+			}
+
 			// ── Ligne basse : totaux avec pictogrammes ───────────────
 			$totItems = array(
 				array('fa-wrench',            $langs->trans('TotalHTMO'),       (float) $job->total_ht_mo),
@@ -1652,6 +1828,155 @@ if ($id > 0) {
 	print '</div>'."\n"; // fichehalfleft
 
 	print '</div>'."\n"; // workshop-jobs-section
+
+
+	// ═══════════════════════════════════════════════════════════════════════
+	// DIALOG : Ajouter une ligne produit/service dans un Job
+	// ═══════════════════════════════════════════════════════════════════════
+
+	// Map prix+type pour les produits (auto-remplissage JS à la sélection)
+	$jsProdData = array();
+	$sqlAllProds  = "SELECT p.rowid, p.price, p.fk_product_type";
+	$sqlAllProds .= " FROM ".MAIN_DB_PREFIX."product p";
+	$sqlAllProds .= " WHERE p.entity IN (".getEntity('product').")";
+	$sqlAllProds .= " ORDER BY p.ref ASC";
+	$resAllProds = $db->query($sqlAllProds);
+	if ($resAllProds) {
+		while ($oProd = $db->fetch_object($resAllProds)) {
+			$jsProdData[(int) $oProd->rowid] = array(
+				'price' => (float) $oProd->price,
+				'type'  => (int) $oProd->fk_product_type,
+			);
+		}
+		$db->free($resAllProds);
+	}
+
+	// HTML du dialog
+	print '<div id="dlg-add-det" style="display:none;" title="'.dol_escape_htmltag($langs->trans('AddDetLine')).'">'."\n";
+	print '<form id="frm-add-det" method="POST" action="'.dol_escape_htmltag($_SERVER['PHP_SELF'].'?id='.$id).'">'."\n";
+	print '<input type="hidden" name="token" value="'.newToken().'">'."\n";
+	print '<input type="hidden" name="action" value="confirm_add_det">'."\n";
+	print '<input type="hidden" name="jobid" id="dlg_det_jobid" value="">'."\n";
+
+	print '<table class="border centpercent">'."\n";
+
+	// Produit — forcecombo=1 : <select> statique, pas d'ajax_combobox, pas de Select2
+	print '<tr><td class="titlefield fieldrequired">'.$langs->trans('Product').'</td><td>';
+	print $form->select_produits(0, 'det_fk_product', '', 0, 0, 1, 2, '', 0, array(), 0, '1', 1, 'maxwidth400', 0, '', null, 0);
+	print '</td></tr>'."\n";
+
+	// Description
+	print '<tr><td>'.$langs->trans('Description').'</td><td>';
+	print '<textarea name="det_description" id="det_description" class="flat" rows="2" style="width:99%;"></textarea>';
+	print '</td></tr>'."\n";
+
+	// Quantité
+	print '<tr><td class="fieldrequired">'.$langs->trans('Qty').'</td><td>';
+	print '<input type="text" name="det_qty" id="det_qty" class="flat width75" value="1">';
+	print '</td></tr>'."\n";
+
+	// Prix unitaire HT
+	print '<tr><td>'.$langs->trans('UnitPriceHT').'</td><td>';
+	print '<input type="text" name="det_price" id="det_price" class="flat width100" value="0">';
+	print '</td></tr>'."\n";
+
+	// Remise %
+	print '<tr><td>'.$langs->trans('Discount').'</td><td>';
+	print '<input type="text" name="det_remise_percent" id="det_remise_percent" class="flat width75" value="0"> %';
+	print '</td></tr>'."\n";
+
+	// Emplacement stock (masqué pour les services, chargé par AJAX au choix du produit)
+	print '<tr id="det_warehouse_row" style="display:none;"><td>'.$langs->trans('StockLocation').'</td><td>';
+	print '<select name="det_fk_warehouse" id="det_fk_warehouse" class="flat maxwidth400"><option value=""></option></select>';
+	print '</td></tr>'."\n";
+
+	print '</table>'."\n";
+	print '</form>'."\n";
+	print '</div>'."\n";
+
+	// JS
+	print '<script type="text/javascript">'."\n";
+	print 'var workshopProdData = '.json_encode($jsProdData).';'."\n";
+	print 'var workshopOrCardUrl = '.json_encode($_SERVER['PHP_SELF'].'?id='.$id).';'."\n";
+	print <<<'JSCODE'
+jQuery(function ($) {
+
+	var $dlg = $('#dlg-add-det');
+
+	window.workshopOpenAddDet = function (jobid) {
+		$('#dlg_det_jobid').val(jobid);
+		$('#det_fk_product').val('');
+		$('#det_description').val('');
+		$('#det_qty').val('1');
+		$('#det_price').val('0');
+		$('#det_remise_percent').val('0');
+		$('#det_fk_warehouse').html('<option value=""></option>');
+		$('#det_warehouse_row').hide();
+
+		if ($dlg.hasClass('ui-dialog-content')) {
+			$dlg.dialog('open');
+		} else {
+			$dlg.dialog({
+				modal:     true,
+				width:     550,
+				resizable: false,
+				buttons: [
+					{
+						text: document.documentElement.lang === 'fr' ? 'Ajouter' : 'Add',
+						click: function () {
+							var prodId = $('#det_fk_product').val();
+							if (!prodId || prodId === '0' || prodId === '') {
+								alert(document.documentElement.lang === 'fr'
+									? 'Veuillez sélectionner un produit.'
+									: 'Please select a product.');
+								return;
+							}
+							$('#frm-add-det').submit();
+						}
+					},
+					{
+						text: document.documentElement.lang === 'fr' ? 'Annuler' : 'Cancel',
+						click: function () { $(this).dialog('close'); }
+					}
+				]
+			});
+		}
+	};
+
+	// Changement de produit : auto-remplir prix + charger entrepôts par AJAX
+	$(document).on('change', '#det_fk_product', function () {
+		var prodId = parseInt($(this).val(), 10);
+		var info = prodId ? workshopProdData[prodId] : null;
+
+		// Prix
+		$('#det_price').val(info ? info.price.toFixed(2) : '0');
+
+		// Entrepôts (produits seulement)
+		var $whSel = $('#det_fk_warehouse');
+		if (info && info.type === 0) {
+			$('#det_warehouse_row').show();
+			$whSel.html('<option value=""></option>');
+			$.getJSON(workshopOrCardUrl + '&action=get_warehouses_for_product', { product_id: prodId })
+				.done(function (warehouses) {
+					console.log('[workshop] warehouses for product ' + prodId + ':', warehouses);
+					var defaultVal = '';
+					$.each(warehouses, function (i, wh) {
+						var label = wh.ref;
+						if (wh.qty > 0) { label += ' (' + wh.qty + ')'; }
+						var $opt = $('<option>').val(wh.rowid).text(label);
+						if (wh.is_default) { defaultVal = wh.rowid; }
+						$whSel.append($opt);
+					});
+					if (defaultVal) { $whSel.val(defaultVal); }
+				});
+		} else {
+			$('#det_warehouse_row').hide();
+			$whSel.html('<option value=""></option>');
+		}
+	});
+});
+JSCODE;
+	print '</script>'."\n";
 
 
 	llxFooter();

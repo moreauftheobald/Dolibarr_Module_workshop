@@ -15,7 +15,7 @@ CREATE TABLE llx_workshop_operationorderdet (
   rang                     integer          DEFAULT 0,
   pc                       varchar(255)     DEFAULT NULL,
   pr                       double           DEFAULT 0,
-  fk_warehouse             varchar(255)     DEFAULT NULL,
+  fk_warehouse             integer          DEFAULT NULL,
   info_bits                integer          DEFAULT 0,
   total_ht_part            double  NOT NULL DEFAULT 0,
   total_ht_service         double  NOT NULL DEFAULT 0,
