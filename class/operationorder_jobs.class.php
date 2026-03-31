@@ -479,20 +479,35 @@ class Operationorder_jobs extends CommonObject
 	}
 
 	/**
-	 * Load the info information in the object
+	 * Return ids of VehiculeOperation records linked to this job.
 	 *
-	 * @param  int  $id Id of object
-	 * @return void
+	 * @return int[]|int Array of ids, or <0 on DB error
 	 */
-	// ── Liens Job ↔ VehiculeOperation ────────────────────────────────────
+	public function fetchLinkedMaintenanceOperationIds()
+	{
+		$sql  = 'SELECT fk_vehicule_operation FROM '.$this->db->prefix().'workshop_operationorder_jobs_maintenance';
+		$sql .= ' WHERE fk_job = '.((int) $this->id);
+		$resql = $this->db->query($sql);
+		if (!$resql) {
+			$this->error = $this->db->lasterror();
+			return -1;
+		}
+		$ids = array();
+		while ($obj = $this->db->fetch_object($resql)) {
+			$ids[] = (int) $obj->fk_vehicule_operation;
+		}
+		$this->db->free($resql);
+		return $ids;
+	}
 
 	/**
 	 * Link this job to one or more VehiculeOperation records.
+	 * Ignores duplicates (INSERT IGNORE).
 	 *
-	 * @param  int[] $ids Array of fk_vehicule_operation ids to link
-	 * @return int        Number of links inserted, or <0 on DB error
+	 * @param  int[] $ids Array of fk_vehicule_operation ids
+	 * @return int        Number of rows inserted, or <0 on DB error
 	 */
-	public function linkVehiculeOperations(array $ids): int
+	public function linkMaintenanceOperations(array $ids): int
 	{
 		$inserted = 0;
 		foreach ($ids as $idVo) {
@@ -500,7 +515,7 @@ class Operationorder_jobs extends CommonObject
 			if ($idVo <= 0) {
 				continue;
 			}
-			$sql  = 'INSERT INTO '.$this->db->prefix().'workshop_operationorder_jobs_vehicule_operation';
+			$sql  = 'INSERT IGNORE INTO '.$this->db->prefix().'workshop_operationorder_jobs_maintenance';
 			$sql .= ' (fk_job, fk_vehicule_operation) VALUES ('.((int) $this->id).', '.$idVo.')';
 			if (!$this->db->query($sql)) {
 				$this->error = $this->db->lasterror();
@@ -517,9 +532,9 @@ class Operationorder_jobs extends CommonObject
 	 *
 	 * @return int >0 if OK, <0 on DB error
 	 */
-	public function unlinkVehiculeOperations(): int
+	public function unlinkAllMaintenanceOperations(): int
 	{
-		$sql  = 'DELETE FROM '.$this->db->prefix().'workshop_operationorder_jobs_vehicule_operation';
+		$sql  = 'DELETE FROM '.$this->db->prefix().'workshop_operationorder_jobs_maintenance';
 		$sql .= ' WHERE fk_job = '.((int) $this->id);
 		if (!$this->db->query($sql)) {
 			$this->error = $this->db->lasterror();
@@ -530,28 +545,11 @@ class Operationorder_jobs extends CommonObject
 	}
 
 	/**
-	 * Return the list of fk_vehicule_operation ids linked to this job.
+	 * Load the info information in the object
 	 *
-	 * @return int[]|int Array of ids (may be empty), or <0 on DB error
+	 * @param  int  $id Id of object
+	 * @return void
 	 */
-	public function fetchLinkedVehiculeOperationIds()
-	{
-		$sql  = 'SELECT fk_vehicule_operation FROM '.$this->db->prefix().'workshop_operationorder_jobs_vehicule_operation';
-		$sql .= ' WHERE fk_job = '.((int) $this->id);
-		$resql = $this->db->query($sql);
-		if (!$resql) {
-			$this->error = $this->db->lasterror();
-			dol_syslog(__METHOD__.' '.$this->error, LOG_ERR);
-			return -1;
-		}
-		$ids = array();
-		while ($obj = $this->db->fetch_object($resql)) {
-			$ids[] = (int) $obj->fk_vehicule_operation;
-		}
-		$this->db->free($resql);
-		return $ids;
-	}
-
 	public function info($id)
 	{
 		$sql  = 'SELECT rowid, date_creation as datec, tms as datem, fk_user_creat, fk_user_modif';

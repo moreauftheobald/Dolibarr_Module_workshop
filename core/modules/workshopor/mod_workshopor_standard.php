@@ -143,6 +143,31 @@ class mod_workshopor_standard extends ModeleNumRefWorkshopOR
 
 		$num = ($max >= (pow(10, 4) - 1)) ? $max + 1 : sprintf("%04s", $max + 1);
 
+		// Verify the candidate doesn't already exist.
+		// The broad LIKE 'OR____-%' can miss records with non-standard refs (PROV, migration…),
+		// causing a false low MAX and a collision. If a collision is detected, recompute
+		// on the exact current YYMM to find the real maximum.
+		$candidate = $this->prefix.$yymm.'-'.$num;
+		$sqlCheck  = "SELECT rowid FROM ".MAIN_DB_PREFIX."workshop_operationorder WHERE ref = '".$db->escape($candidate)."'";
+		if ($object->ismultientitymanaged == 1) {
+			$sqlCheck .= " AND entity = ".(int) $conf->entity;
+		}
+		$resCheck = $db->query($sqlCheck);
+		if ($resCheck && $db->num_rows($resCheck) > 0) {
+			$sqlRetry  = "SELECT MAX(CAST(SUBSTRING(ref FROM ".$posindice.") AS SIGNED)) as max";
+			$sqlRetry .= " FROM ".MAIN_DB_PREFIX."workshop_operationorder";
+			$sqlRetry .= " WHERE ref LIKE '".$db->escape($this->prefix.$yymm)."-%'";
+			if ($object->ismultientitymanaged == 1) {
+				$sqlRetry .= " AND entity = ".(int) $conf->entity;
+			}
+			$resRetry = $db->query($sqlRetry);
+			if ($resRetry) {
+				$objRetry = $db->fetch_object($resRetry);
+				$maxRetry = $objRetry ? intval($objRetry->max) : 0;
+				$num      = ($maxRetry >= (pow(10, 4) - 1)) ? $maxRetry + 1 : sprintf("%04s", $maxRetry + 1);
+			}
+		}
+
 		dol_syslog("mod_workshopor_standard::getNextValue return ".$this->prefix.$yymm."-".$num);
 		return $this->prefix.$yymm."-".$num;
 	}

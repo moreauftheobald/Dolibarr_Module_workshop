@@ -467,10 +467,12 @@ if (empty($reshook)) {
 	if ($action == 'confirm_add_job' && $confirm == 'yes' && $id > 0 && $permissiontoadd) {
 		$error = 0;
 
-		$fk_service_type = GETPOSTINT('job_fk_service_type');
-		$description     = GETPOST('job_description', 'restricthtml');
-		$qty_mo          = (float) price2num(str_replace(',', '.', GETPOST('job_qty_mo', 'alpha')), 'MU');
-		$remise_percent  = (float) price2num(str_replace(',', '.', GETPOST('job_remise_percent', 'alpha')), 'MU');
+		$fk_service_type     = GETPOSTINT('job_fk_service_type');
+		$_voRaw              = isset($_GET['job_vehicule_operations']) ? $_GET['job_vehicule_operations'] : (isset($_POST['job_vehicule_operations']) ? $_POST['job_vehicule_operations'] : '');
+		$voIds               = is_array($_voRaw) ? array_values(array_filter(array_map('intval', $_voRaw))) : array_values(array_filter(array_map('intval', explode(',', (string) $_voRaw))));
+		$description         = GETPOST('job_description', 'restricthtml');
+		$qty_mo                = (float) price2num(str_replace(',', '.', GETPOST('job_qty_mo', 'alpha')), 'MU');
+		$remise_percent        = (float) price2num(str_replace(',', '.', GETPOST('job_remise_percent', 'alpha')), 'MU');
 
 		if ($fk_service_type <= 0) {
 			setEventMessages($langs->trans('ErrorFieldRequired', $langs->transnoentitiesnoconv('ServiceType')), null, 'errors');
@@ -532,24 +534,21 @@ if (empty($reshook)) {
 			$job->remise_percent    = $remise_percent;
 			$job->tva_tx_mo         = isset($serviceType->tva_tx_mo) ? (float) $serviceType->tva_tx_mo : null;
 			$job->tva_tx_st         = isset($serviceType->tva_tx_st) ? (float) $serviceType->tva_tx_st : null;
-			$job->fk_soc            = $fk_soc_job;
-			$job->time_spent        = 0;
-			$job->rang              = $nextRang;
-			$job->total_ht_mo       = $totalHtMO;
-			$job->total_ht_part     = 0;
-			$job->total_ht_service  = 0;
-			$job->total_ht_external = 0;
-			$job->total_ht_refund   = 0;
-			$job->total_ht          = $totalHtMO;
+			$job->fk_soc     = $fk_soc_job;
+			$job->time_spent = 0;
+			$job->rang                  = $nextRang;
+			$job->total_ht_mo           = $totalHtMO;
+			$job->total_ht_part         = 0;
+			$job->total_ht_service      = 0;
+			$job->total_ht_external     = 0;
+			$job->total_ht_refund       = 0;
+			$job->total_ht              = $totalHtMO;
 
 			$newJobId = $job->create($user);
 			if ($newJobId > 0) {
-				// Lien aux opérations véhicule sélectionnées
-				$voIds = array_filter(array_map('intval', (array) ($_POST['job_vehicule_operations'] ?? [])));
 				if (!empty($voIds)) {
-					$job->linkVehiculeOperations($voIds);
+					$job->linkMaintenanceOperations($voIds);
 				}
-
 				$object->updateTotals($user);
 				setEventMessage($langs->trans('JobAdded'));
 				header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id.'#job_'.$newJobId);
@@ -575,6 +574,85 @@ if (empty($reshook)) {
 		}
 		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
 		exit;
+	}
+
+	// ── Modification d'un Job ────────────────────────────────────────────
+	if ($action == 'confirm_edit_job' && $confirm == 'yes' && $id > 0 && $permissiontoadd) {
+		$error           = 0;
+		$editJobId       = GETPOSTINT('jobid');
+		$fk_service_type = GETPOSTINT('job_fk_service_type');
+		$_voRaw          = isset($_GET['job_vehicule_operations']) ? $_GET['job_vehicule_operations'] : (isset($_POST['job_vehicule_operations']) ? $_POST['job_vehicule_operations'] : '');
+		$voIds           = is_array($_voRaw) ? array_values(array_filter(array_map('intval', $_voRaw))) : array_values(array_filter(array_map('intval', explode(',', (string) $_voRaw))));
+		$description     = GETPOST('job_description', 'restricthtml');
+		$qty_mo          = (float) price2num(str_replace(',', '.', GETPOST('job_qty_mo', 'alpha')), 'MU');
+		$remise_percent  = (float) price2num(str_replace(',', '.', GETPOST('job_remise_percent', 'alpha')), 'MU');
+
+		if ($editJobId <= 0 || $fk_service_type <= 0) {
+			setEventMessages($langs->trans('ErrorFieldRequired'), null, 'errors');
+			$error++;
+		}
+
+		if (!$error) {
+			$job = new Operationorder_jobs($db);
+			if ($job->fetch($editJobId) <= 0 || (int) $job->fk_operationorder !== (int) $id) {
+				setEventMessages($langs->trans('ErrorRecordNotFound'), null, 'errors');
+				$error++;
+			}
+		}
+
+		if (!$error) {
+			$serviceType = new ServiceType($db);
+			if ($serviceType->fetch($fk_service_type) <= 0) {
+				setEventMessages($langs->trans('ErrorRecordNotFound'), null, 'errors');
+				$error++;
+			}
+		}
+
+		if (!$error) {
+			// Billing third-party from service type, with legacy fallback
+			$fk_soc_job = !empty($serviceType->fk_soc) ? (int) $serviceType->fk_soc : null;
+			if (empty($fk_soc_job) && !empty($serviceType->fk_job_type)) {
+				$jobType = new WorkshopJobType($db);
+				if ($jobType->fetch((int) $serviceType->fk_job_type) > 0 && !empty($jobType->fk_soc)) {
+					$fk_soc_job = (int) $jobType->fk_soc;
+				}
+			}
+
+			$job->fk_service_type = (int) $fk_service_type;
+			$job->fk_job_type     = !empty($serviceType->fk_job_type) ? (int) $serviceType->fk_job_type : null;
+			$job->label           = $serviceType->label;
+			$job->description     = $description;
+			$job->qty_mo          = $qty_mo;
+			$job->prix_mo         = (float) $serviceType->prix_mo;
+			$job->remise_percent  = $remise_percent;
+			$job->tva_tx_mo       = isset($serviceType->tva_tx_mo) ? (float) $serviceType->tva_tx_mo : null;
+			$job->tva_tx_st       = isset($serviceType->tva_tx_st) ? (float) $serviceType->tva_tx_st : null;
+			$job->fk_soc          = $fk_soc_job;
+
+			$job->computeMO();
+			$job->total_ht = $job->total_ht_mo
+				+ (float) $job->total_ht_part
+				+ (float) $job->total_ht_service
+				+ (float) $job->total_ht_external
+				+ (float) $job->total_ht_refund;
+
+			if ($job->update($user) < 0) {
+				setEventMessages($job->error, $job->errors, 'errors');
+				$error++;
+			}
+		}
+
+		if (!$error) {
+			$job->unlinkAllMaintenanceOperations();
+			if (!empty($voIds)) {
+				$job->linkMaintenanceOperations($voIds);
+			}
+			$object->updateTotals($user);
+			setEventMessage($langs->trans('JobUpdated'));
+			header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id.'#job_'.$editJobId);
+			exit;
+		}
+		$action = 'edit_job'; // réouvre le dialog en cas d'erreur
 	}
 
 	// ── Transition de statut ─────────────────────────────────────────────
@@ -874,7 +952,6 @@ if ($id > 0) {
 		// ── Opérations disponibles (calculé !) ───────────────────────────
 		print '<tr><td class="titlefield">'.$langs->trans('OperationsDisponibles').'</td>';
 		print '<td>';
-		dol_include_once('/workshop/class/vehiculeOperation.class.php');
 		$vehiculeObj->getOperations();
 		if (!empty($vehiculeObj->operations)) {
 			$opLabels = array();
@@ -1192,12 +1269,12 @@ if ($id > 0) {
 
 		$remiseVal = GETPOST('job_remise_percent', 'alpha') !== '' ? GETPOST('job_remise_percent', 'alpha') : price2num($defaultRemise, 2);
 
-		// ── Multi-sélection des opérations planifiées du véhicule ──────────
+		// ── Sélecteur multiple (optionnel) : opérations de maintenance du véhicule ──
 		$htmlVOSelect = '';
 		if ($object->fk_vehicule > 0) {
-			$selectedVoIds = array_filter(array_map('intval', (array) ($_POST['job_vehicule_operations'] ?? [])));
-
-			$sqlVO  = 'SELECT vo.rowid, cmo.code, cmo.label AS op_label, vo.status, vo.date_next, vo.km_next';
+			$_voRaw        = isset($_GET['job_vehicule_operations']) ? $_GET['job_vehicule_operations'] : (isset($_POST['job_vehicule_operations']) ? $_POST['job_vehicule_operations'] : '');
+			$selectedVoIds = is_array($_voRaw) ? array_values(array_filter(array_map('intval', $_voRaw))) : array_values(array_filter(array_map('intval', explode(',', (string) $_voRaw))));
+			$sqlVO  = 'SELECT vo.rowid, cmo.code, cmo.label AS op_label, vo.date_next';
 			$sqlVO .= ' FROM '.MAIN_DB_PREFIX.'workshop_vehicule_operation vo';
 			$sqlVO .= ' LEFT JOIN '.MAIN_DB_PREFIX.'workshop_vehicule_c_maintenance_operation cmo';
 			$sqlVO .= '   ON cmo.rowid = vo.fk_maintenance_operation';
@@ -1205,20 +1282,19 @@ if ($id > 0) {
 			$sqlVO .= ' AND vo.status != '.WorkshopVehiculeOperation::STATUS_DONE;
 			$sqlVO .= ' ORDER BY cmo.code ASC';
 			$resVO = $db->query($sqlVO);
-
 			if ($resVO && $db->num_rows($resVO) > 0) {
 				$htmlVOSelect  = '<select name="job_vehicule_operations[]" id="job_vehicule_operations"';
-				$htmlVOSelect .= ' class="flat" multiple size="5" style="width:100%;min-width:260px">';
+				$htmlVOSelect .= ' class="flat" multiple size="4" style="width:100%;min-width:260px">';
 				while ($objVO = $db->fetch_object($resVO)) {
-					$selected  = in_array((int) $objVO->rowid, $selectedVoIds) ? ' selected' : '';
-					$optLabel  = dol_escape_htmltag($objVO->code.' — '.$objVO->op_label);
+					$sel      = in_array((int) $objVO->rowid, $selectedVoIds) ? ' selected' : '';
+					$optLabel = $objVO->code.' — '.$objVO->op_label;
 					if (!empty($objVO->date_next)) {
 						$optLabel .= ' ('.dol_print_date($db->jdate($objVO->date_next), 'day').')';
 					}
-					$htmlVOSelect .= '<option value="'.(int) $objVO->rowid.'"'.$selected.'>'.$optLabel.'</option>';
+					$htmlVOSelect .= '<option value="'.(int) $objVO->rowid.'"'.$sel.'>'.dol_escape_htmltag($optLabel).'</option>';
 				}
 				$htmlVOSelect .= '</select>';
-				$htmlVOSelect .= '<br><small class="opacitymedium">'.$langs->trans('MultipleSelectionCtrlClick').'</small>';
+				$htmlVOSelect .= '<br><small class="opacitymedium">'.$langs->trans('HoldCtrlForMultiple').'</small>';
 				$db->free($resVO);
 			}
 		}
@@ -1230,6 +1306,16 @@ if ($id > 0) {
 				'name'  => 'job_fk_service_type',
 				'value' => $htmlSTSelect,
 			),
+		);
+		if (!empty($htmlVOSelect)) {
+			$fq[] = array(
+				'type'  => 'other',
+				'label' => $langs->trans('MaintenanceOperations'),
+				'name'  => 'job_vehicule_operations',
+				'value' => $htmlVOSelect,
+			);
+		}
+		$fq = array_merge($fq, array(
 			array(
 				'type'  => 'textarea',
 				'label' => $langs->trans('Description'),
@@ -1252,15 +1338,7 @@ if ($id > 0) {
 				'value' => $remiseVal,
 				'size'  => 8,
 			),
-		);
-		if (!empty($htmlVOSelect)) {
-			$fq[] = array(
-				'type'  => 'other',
-				'label' => $langs->trans('LinkedVehiculeOperations'),
-				'name'  => 'job_vehicule_operations',
-				'value' => $htmlVOSelect,
-			);
-		}
+		));
 		print $form->formconfirm(
 			$_SERVER['PHP_SELF'].'?id='.(int) $object->id,
 			$langs->trans('AddJob'),
@@ -1275,6 +1353,139 @@ if ($id > 0) {
 			$langs->trans('Add'),
 			$langs->trans('Cancel')
 		);
+	}
+
+	// ── Dialog : Modifier un Job ──────────────────────────────────────────────
+	if (($action === 'edit_job' || $action === 'confirm_edit_job') && $id > 0 && $canEditAtStatus) {
+		$editJobId = GETPOSTINT('jobid');
+		$editJob   = new Operationorder_jobs($db);
+
+		if ($editJobId > 0 && $editJob->fetch($editJobId) > 0 && (int) $editJob->fk_operationorder === (int) $id) {
+			// ServiceType select pre-selecting current value
+			$sqlST  = 'SELECT rowid, label, prix_mo, tva_tx_mo, tva_tx_st FROM '.MAIN_DB_PREFIX.'workshop_c_servicetype';
+			$sqlST .= ' WHERE active = 1 ORDER BY label ASC';
+			$resST  = $db->query($sqlST);
+
+			$curSTId = ($action === 'confirm_edit_job') ? GETPOSTINT('job_fk_service_type') : (int) $editJob->fk_service_type;
+			$htmlEditSTSelect  = '<select name="job_fk_service_type" id="job_fk_service_type" class="flat maxwidth300" required>';
+			$htmlEditSTSelect .= '<option value="0">— '.$langs->trans('SelectServiceType').' —</option>';
+			if ($resST) {
+				while ($objST = $db->fetch_object($resST)) {
+					$selected = ($curSTId == $objST->rowid) ? ' selected' : '';
+					$stLabel  = $objST->label.($objST->prix_mo > 0 ? ' ('.price2num($objST->prix_mo, 2).' €/h)' : '');
+					$tvaMoInfo = $objST->tva_tx_mo !== null ? ' TVA MO:'.price2num($objST->tva_tx_mo, 2).'%' : '';
+					$tvaStInfo = $objST->tva_tx_st !== null ? ' TVA ST:'.price2num($objST->tva_tx_st, 2).'%' : '';
+					$htmlEditSTSelect .= '<option value="'.(int) $objST->rowid.'"'.$selected
+						.' data-tva-mo="'.dol_escape_htmltag((string) $objST->tva_tx_mo).'"'
+						.' data-tva-st="'.dol_escape_htmltag((string) $objST->tva_tx_st).'"'
+						.'>'.dol_escape_htmltag($stLabel.$tvaMoInfo.$tvaStInfo).'</option>';
+				}
+				$db->free($resST);
+			}
+			$htmlEditSTSelect .= '</select>';
+
+			// Pre-filled values (from POST on re-open after error, else from DB)
+			$curQtyMO  = ($action === 'confirm_edit_job') ? GETPOST('job_qty_mo', 'alpha') : price2num($editJob->qty_mo, 2);
+			$curRemise = ($action === 'confirm_edit_job') ? GETPOST('job_remise_percent', 'alpha') : price2num($editJob->remise_percent, 2);
+			$curDesc   = ($action === 'confirm_edit_job') ? GETPOST('job_description', 'restricthtml') : $editJob->description;
+
+			// Maintenance operations select (same as add_job)
+			$htmlEditVOSelect = '';
+			if ($object->fk_vehicule > 0) {
+				if ($action === 'confirm_edit_job') {
+					$_voRaw   = isset($_GET['job_vehicule_operations']) ? $_GET['job_vehicule_operations'] : (isset($_POST['job_vehicule_operations']) ? $_POST['job_vehicule_operations'] : '');
+					$curVoIds = is_array($_voRaw) ? array_values(array_filter(array_map('intval', $_voRaw))) : array_values(array_filter(array_map('intval', explode(',', (string) $_voRaw))));
+				} else {
+					$curVoIds = $editJob->fetchLinkedMaintenanceOperationIds();
+					if (!is_array($curVoIds)) {
+						$curVoIds = array();
+					}
+				}
+				$sqlVO  = 'SELECT vo.rowid, cmo.code, cmo.label AS op_label, vo.date_next';
+				$sqlVO .= ' FROM '.MAIN_DB_PREFIX.'workshop_vehicule_operation vo';
+				$sqlVO .= ' LEFT JOIN '.MAIN_DB_PREFIX.'workshop_vehicule_c_maintenance_operation cmo';
+				$sqlVO .= '   ON cmo.rowid = vo.fk_maintenance_operation';
+				$sqlVO .= ' WHERE vo.fk_vehicule = '.((int) $object->fk_vehicule);
+				$sqlVO .= ' AND vo.status != '.WorkshopVehiculeOperation::STATUS_DONE;
+				$sqlVO .= ' ORDER BY cmo.code ASC';
+				$resVO = $db->query($sqlVO);
+				if ($resVO && $db->num_rows($resVO) > 0) {
+					$htmlEditVOSelect  = '<select name="job_vehicule_operations[]" id="job_vehicule_operations"';
+					$htmlEditVOSelect .= ' class="flat" multiple size="4" style="width:100%;min-width:260px">';
+					while ($objVO = $db->fetch_object($resVO)) {
+						$sel      = in_array((int) $objVO->rowid, $curVoIds) ? ' selected' : '';
+						$optLabel = $objVO->code.' — '.$objVO->op_label;
+						if (!empty($objVO->date_next)) {
+							$optLabel .= ' ('.dol_print_date($db->jdate($objVO->date_next), 'day').')';
+						}
+						$htmlEditVOSelect .= '<option value="'.(int) $objVO->rowid.'"'.$sel.'>'.dol_escape_htmltag($optLabel).'</option>';
+					}
+					$htmlEditVOSelect .= '</select>';
+					$htmlEditVOSelect .= '<br><small class="opacitymedium">'.$langs->trans('HoldCtrlForMultiple').'</small>';
+					$db->free($resVO);
+				}
+			}
+
+			$fqEdit = array(
+				array(
+					'type'  => 'hidden',
+					'name'  => 'jobid',
+					'value' => (string) $editJobId,
+				),
+				array(
+					'type'  => 'other',
+					'label' => $langs->trans('ServiceType').' <span class="fieldrequired">*</span>',
+					'name'  => 'job_fk_service_type',
+					'value' => $htmlEditSTSelect,
+				),
+			);
+			if (!empty($htmlEditVOSelect)) {
+				$fqEdit[] = array(
+					'type'  => 'other',
+					'label' => $langs->trans('MaintenanceOperations'),
+					'name'  => 'job_vehicule_operations',
+					'value' => $htmlEditVOSelect,
+				);
+			}
+			$fqEdit = array_merge($fqEdit, array(
+				array(
+					'type'  => 'textarea',
+					'label' => $langs->trans('Description'),
+					'name'  => 'job_description',
+					'value' => $curDesc,
+					'cols'  => 60,
+					'rows'  => 3,
+				),
+				array(
+					'type'  => 'text',
+					'label' => $langs->trans('QtyMO').' <span class="fieldrequired">*</span> ('.$langs->trans('Hours').')',
+					'name'  => 'job_qty_mo',
+					'value' => $curQtyMO ?: '1.00',
+					'size'  => 10,
+				),
+				array(
+					'type'  => 'text',
+					'label' => $langs->trans('RemiseMO').' (%)',
+					'name'  => 'job_remise_percent',
+					'value' => $curRemise,
+					'size'  => 8,
+				),
+			));
+			print $form->formconfirm(
+				$_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&jobid='.(int) $editJobId,
+				$langs->trans('EditJob'),
+				'',
+				'confirm_edit_job',
+				$fqEdit,
+				'yes',
+				1,
+				400,
+				600,
+				0,
+				$langs->trans('Save'),
+				$langs->trans('Cancel')
+			);
+		}
 	}
 
 	// ═══════════════════════════════════════════════════════════════════════
@@ -1374,9 +1585,18 @@ if ($id > 0) {
 				.'<span class="opacitymedium"> / '.$qtyH.' h</span>';
 
 			// ── Ligne haute : infos du job ───────────────────────────
+			$linkedVoIds = $job->fetchLinkedMaintenanceOperationIds();
 			print '<tr class="'.$trClass.' workshop-job-row" id="job_'.(int) $job->id.'">'."\n";
 			print '  <td class="workshop-jobs-col-type">';
 			print $serviceTypeBadge ?: '<span class="opacitymedium">—</span>';
+			if (is_array($linkedVoIds) && !empty($linkedVoIds)) {
+				foreach ($linkedVoIds as $voId) {
+					$voItem = new WorkshopVehiculeOperation($db);
+					if ($voItem->fetch($voId) > 0) {
+						print '<br><small class="opacitymedium"><i class="fa fa-calendar-check"></i> '.$voItem->getName().'</small>';
+					}
+				}
+			}
 			print '</td>'."\n";
 			print '  <td class="workshop-jobs-col-label"><strong>'.dol_escape_htmltag((string) $job->label).'</strong></td>'."\n";
 			print '  <td class="workshop-jobs-col-desc">';
@@ -1387,6 +1607,10 @@ if ($id > 0) {
 			print '  <td class="workshop-jobs-col-billing">'.$billingHtml.'</td>'."\n";
 			print '  <td class="right workshop-jobs-col-actions nowraponall">'."\n";
 			if ($canEditAtStatus) {
+				$editUrl = $_SERVER['PHP_SELF'].'?id='.$object->id.'&action=edit_job&jobid='.(int) $job->id;
+				print '<a class="reposition marginrightonly" href="'.dol_escape_htmltag($editUrl).'">';
+				print img_picto($langs->trans('Modify'), 'edit');
+				print '</a>';
 				$delUrl = $_SERVER['PHP_SELF'].'?id='.$object->id.'&action=delete_job&jobid='.(int) $job->id.'&token='.newToken();
 				print '<a class="reposition" href="'.dol_escape_htmltag($delUrl).'"';
 				print ' onclick="return confirm(\''.dol_escape_js($langs->trans('ConfirmDeleteJob')).'\');">';

@@ -245,7 +245,9 @@ PlanningDateRequired=La date de planification est obligatoire pour passer à ce 
 FacturerOR=Facturer l'OR
 NoRightToCreateInvoice=Droits insuffisants pour créer une facture client
 AddJob=Ajouter un Job
+EditJob=Modifier le Job
 JobAdded=Job ajouté avec succès
+JobUpdated=Job modifié avec succès
 JobDeleted=Job supprimé
 NoJobYet=Aucun job défini pour cet OR
 SelectServiceType=Sélectionner un type de service
@@ -316,7 +318,10 @@ EditPneu=Editer un type de pneu
 pneulabel=Nom du type de pneu
 AllMarks=Toutes marques
 AllTypes=Tous types
+MaintenanceOperation=Opération de maintenance
+MaintenanceOperations=Opérations de maintenance liées
 MaintenanceOperationList=Opérations de maintenance
+HoldCtrlForMultiple=Maintenir Ctrl pour sélection multiple
 NewMaintenanceOperation=Nouvelle opération de maintenance
 VehiculeMarkId=Marque associée
 WorkshopUnifiedParamTitle=Paramètres
@@ -579,6 +584,4 @@ ReadWorkshopTags=Consulter les tags des ordres de réparation
 WriteWorkshopTags=Créer/modifier les tags des ordres de réparation
 DeleteWorkshopTags=Supprimer les tags des ordres de réparation
 
-# Job ↔ VehiculeOperation link
-LinkedVehiculeOperations=Opérations véhicule liées
-MultipleSelectionCtrlClick=Ctrl+clic pour sélection multiple
+
