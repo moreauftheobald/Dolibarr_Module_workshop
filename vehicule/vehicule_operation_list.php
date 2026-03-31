@@ -57,9 +57,10 @@ if (!$res) {
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.form.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.formcompany.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/date.lib.php';
-require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
 dol_include_once('/workshop/class/Vehicule.class.php');
 dol_include_once('/workshop/class/vehiculeOperation.class.php');
+dol_include_once('/workshop/class/vehiculemaintenanceoperation.class.php');
+dol_include_once('/workshop/lib/workshop_vehicule.lib.php');
 if (isModEnabled('operationorder')) {
 	dol_include_once('operationorder/class/operationorder.class.php');
 }
@@ -115,14 +116,14 @@ $search['t_fk_vehicule_mark'] = GETPOST('search_t_fk_vehicule_mark', 'alpha');
 $search['t_fk_soc'] = GETPOSTINT('search_t_fk_soc');
 $search['t_fk_contract_type'] = GETPOST('search_t_fk_contract_type', 'alpha');
 $search['t_km'] = GETPOST('search_t_km', 'alpha');
-$search['o_fk_product'] = GETPOST('search_o_fk_product', 'array');
+$search['o_fk_maintenance_operation'] = GETPOST('search_o_fk_maintenance_operation', 'array');
 $search['o_km'] = GETPOST('search_o_km', 'alpha');
 $search['o_delai_from_last_op'] = GETPOST('search_o_delai_from_last_op', 'alpha');
 $search['o_km_done'] = GETPOST('search_o_km_done', 'alpha');
 $search['o_km_next'] = GETPOST('search_o_km_next', 'alpha');
 $search['o_on_time'] = GETPOST('search_o_on_time', 'alpha');
 $search['o_or_next'] = GETPOST('search_o_or_next', 'alpha');
-$search['p_label'] = GETPOST('search_p_label', 'alpha');
+$search['m_label'] = GETPOST('search_m_label', 'alpha');
 
 // Date search fields
 $search['t_date_immat_dtstart'] = dol_mktime(0, 0, 0, GETPOSTINT('search_t_date_immat_dtstartmonth'), GETPOSTINT('search_t_date_immat_dtstartday'), GETPOSTINT('search_t_date_immat_dtstartyear'));
@@ -140,20 +141,8 @@ $search['o_date_next_dtend'] = dol_mktime(23, 59, 59, GETPOSTINT('search_o_date_
 $search['o_date_due_dtstart'] = dol_mktime(0, 0, 0, GETPOSTINT('search_o_date_due_dtstartmonth'), GETPOSTINT('search_o_date_due_dtstartday'), GETPOSTINT('search_o_date_due_dtstartyear'));
 $search['o_date_due_dtend'] = dol_mktime(23, 59, 59, GETPOSTINT('search_o_date_due_dtendmonth'), GETPOSTINT('search_o_date_due_dtendday'), GETPOSTINT('search_o_date_due_dtendyear'));
 
-// Build list of available products for the multiselect filter
-$sql_prod = 'SELECT op.fk_product, p.label';
-$sql_prod .= ' FROM '.$db->prefix().'workshop_vehicule_operation AS op';
-$sql_prod .= ' INNER JOIN '.$db->prefix().'product as p ON p.rowid = op.fk_product';
-$sql_prod .= ' INNER JOIN '.$db->prefix().'workshop_vehicule as v ON v.rowid = op.fk_vehicule';
-$sql_prod .= ' WHERE v.status = 1 AND p.tosell = 1 AND p.tobuy = 1';
-$sql_prod .= ' GROUP BY op.fk_product, p.label';
-$prod_array = array();
-$resql_prod = $db->query($sql_prod);
-if ($resql_prod) {
-	while ($obj = $db->fetch_object($resql_prod)) {
-		$prod_array[$obj->fk_product] = $obj->label;
-	}
-}
+// Build list of maintenance operations for the multiselect filter
+$mainOpeArray = getMaintenanceOperationSelectArray($db);
 
 // Definition of array of fields for columns
 $arrayfields = array(
@@ -169,8 +158,8 @@ $arrayfields = array(
 	't.fk_contract_type' => array('label' => 'contractType', 'checked' => 0, 'position' => 100),
 	't.date_end_contract' => array('label' => 'date_end_contract', 'checked' => 0, 'position' => 110),
 	't.status' => array('label' => 'Status', 'checked' => 1, 'position' => 115),
-	'o.fk_product' => array('label' => 'VehiculeOperation', 'checked' => 1, 'position' => 120),
-	'p.label' => array('label' => 'libelle', 'checked' => 1, 'position' => 125),
+	'o.fk_maintenance_operation' => array('label' => 'VehiculeOperation', 'checked' => 1, 'position' => 120),
+	'm.label' => array('label' => 'libelle', 'checked' => 1, 'position' => 125),
 	'o.km' => array('label' => 'km', 'checked' => 1, 'position' => 130),
 	'o.delai_from_last_op' => array('label' => 'VehiculeOperationDelay', 'checked' => 1, 'position' => 140),
 	'o.date_done' => array('label' => 'VehiculeOperationLastDateDone', 'checked' => 1, 'position' => 150),
@@ -233,9 +222,9 @@ $help_url = '';
 $sql = 'SELECT t.rowid as t_rowid, t.vin, t.fk_vehicule_type, t.fk_vehicule_mark, t.immatriculation,';
 $sql .= ' t.date_immat, t.fk_soc, t.date_customer_exploit, t.km as t_km, t.km_date,';
 $sql .= ' t.fk_contract_type, t.date_end_contract, t.status as t_status,';
-$sql .= ' o.rowid as o_rowid, o.fk_product, o.km as o_km, o.delai_from_last_op,';
+$sql .= ' o.rowid as o_rowid, o.fk_maintenance_operation, o.km as o_km, o.delai_from_last_op,';
 $sql .= ' o.date_done, o.km_done, o.date_next, o.date_due, o.km_next, o.on_time, o.or_next,';
-$sql .= ' p.label as p_label';
+$sql .= ' m.code as m_code, m.label as m_label';
 
 $parameters = array();
 $reshook = $hookmanager->executeHooks('printFieldListSelect', $parameters, $object, $action);
@@ -246,7 +235,7 @@ $sqlfields = $sql;
 $sql .= ' FROM '.$db->prefix().'workshop_vehicule as t';
 $sql .= ' INNER JOIN '.$db->prefix().'workshop_vehicule_operation as o ON o.fk_vehicule = t.rowid';
 $sql .= ' LEFT JOIN '.$db->prefix().'workshop_vehicule_extrafields as te ON te.fk_object = t.rowid';
-$sql .= ' INNER JOIN '.$db->prefix().'product as p ON o.fk_product = p.rowid';
+$sql .= ' LEFT JOIN '.$db->prefix().'workshop_vehicule_c_maintenance_operation as m ON m.rowid = o.fk_maintenance_operation';
 
 $parameters = array();
 $reshook = $hookmanager->executeHooks('printFieldListFrom', $parameters, $object, $action);
@@ -283,9 +272,9 @@ if (!empty($search['t_fk_contract_type'])) {
 if ($search['t_km'] !== '' && $search['t_km'] !== null) {
 	$sql .= natural_search('t.km', $search['t_km'], 1);
 }
-if (!empty($search['o_fk_product']) && is_array($search['o_fk_product'])) {
-	$cleanIds = array_map('intval', $search['o_fk_product']);
-	$sql .= ' AND o.fk_product IN ('.implode(',', $cleanIds).')';
+if (!empty($search['o_fk_maintenance_operation']) && is_array($search['o_fk_maintenance_operation'])) {
+	$cleanIds = array_map('intval', $search['o_fk_maintenance_operation']);
+	$sql .= ' AND o.fk_maintenance_operation IN ('.implode(',', $cleanIds).')';
 }
 if ($search['o_km'] !== '' && $search['o_km'] !== null) {
 	$sql .= natural_search('o.km', $search['o_km'], 1);
@@ -309,8 +298,8 @@ if ($search['o_or_next'] !== '' && $search['o_or_next'] !== null) {
 		$sql .= ' AND (o.or_next IS NULL OR o.or_next = 0)';
 	}
 }
-if (!empty($search['p_label'])) {
-	$sql .= natural_search('p.label', $search['p_label']);
+if (!empty($search['m_label'])) {
+	$sql .= natural_search('m.label', $search['m_label']);
 }
 
 // Date range filters
@@ -475,10 +464,10 @@ foreach ($arrayfields as $key => $val) {
 		print $object->showInputField($object->fields['fk_contract_type'], 'fk_contract_type', $search['t_fk_contract_type'], '', '', 'search_t_', 'maxwidth150', 1);
 	} elseif ($key == 't.km') {
 		print '<input type="text" class="flat maxwidth50" name="search_t_km" value="'.dol_escape_htmltag($search['t_km']).'">';
-	} elseif ($key == 'o.fk_product') {
-		print $form->multiselectarray('search_o_fk_product', $prod_array, (is_array($search['o_fk_product']) ? $search['o_fk_product'] : array()), '', 0, '', 0, '100%');
-	} elseif ($key == 'p.label') {
-		print '<input type="text" class="flat maxwidth75" name="search_p_label" value="'.dol_escape_htmltag($search['p_label']).'">';
+	} elseif ($key == 'o.fk_maintenance_operation') {
+		print $form->multiselectarray('search_o_fk_maintenance_operation', $mainOpeArray, (is_array($search['o_fk_maintenance_operation']) ? $search['o_fk_maintenance_operation'] : array()), '', 0, '', 0, '100%');
+	} elseif ($key == 'm.label') {
+		print '';
 	} elseif ($key == 'o.km') {
 		print '<input type="text" class="flat maxwidth50" name="search_o_km" value="'.dol_escape_htmltag($search['o_km']).'">';
 	} elseif ($key == 'o.delai_from_last_op') {
@@ -647,17 +636,12 @@ while ($i < $imaxinloop) {
 			print dol_print_date($db->jdate($obj->date_end_contract), 'day');
 		} elseif ($key == 't.status') {
 			print Vehicule::LibStatut($obj->t_status, 5);
-		} elseif ($key == 'o.fk_product') {
-			if ($obj->fk_product > 0) {
-				if (!isset($cacheProducts[$obj->fk_product])) {
-					$prod = new Product($db);
-					$prod->fetch($obj->fk_product);
-					$cacheProducts[$obj->fk_product] = $prod;
-				}
-				print $cacheProducts[$obj->fk_product]->getNomUrl(1);
+		} elseif ($key == 'o.fk_maintenance_operation') {
+			if (!empty($obj->fk_maintenance_operation)) {
+				print '<b>'.dol_escape_htmltag($obj->m_code).'</b>';
 			}
-		} elseif ($key == 'p.label') {
-			print dol_escape_htmltag($obj->p_label);
+		} elseif ($key == 'm.label') {
+			print dol_escape_htmltag($obj->m_label);
 		} elseif ($key == 'o.km') {
 			print $obj->o_km;
 		} elseif ($key == 'o.delai_from_last_op') {

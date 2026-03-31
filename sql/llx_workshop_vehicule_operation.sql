@@ -3,7 +3,7 @@ CREATE TABLE llx_workshop_vehicule_operation (
   date_creation datetime DEFAULT NULL,
   tms timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   fk_vehicule integer DEFAULT 0,
-  fk_product integer DEFAULT 0,
+  fk_maintenance_operation integer DEFAULT NULL,
   status integer NOT NULL DEFAULT 0,
   rang integer DEFAULT 0,
   km double DEFAULT 0,

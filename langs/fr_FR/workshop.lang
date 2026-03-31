@@ -578,3 +578,7 @@ TagCouleur=Couleur
 ReadWorkshopTags=Consulter les tags des ordres de réparation
 WriteWorkshopTags=Créer/modifier les tags des ordres de réparation
 DeleteWorkshopTags=Supprimer les tags des ordres de réparation
+
+# Job ↔ VehiculeOperation link
+LinkedVehiculeOperations=Opérations véhicule liées
+MultipleSelectionCtrlClick=Ctrl+clic pour sélection multiple

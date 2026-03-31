@@ -64,8 +64,8 @@ class WorkshopVehiculeOperation extends CommonObject
 	/** @var int $fk_vehicule Object link to vehicule */
 	public $fk_vehicule;
 
-	/** @var int $fk_product Product id */
-	public $fk_product;
+	/** @var int $fk_maintenance_operation Maintenance operation id (dictionary) */
+	public $fk_maintenance_operation;
 
 	/** @var int $status Status */
 	public $status;
@@ -127,12 +127,13 @@ class WorkshopVehiculeOperation extends CommonObject
 			'position' => 10,
 			'index'   => 1,
 		),
-		'fk_product' => array(
-			'type'    => 'integer:Product:product/class/product.class.php',
+		'fk_maintenance_operation' => array(
+			'type'    => 'integer:VehiculeMaintenanceOperation:workshop/class/vehiculemaintenanceoperation.class.php',
 			'label'   => 'VehiculeOperation',
 			'visible' => 1,
 			'enabled' => 1,
 			'position' => 20,
+			'notnull' => 0,
 			'index'   => 1,
 		),
 		'status' => array(
@@ -267,15 +268,15 @@ class WorkshopVehiculeOperation extends CommonObject
 			$this->errors[] = $langs->trans('ErrInvalidFkVehicule');
 		}
 
-		if (empty($this->fk_product)) {
-			$this->errors[] = $langs->trans('ErrOperationNoProdId');
+		if (empty($this->fk_maintenance_operation)) {
+			$this->errors[] = $langs->trans('ErrOperationNoMaintenanceOperation');
 		}
 
-		require_once DOL_DOCUMENT_ROOT."/product/class/product.class.php";
-		$prod = new Product($this->db);
-		$ret  = $prod->fetch($this->fk_product);
+		dol_include_once('/workshop/class/vehiculemaintenanceoperation.class.php');
+		$mainOpe = new VehiculeMaintenanceOperation($this->db);
+		$ret  = $mainOpe->fetch($this->fk_maintenance_operation);
 		if ($ret <= 0) {
-			$this->errors[] = $langs->trans('ErrOperationInvalidProduct');
+			$this->errors[] = $langs->trans('ErrOperationInvalidMaintenanceOperation');
 		}
 
 		if (empty($this->km) && empty($this->delai_from_last_op)) {
@@ -381,33 +382,32 @@ class WorkshopVehiculeOperation extends CommonObject
 	}
 
 	/**
-	 * Get product name with link
+	 * Get maintenance operation label
 	 *
-	 * @return string Product name with URL or empty string
+	 * @return string Operation code + label or empty string
 	 */
 	public function getName()
 	{
-		$ret = $this->fetch_product();
-		if ($ret > 0) {
-			return $this->product->getNomUrl(1).' '.$this->product->label;
+		if (empty($this->fk_maintenance_operation)) {
+			return '';
+		}
+		dol_include_once('/workshop/class/vehiculemaintenanceoperation.class.php');
+		$mainOpe = new VehiculeMaintenanceOperation($this->db);
+		if ($mainOpe->fetch($this->fk_maintenance_operation) > 0) {
+			return '<b>'.dol_htmlentities($mainOpe->code).'</b> - '.dol_htmlentities($mainOpe->label);
 		}
 
 		return '';
 	}
 
 	/**
-	 * Get product name for web display
+	 * Get maintenance operation label for web display
 	 *
-	 * @return string Product ref + label or empty string
+	 * @return string Operation code + label or empty string
 	 */
 	public function getWebName()
 	{
-		$ret = $this->fetch_product();
-		if ($ret > 0) {
-			return '<b>'.$this->product->ref.'</b> - '.$this->product->label;
-		}
-
-		return '';
+		return $this->getName();
 	}
 
 	/**
@@ -460,19 +460,14 @@ class WorkshopVehiculeOperation extends CommonObject
 	}
 
 	/**
-	 * Check if operation needs update based on operation order lines
+	 * Check if operation needs update based on operation order
+	 * (matches via or_next field — the explicit OR link)
 	 *
 	 * @param  CommonObject $object Operation order object
-	 * @return bool                 True if operation needs update
+	 * @return bool                 True if this operation is linked to the given OR
 	 */
 	public function operationNeedUpdate($object)
 	{
-		$sql = "SELECT rowid FROM ".$this->db->prefix().$object->table_element_line." WHERE fk_operation_order=".((int) $object->id)." AND fk_product=".((int) $this->fk_product);
-		$resql = $this->db->query($sql);
-		if (!empty($resql) && $this->db->num_rows($resql) > 0) {
-			return true;
-		}
-
-		return false;
+		return !empty($this->or_next) && (int) $this->or_next === (int) $object->id;
 	}
 }

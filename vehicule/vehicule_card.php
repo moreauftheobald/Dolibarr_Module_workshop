@@ -306,7 +306,7 @@ if (empty($reshook)) {
 			}
 
 		case 'addVehiculeOperation':
-			$productid = GETPOSTINT('productid');
+			$fk_maintenance_operation = GETPOSTINT('fk_maintenance_operation');
 			$km = GETPOSTINT('km');
 			$delay = GETPOSTINT('delay');
 			$date_done = dol_mktime(0, 0, 0,
@@ -314,7 +314,7 @@ if (empty($reshook)) {
 				GETPOSTINT('date_doneday'),
 				GETPOSTINT('date_doneyear'));
 			$km_done = GETPOSTINT('km_done');
-			$ret = $object->addOperation($productid, $km, $delay, $date_done, $km_done);
+			$ret = $object->addOperation($fk_maintenance_operation, $km, $delay, $date_done, $km_done);
 			if ($ret < 0) {
 				setEventMessages('', $object->errors, "errors");
 				break;
@@ -337,7 +337,7 @@ if (empty($reshook)) {
 
 		case 'updateOperation':
 			$ope_id = GETPOSTINT('ope_id');
-			$productid = GETPOSTINT('productid');
+			$fk_maintenance_operation = GETPOSTINT('fk_maintenance_operation');
 			$km = GETPOSTINT('km');
 			$delay = GETPOSTINT('delay');
 			$date_done = dol_mktime(0, 0, 0,
@@ -345,7 +345,7 @@ if (empty($reshook)) {
 				GETPOSTINT('date_doneday'),
 				GETPOSTINT('date_doneyear'));
 			$km_done = GETPOSTINT('km_done');
-			$ret = $object->updateOperation($ope_id, $productid, $km, $delay, $date_done, $km_done);
+			$ret = $object->updateOperation($ope_id, $fk_maintenance_operation, $km, $delay, $date_done, $km_done);
 			if ($ret < 0) {
 				setEventMessages('', $object->errors, "errors");
 				break;
@@ -373,7 +373,7 @@ if (empty($reshook)) {
 			$dateDoneDefault = !empty($object->date_customer_exploit) ? $object->date_customer_exploit : dol_now();
 			foreach ($sourceVehicule->operations as $srcOpe) {
 				$ret = $object->addOperation(
-					$srcOpe->fk_product,
+					$srcOpe->fk_maintenance_operation,
 					$srcOpe->km,
 					$srcOpe->delai_from_last_op,
 					$dateDoneDefault,

@@ -66,6 +66,7 @@ dol_include_once('/workshop/lib/workshop.lib.php');
 dol_include_once('/workshop/class/operationorder_jobs.class.php');
 dol_include_once('/workshop/class/servicetype.class.php');
 dol_include_once('/workshop/class/workshopjobtype.class.php');
+dol_include_once('/workshop/class/vehiculeOperation.class.php');
 
 if (!isModEnabled('workshop')) {
 	accessforbidden();
@@ -543,6 +544,12 @@ if (empty($reshook)) {
 
 			$newJobId = $job->create($user);
 			if ($newJobId > 0) {
+				// Lien aux opérations véhicule sélectionnées
+				$voIds = array_filter(array_map('intval', (array) ($_POST['job_vehicule_operations'] ?? [])));
+				if (!empty($voIds)) {
+					$job->linkVehiculeOperations($voIds);
+				}
+
 				$object->updateTotals($user);
 				setEventMessage($langs->trans('JobAdded'));
 				header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id.'#job_'.$newJobId);
@@ -1185,6 +1192,37 @@ if ($id > 0) {
 
 		$remiseVal = GETPOST('job_remise_percent', 'alpha') !== '' ? GETPOST('job_remise_percent', 'alpha') : price2num($defaultRemise, 2);
 
+		// ── Multi-sélection des opérations planifiées du véhicule ──────────
+		$htmlVOSelect = '';
+		if ($object->fk_vehicule > 0) {
+			$selectedVoIds = array_filter(array_map('intval', (array) ($_POST['job_vehicule_operations'] ?? [])));
+
+			$sqlVO  = 'SELECT vo.rowid, cmo.code, cmo.label AS op_label, vo.status, vo.date_next, vo.km_next';
+			$sqlVO .= ' FROM '.MAIN_DB_PREFIX.'workshop_vehicule_operation vo';
+			$sqlVO .= ' LEFT JOIN '.MAIN_DB_PREFIX.'workshop_vehicule_c_maintenance_operation cmo';
+			$sqlVO .= '   ON cmo.rowid = vo.fk_maintenance_operation';
+			$sqlVO .= ' WHERE vo.fk_vehicule = '.((int) $object->fk_vehicule);
+			$sqlVO .= ' AND vo.status != '.WorkshopVehiculeOperation::STATUS_DONE;
+			$sqlVO .= ' ORDER BY cmo.code ASC';
+			$resVO = $db->query($sqlVO);
+
+			if ($resVO && $db->num_rows($resVO) > 0) {
+				$htmlVOSelect  = '<select name="job_vehicule_operations[]" id="job_vehicule_operations"';
+				$htmlVOSelect .= ' class="flat" multiple size="5" style="width:100%;min-width:260px">';
+				while ($objVO = $db->fetch_object($resVO)) {
+					$selected  = in_array((int) $objVO->rowid, $selectedVoIds) ? ' selected' : '';
+					$optLabel  = dol_escape_htmltag($objVO->code.' — '.$objVO->op_label);
+					if (!empty($objVO->date_next)) {
+						$optLabel .= ' ('.dol_print_date($db->jdate($objVO->date_next), 'day').')';
+					}
+					$htmlVOSelect .= '<option value="'.(int) $objVO->rowid.'"'.$selected.'>'.$optLabel.'</option>';
+				}
+				$htmlVOSelect .= '</select>';
+				$htmlVOSelect .= '<br><small class="opacitymedium">'.$langs->trans('MultipleSelectionCtrlClick').'</small>';
+				$db->free($resVO);
+			}
+		}
+
 		$fq = array(
 			array(
 				'type'  => 'other',
@@ -1215,6 +1253,14 @@ if ($id > 0) {
 				'size'  => 8,
 			),
 		);
+		if (!empty($htmlVOSelect)) {
+			$fq[] = array(
+				'type'  => 'other',
+				'label' => $langs->trans('LinkedVehiculeOperations'),
+				'name'  => 'job_vehicule_operations',
+				'value' => $htmlVOSelect,
+			);
+		}
 		print $form->formconfirm(
 			$_SERVER['PHP_SELF'].'?id='.(int) $object->id,
 			$langs->trans('AddJob'),
@@ -1223,8 +1269,8 @@ if ($id > 0) {
 			$fq,
 			'yes',
 			1,
-			300,
-			500,
+			400,
+			600,
 			0,
 			$langs->trans('Add'),
 			$langs->trans('Cancel')

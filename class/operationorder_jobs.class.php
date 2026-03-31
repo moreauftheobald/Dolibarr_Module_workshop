@@ -484,6 +484,74 @@ class Operationorder_jobs extends CommonObject
 	 * @param  int  $id Id of object
 	 * @return void
 	 */
+	// ── Liens Job ↔ VehiculeOperation ────────────────────────────────────
+
+	/**
+	 * Link this job to one or more VehiculeOperation records.
+	 *
+	 * @param  int[] $ids Array of fk_vehicule_operation ids to link
+	 * @return int        Number of links inserted, or <0 on DB error
+	 */
+	public function linkVehiculeOperations(array $ids): int
+	{
+		$inserted = 0;
+		foreach ($ids as $idVo) {
+			$idVo = (int) $idVo;
+			if ($idVo <= 0) {
+				continue;
+			}
+			$sql  = 'INSERT INTO '.$this->db->prefix().'workshop_operationorder_jobs_vehicule_operation';
+			$sql .= ' (fk_job, fk_vehicule_operation) VALUES ('.((int) $this->id).', '.$idVo.')';
+			if (!$this->db->query($sql)) {
+				$this->error = $this->db->lasterror();
+				dol_syslog(__METHOD__.' '.$this->error, LOG_ERR);
+				return -1;
+			}
+			$inserted++;
+		}
+		return $inserted;
+	}
+
+	/**
+	 * Remove all VehiculeOperation links for this job.
+	 *
+	 * @return int >0 if OK, <0 on DB error
+	 */
+	public function unlinkVehiculeOperations(): int
+	{
+		$sql  = 'DELETE FROM '.$this->db->prefix().'workshop_operationorder_jobs_vehicule_operation';
+		$sql .= ' WHERE fk_job = '.((int) $this->id);
+		if (!$this->db->query($sql)) {
+			$this->error = $this->db->lasterror();
+			dol_syslog(__METHOD__.' '.$this->error, LOG_ERR);
+			return -1;
+		}
+		return 1;
+	}
+
+	/**
+	 * Return the list of fk_vehicule_operation ids linked to this job.
+	 *
+	 * @return int[]|int Array of ids (may be empty), or <0 on DB error
+	 */
+	public function fetchLinkedVehiculeOperationIds()
+	{
+		$sql  = 'SELECT fk_vehicule_operation FROM '.$this->db->prefix().'workshop_operationorder_jobs_vehicule_operation';
+		$sql .= ' WHERE fk_job = '.((int) $this->id);
+		$resql = $this->db->query($sql);
+		if (!$resql) {
+			$this->error = $this->db->lasterror();
+			dol_syslog(__METHOD__.' '.$this->error, LOG_ERR);
+			return -1;
+		}
+		$ids = array();
+		while ($obj = $this->db->fetch_object($resql)) {
+			$ids[] = (int) $obj->fk_vehicule_operation;
+		}
+		$this->db->free($resql);
+		return $ids;
+	}
+
 	public function info($id)
 	{
 		$sql  = 'SELECT rowid, date_creation as datec, tms as datem, fk_user_creat, fk_user_modif';

@@ -1,4 +1,4 @@
-ALTER TABLE llx_workshop_vehicule_operation ADD UNIQUE uk_vehicule_operation_veh_prod (fk_vehicule,fk_product);
+ALTER TABLE llx_workshop_vehicule_operation ADD UNIQUE uk_vehicule_operation_veh_ope (fk_vehicule,fk_maintenance_operation);
 
 ALTER TABLE llx_workshop_vehicule_operation ADD CONSTRAINT fk_workshop_vehicule_operation_vehicule FOREIGN KEY (fk_vehicule) REFERENCES llx_workshop_vehicule (rowid);
-ALTER TABLE llx_workshop_vehicule_operation ADD CONSTRAINT fk_workshop_vehicule_operation_product FOREIGN KEY (fk_product) REFERENCES llx_procduct (rowid);
+ALTER TABLE llx_workshop_vehicule_operation ADD CONSTRAINT fk_workshop_vehicule_operation_maintenance_operation FOREIGN KEY (fk_maintenance_operation) REFERENCES llx_workshop_vehicule_c_maintenance_operation (rowid);

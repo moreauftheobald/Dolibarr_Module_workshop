@@ -374,9 +374,40 @@ function printLinkedVehicules($object, $fromcard = false)
  *
  * @param Vehicule $object Vehicule object
  */
+/**
+ * Build a select array of maintenance operations, optionally filtered by vehicule type/mark
+ *
+ * @param  object $db             Database connector
+ * @param  int    $fk_type        Filter by vehicule type (0 = all)
+ * @param  int    $fk_mark        Filter by vehicule mark (0 = all)
+ * @return array                  Array [rowid => 'code - label']
+ */
+function getMaintenanceOperationSelectArray($db, $fk_type = 0, $fk_mark = 0)
+{
+	$sql = "SELECT rowid, code, label FROM ".$db->prefix()."workshop_vehicule_c_maintenance_operation";
+	$sql .= " WHERE active = 1";
+	if (!empty($fk_type)) {
+		$sql .= " AND (fk_vehicule_type IS NULL OR fk_vehicule_type = ".(int) $fk_type.")";
+	}
+	if (!empty($fk_mark)) {
+		$sql .= " AND (fk_vehicule_mark IS NULL OR fk_vehicule_mark = ".(int) $fk_mark.")";
+	}
+	$sql .= " ORDER BY code ASC";
+
+	$result = array();
+	$resql  = $db->query($sql);
+	if ($resql) {
+		while ($obj = $db->fetch_object($resql)) {
+			$result[$obj->rowid] = $obj->code.' - '.$obj->label;
+		}
+		$db->free($resql);
+	}
+	return $result;
+}
+
 function printVehiculeOperations($object)
 {
-	global $langs, $form, $user;
+	global $langs, $form, $user, $db;
 
 	print load_fiche_titre($langs->trans('VehiculeOperations'), '', '');
 
@@ -422,7 +453,8 @@ function printVehiculeOperations($object)
 			if (GETPOST('action', 'alpha') == 'editOperation'
 				&& $operation->id == GETPOST('ope_id', 'int')) {
 				print '<td align="center">';
-				print $form->select_produits($operation->fk_product, 'productid', 1, 0, 0, 1, 2, '', 0);
+				$mainOpeArray = getMaintenanceOperationSelectArray($db, $object->fk_vehicule_type, $object->fk_vehicule_mark);
+				print $form->selectarray('fk_maintenance_operation', $mainOpeArray, $operation->fk_maintenance_operation, 1, 0, 0, '', 0, 0, 0, '', 'minwidth200');
 				print '</td>';
 				print '<td align="center">';
 				print '<input class="quatrevingtpercent" type="number" name="km" id="km" step="1" value="'.$operation->km.'">';
@@ -491,7 +523,8 @@ function printVehiculeOperations($object)
 		// New operation line
 		print '<tr>';
 		print '<td align="center">';
-		print $form->select_produits(GETPOST('productid'), 'productid', 1, 0, 0, 1, 2, '', 0);
+		$mainOpeArray = getMaintenanceOperationSelectArray($db, $object->fk_vehicule_type, $object->fk_vehicule_mark);
+		print $form->selectarray('fk_maintenance_operation', $mainOpeArray, GETPOSTINT('fk_maintenance_operation'), 1, 0, 0, '', 0, 0, 0, '', 'minwidth200');
 		print '</td>';
 		print '<td align="center">';
 		print '<input class="quatrevingtpercent" type="number" name="km" id="km" step="1" value="'.GETPOST('km').'">';
@@ -523,12 +556,6 @@ function printVehiculeOperations($object)
 		print '</div>';
 	}
 
-	?>
-	<script>
-		$("#search_productid").removeClass("minwidth100");
-		$("#search_productid").addClass("quatrevingtpercent");
-	</script>
-	<?php
 }
 
 

@@ -911,14 +911,14 @@ class Vehicule extends CommonObject
 	}
 
 	/**
-	 * @param int $productid     Product id
-	 * @param int $km            Km interval
-	 * @param int $delayInMonths Delay in months
-	 * @param int $dateDone      Last done date
-	 * @param int $kmDone        Last done km
+	 * @param int $maintenanceOperationId VehiculeMaintenanceOperation id
+	 * @param int $km                     Km interval
+	 * @param int $delayInMonths          Delay in months
+	 * @param int $dateDone               Last done date
+	 * @param int $kmDone                 Last done km
 	 * @return int
 	 */
-	public function addOperation($productid, $km = 0, $delayInMonths = 0, $dateDone = 0, $kmDone = 0)
+	public function addOperation($maintenanceOperationId, $km = 0, $delayInMonths = 0, $dateDone = 0, $kmDone = 0)
 	{
 		global $user;
 
@@ -926,12 +926,12 @@ class Vehicule extends CommonObject
 
 		$ope = new WorkshopVehiculeOperation($this->db);
 
-		$ope->fk_vehicule        = $this->id;
-		$ope->fk_product         = $productid;
-		$ope->km                 = $km;
-		$ope->delai_from_last_op = $delayInMonths;
-		$ope->km_done            = $kmDone;
-		$ope->date_done          = $dateDone;
+		$ope->fk_vehicule               = $this->id;
+		$ope->fk_maintenance_operation  = $maintenanceOperationId;
+		$ope->km                        = $km;
+		$ope->delai_from_last_op        = $delayInMonths;
+		$ope->km_done                   = $kmDone;
+		$ope->date_done                 = $dateDone;
 
 		$ret = $ope->create($user);
 		if ($ret < 0) {
@@ -968,7 +968,7 @@ class Vehicule extends CommonObject
 		return 1;
 	}
 
-	public function updateOperation($ope_id, $productid, $km = 0, $delayInMonths = 0, $dateDone = 0, $kmDone = 0)
+	public function updateOperation($ope_id, $maintenanceOperationId, $km = 0, $delayInMonths = 0, $dateDone = 0, $kmDone = 0)
 	{
 		global $user;
 
@@ -980,12 +980,12 @@ class Vehicule extends CommonObject
 			return $result;
 		}
 
-		$ope->fk_vehicule        = $this->id;
-		$ope->fk_product         = $productid;
-		$ope->km                 = $km;
-		$ope->delai_from_last_op = $delayInMonths;
-		$ope->km_done            = $kmDone;
-		$ope->date_done          = $dateDone;
+		$ope->fk_vehicule              = $this->id;
+		$ope->fk_maintenance_operation = $maintenanceOperationId;
+		$ope->km                       = $km;
+		$ope->delai_from_last_op       = $delayInMonths;
+		$ope->km_done                  = $kmDone;
+		$ope->date_done                = $dateDone;
 
 		$ret = $ope->update($user);
 		if ($ret < 0) {
