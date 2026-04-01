@@ -274,6 +274,7 @@ VehiculeOperationStatusShortDone=Done
 # Vehicule V5 - Field labels
 #
 ShowVehicule=Show vehicle
+CreateOperationOrderFromVehicule=Create a repair order
 VIN=VIN number
 vehiculeType=Vehicle type
 vehiculeMark=Brand

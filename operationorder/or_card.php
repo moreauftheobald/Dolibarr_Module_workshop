@@ -792,10 +792,15 @@ if ($id > 0) {
 	dol_banner_tab($object, 'ref', $linkback, 1, 'ref', 'ref', $morehtmlref, '', $object->getLibStatut(4));
 
 	// ── Chargement du véhicule pour la colonne droite ─────────────────────
+	// ismultientitymanaged désactivé temporairement : le véhicule peut être
+	// dans une entité partagée différente de l'OR (cross-entity sharing).
 	$vehiculeObj = null;
 	if ($object->fk_vehicule > 0) {
 		$vehiculeObj = new Vehicule($db);
-		if ($vehiculeObj->fetch($object->fk_vehicule) <= 0) {
+		$vehiculeObj->ismultientitymanaged = 0;
+		$ret = $vehiculeObj->fetch($object->fk_vehicule);
+		$vehiculeObj->ismultientitymanaged = 1;
+		if ($ret <= 0) {
 			$vehiculeObj = null;
 		}
 	}
@@ -945,12 +950,12 @@ if ($id > 0) {
 		$vehiculeObj->getOperations();
 		if (!empty($vehiculeObj->operations)) {
 			$opLabels = array();
+			dol_include_once('/workshop/class/vehiculemaintenanceoperation.class.php');
 			foreach ($vehiculeObj->operations as $ope) {
-				if (!empty($ope->fk_product)) {
-					require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
-					$prod = new Product($db);
-					if ($prod->fetch($ope->fk_product) > 0) {
-						$opLabels[] = $prod->getNomUrl(1);
+				if (!empty($ope->fk_maintenance_operation)) {
+					$maintOpe = new VehiculeMaintenanceOperation($db);
+					if ($maintOpe->fetch($ope->fk_maintenance_operation) > 0) {
+						$opLabels[] = dol_escape_htmltag($maintOpe->label);
 					}
 				}
 			}
@@ -997,11 +1002,14 @@ if ($id > 0) {
 		// ── Véhicule lié (calculé !) ──────────────────────────────────────
 		print '<tr><td class="titlefield">'.$langs->trans('VehiculeLie').'</td>';
 		print '<td>';
-		$linkedVehicules = $vehiculeObj->getLinkedVehicules();
-		if (is_array($linkedVehicules) && !empty($linkedVehicules)) {
-			$lv = reset($linkedVehicules); // Véhicule lié courant
+		$vehiculeObj->getLinkedVehicules(); // stocke dans $vehiculeObj->linkedVehicules (void)
+		if (is_array($vehiculeObj->linkedVehicules) && !empty($vehiculeObj->linkedVehicules)) {
+			$lv = reset($vehiculeObj->linkedVehicules);
 			$linkedVeh = new Vehicule($db);
-			if ($linkedVeh->fetch($lv->fk_vehicule_linked) > 0) {
+			$linkedVeh->ismultientitymanaged = 0;
+			$retLinked = $linkedVeh->fetch($lv->fk_other_vehicule);
+			$linkedVeh->ismultientitymanaged = 1;
+			if ($retLinked > 0) {
 				print $linkedVeh->getNomUrl(1);
 			}
 		} else {

@@ -388,6 +388,7 @@ VehiculeOperationStatusShortDone=Réalisé
 # Vehicule V5 - Labels des champs
 #
 ShowVehicule=Voir le véhicule
+CreateOperationOrderFromVehicule=Créer un OR
 VIN=Numéro VIN
 vehiculeType=Type de véhicule
 vehiculeMark=Marque

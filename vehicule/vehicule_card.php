@@ -491,15 +491,31 @@ if ($action == 'create') {
 
 			dol_banner_tab($object, 'vin', $linkback, 1, 'vin', 'vin', $morehtmlref, '', 0, '', '');
 
+			$fieldsBackup = $object->fields;
+
+			// Colonne gauche : champs de position < 120 (jusqu'à km_date)
+			$object->fields = array_filter($fieldsBackup, function ($f) { return (int) $f['position'] < 120; });
 			print '<div class="fichecenter">';
 			print '<div class="fichehalfleft">';
 			print '<div class="underbanner clearboth"></div>';
 			print '<table class="border tableforfield" width="100%">'."\n";
 			include DOL_DOCUMENT_ROOT.'/core/tpl/commonfields_view.tpl.php';
-			include DOL_DOCUMENT_ROOT.'/core/tpl/extrafields_view.tpl.php';
 			print '</table>';
 			print '</div>'; // fin fichehalfleft
+
+			// Colonne droite : champs de position >= 120 (à partir de type de contrat) + champs extra
+			$object->fields = array_filter($fieldsBackup, function ($f) { return (int) $f['position'] >= 120; });
+			print '<div class="fichehalfright">';
+			print '<div class="underbanner clearboth"></div>';
+			print '<table class="border tableforfield" width="100%">'."\n";
+			include DOL_DOCUMENT_ROOT.'/core/tpl/commonfields_view.tpl.php';
+			include DOL_DOCUMENT_ROOT.'/core/tpl/extrafields_view.tpl.php';
+			print '</table>';
+			print '</div>'; // fin fichehalfright
+
 			print '</div>'; // fin fichecenter
+
+			$object->fields = $fieldsBackup;
 
 			print '<div class="clearboth"></div><br />';
 
@@ -511,8 +527,12 @@ if ($action == 'create') {
 				setEventMessages($hookmanager->error, $hookmanager->errors, 'errors');
 			}
 			if (empty($reshook)) {
-				if ($object->status == Vehicule::STATUS_ACTIVE && isModEnabled('operationorder')) {
-					print '<div class="inline-block divButAction"><a class="butAction" href="'.dol_buildpath('/operationorder/operationorder_card.php', 1).'?action=create&mainmenu=commercial&fk_soc='.$object->fk_soc.'&fk_vehicule='.$object->id.'">'.$langs->trans("CreateOperationOrderFromVehicule").'</a></div>'."\n";
+				if ($object->status == Vehicule::STATUS_ACTIVE && getDolGlobalInt('WORKSHOP_USE_OR')) {
+					if ($user->hasRight('workshop', 'operationorders', 'write')) {
+						print '<div class="inline-block divButAction"><a class="butAction" href="'.dol_buildpath('/workshop/operationorder/or_card.php', 1).'?action=create&fk_vehicule='.$object->id.'&fk_soc='.$object->fk_soc.'">'.$langs->trans("CreateOperationOrderFromVehicule").'</a></div>'."\n";
+					} else {
+						print '<div class="inline-block divButAction"><a class="butActionRefused" href="#" title="'.dol_escape_htmltag($langs->trans("NotEnoughPermissions")).'">'.$langs->trans("CreateOperationOrderFromVehicule").'</a></div>'."\n";
+					}
 				}
 				if ($user->hasRight('workshop', 'vehicule', 'write')) {
 					print '<div class="inline-block divButAction"><a class="butAction" href="'.dol_escape_htmltag($_SERVER["PHP_SELF"]).'?id='.$object->id.'&amp;action=edit">'.$langs->trans("Modify").'</a></div>'."\n";
