@@ -1281,18 +1281,15 @@ if ($id > 0) {
 			$sqlVO .= ' ORDER BY cmo.code ASC';
 			$resVO = $db->query($sqlVO);
 			if ($resVO && $db->num_rows($resVO) > 0) {
-				$htmlVOSelect  = '<select name="job_vehicule_operations[]" id="job_vehicule_operations"';
-				$htmlVOSelect .= ' class="flat" multiple size="4" style="width:100%;min-width:260px">';
+				$voOptions = array();
 				while ($objVO = $db->fetch_object($resVO)) {
-					$sel      = in_array((int) $objVO->rowid, $selectedVoIds) ? ' selected' : '';
 					$optLabel = $objVO->code.' — '.$objVO->op_label;
 					if (!empty($objVO->date_next)) {
 						$optLabel .= ' ('.dol_print_date($db->jdate($objVO->date_next), 'day').')';
 					}
-					$htmlVOSelect .= '<option value="'.(int) $objVO->rowid.'"'.$sel.'>'.dol_escape_htmltag($optLabel).'</option>';
+					$voOptions[(string)(int) $objVO->rowid] = dol_escape_htmltag($optLabel);
 				}
-				$htmlVOSelect .= '</select>';
-				$htmlVOSelect .= '<br><small class="opacitymedium">'.$langs->trans('HoldCtrlForMultiple').'</small>';
+				$htmlVOSelect = $form->multiselectarray('job_vehicule_operations', $voOptions, array_map('strval', $selectedVoIds), 0, 0, 'flat minwidth260', 0, 0);
 				$db->free($resVO);
 			}
 		}
@@ -1319,8 +1316,7 @@ if ($id > 0) {
 				'label' => $langs->trans('Description'),
 				'name'  => 'job_description',
 				'value' => GETPOST('job_description', 'restricthtml'),
-				'cols'  => 60,
-				'rows'  => 3,
+				'moreattr' => 'style=width:99%'
 			),
 			array(
 				'type'  => 'text',
@@ -1345,8 +1341,8 @@ if ($id > 0) {
 			$fq,
 			'yes',
 			1,
-			400,
-			600,
+			550,
+			750,
 			0,
 			$langs->trans('Add'),
 			$langs->trans('Cancel')
@@ -1408,18 +1404,15 @@ if ($id > 0) {
 				$sqlVO .= ' ORDER BY cmo.code ASC';
 				$resVO = $db->query($sqlVO);
 				if ($resVO && $db->num_rows($resVO) > 0) {
-					$htmlEditVOSelect  = '<select name="job_vehicule_operations[]" id="job_vehicule_operations"';
-					$htmlEditVOSelect .= ' class="flat" multiple size="4" style="width:100%;min-width:260px">';
+					$voEditOptions = array();
 					while ($objVO = $db->fetch_object($resVO)) {
-						$sel      = in_array((int) $objVO->rowid, $curVoIds) ? ' selected' : '';
 						$optLabel = $objVO->code.' — '.$objVO->op_label;
 						if (!empty($objVO->date_next)) {
 							$optLabel .= ' ('.dol_print_date($db->jdate($objVO->date_next), 'day').')';
 						}
-						$htmlEditVOSelect .= '<option value="'.(int) $objVO->rowid.'"'.$sel.'>'.dol_escape_htmltag($optLabel).'</option>';
+						$voEditOptions[(string)(int) $objVO->rowid] = dol_escape_htmltag($optLabel);
 					}
-					$htmlEditVOSelect .= '</select>';
-					$htmlEditVOSelect .= '<br><small class="opacitymedium">'.$langs->trans('HoldCtrlForMultiple').'</small>';
+					$htmlEditVOSelect = $form->multiselectarray('job_vehicule_operations', $voEditOptions, array_map('strval', $curVoIds), 0, 0, 'flat minwidth260', 0, 0);
 					$db->free($resVO);
 				}
 			}
@@ -1451,8 +1444,7 @@ if ($id > 0) {
 					'label' => $langs->trans('Description'),
 					'name'  => 'job_description',
 					'value' => $curDesc,
-					'cols'  => 60,
-					'rows'  => 3,
+					'moreattr' => 'style=width:99%'
 				),
 				array(
 					'type'  => 'text',
@@ -1477,8 +1469,8 @@ if ($id > 0) {
 				$fqEdit,
 				'yes',
 				1,
-				400,
-				600,
+				550,
+				750,
 				0,
 				$langs->trans('Save'),
 				$langs->trans('Cancel')

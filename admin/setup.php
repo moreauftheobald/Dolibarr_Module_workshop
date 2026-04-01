@@ -119,14 +119,13 @@ print dol_get_fiche_head($head, 'vehicules', $langs->trans($title), -1, "worksho
 $currentTractorTypes = array_filter(explode(',', getDolGlobalString('WORKSHOP_TRACTOR_VEHICLE_TYPES')));
 $sqlTypes = "SELECT rowid, label FROM ".MAIN_DB_PREFIX."workshop_vehicule_c_vehicule_type WHERE active = 1 ORDER BY label";
 $resTypes = $db->query($sqlTypes);
-$selectHtml = '<select name="WORKSHOP_TRACTOR_VEHICLE_TYPES[]" id="WORKSHOP_TRACTOR_VEHICLE_TYPES" class="flat" multiple="multiple" size="6" style="min-width:250px;">';
+$tractorTypesArray = array();
 if ($resTypes) {
 	while ($objType = $db->fetch_object($resTypes)) {
-		$sel = in_array((string) $objType->rowid, $currentTractorTypes) ? ' selected="selected"' : '';
-		$selectHtml .= '<option value="'.$objType->rowid.'"'.$sel.'>'.dol_htmlentities($objType->label).'</option>';
+		$tractorTypesArray[(string) $objType->rowid] = dol_htmlentities($objType->label);
 	}
 }
-$selectHtml .= '</select>';
+$selectHtml = $form->multiselectarray('WORKSHOP_TRACTOR_VEHICLE_TYPES', $tractorTypesArray, $currentTractorTypes, 0, 0, 'flat minwidth250', 0, 0);
 
 print '<form method="POST" action="'.$_SERVER["PHP_SELF"].'">';
 print '<input type="hidden" name="token" value="'.newToken().'">';

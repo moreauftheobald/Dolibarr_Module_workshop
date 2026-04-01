@@ -388,11 +388,10 @@ if (getDolGlobalInt('WORKSHOP_USE_OR')) {
 		$currentAlertStatuts = array_filter(explode(',', getDolGlobalString('WORKSHOP_OR_ALERT_STATUTS')));
 		$sqlStatuts = "SELECT rowid, label FROM ".$db->prefix()."workshop_operationorder_status WHERE status = 1 ORDER BY rang ASC";
 		$resStatuts = $db->query($sqlStatuts);
-		$statuts_options = '';
+		$TAlertStatuts = array();
 		if ($resStatuts) {
 			while ($objStatut = $db->fetch_object($resStatuts)) {
-				$sel = in_array((string) $objStatut->rowid, $currentAlertStatuts) ? ' selected="selected"' : '';
-				$statuts_options .= '<option value="'.$objStatut->rowid.'"'.$sel.'>'.dol_htmlentities($objStatut->label).'</option>';
+				$TAlertStatuts[(string) $objStatut->rowid] = dol_htmlentities($objStatut->label);
 			}
 		}
 
@@ -427,8 +426,8 @@ if (getDolGlobalInt('WORKSHOP_USE_OR')) {
 		);
 		print '</td>';
 		print '<td>';
-		if ($statuts_options) {
-			print '<select name="WORKSHOP_OR_ALERT_STATUTS[]" id="WORKSHOP_OR_ALERT_STATUTS" class="flat" multiple style="height:100px">'.$statuts_options.'</select>';
+		if ($TAlertStatuts) {
+			print $form->multiselectarray('WORKSHOP_OR_ALERT_STATUTS', $TAlertStatuts, $currentAlertStatuts, 0, 0, 'flat', 0, 0);
 		} else {
 			print '<span class="opacitymedium">'.$langs->trans('WorkshopNoStatusDefined').'</span>';
 		}
@@ -651,11 +650,10 @@ if (getDolGlobalInt('WORKSHOP_USE_OR')) {
 		$currentPlanningGroups = array_filter(explode(',', getDolGlobalString('WORKSHOP_OR_PLANNING_GROUPS')));
 		$sqlPlanGrp = "SELECT rowid, nom FROM ".$db->prefix()."usergroup WHERE entity IN (0, ".((int) $conf->entity).") ORDER BY nom";
 		$resPlanGrp = $db->query($sqlPlanGrp);
-		$planningGrpOpts = '';
+		$TPlanningGroups = array();
 		if ($resPlanGrp) {
 			while ($objGrp = $db->fetch_object($resPlanGrp)) {
-				$sel = in_array((string) $objGrp->rowid, $currentPlanningGroups) ? ' selected="selected"' : '';
-				$planningGrpOpts .= '<option value="'.$objGrp->rowid.'"'.$sel.'>'.dol_htmlentities($objGrp->nom).'</option>';
+				$TPlanningGroups[(string) $objGrp->rowid] = dol_htmlentities($objGrp->nom);
 			}
 		}
 
@@ -687,8 +685,8 @@ if (getDolGlobalInt('WORKSHOP_USE_OR')) {
 		print $form->textwithpicto($langs->trans('WorkshopORPlanningGroups'), $langs->trans('WorkshopORPlanningGroupsHelp'));
 		print '</td>';
 		print '<td>';
-		if ($planningGrpOpts) {
-			print '<select name="WORKSHOP_OR_PLANNING_GROUPS[]" id="WORKSHOP_OR_PLANNING_GROUPS" class="flat" multiple style="height:100px">'.$planningGrpOpts.'</select>';
+		if ($TPlanningGroups) {
+			print $form->multiselectarray('WORKSHOP_OR_PLANNING_GROUPS', $TPlanningGroups, $currentPlanningGroups, 0, 0, 'flat', 0, 0);
 		} else {
 			print '<span class="opacitymedium">'.$langs->trans('WorkshopNoGroupDefined').'</span>';
 		}
@@ -873,11 +871,10 @@ if (getDolGlobalInt('WORKSHOP_USE_OR')) {
 		$resORS = $db->query($sqlORS);
 		$TStatusAvailable = array();
 		$currentOrderableStatus = array_filter(explode(',', getDolGlobalString('WORKSHOP_OR_ORDERABLE_STATUS')));
-		$orderableStatusOpts = '';
+		$TOrderableStatus = array();
 		if ($resORS) {
 			while ($objORS = $db->fetch_object($resORS)) {
-				$sel = in_array((string) $objORS->rowid, $currentOrderableStatus) ? ' selected="selected"' : '';
-				$orderableStatusOpts .= '<option value="'.$objORS->rowid.'"'.$sel.'>'.dol_htmlentities($objORS->label).'</option>';
+				$TOrderableStatus[(string) $objORS->rowid] = dol_htmlentities($objORS->label);
 			}
 		}
 
@@ -902,8 +899,8 @@ if (getDolGlobalInt('WORKSHOP_USE_OR')) {
 		print '<tr class="oddeven">';
 		print '<td>'.$form->textwithpicto($langs->trans('WorkshopOROrderableStatus'), $langs->trans('WorkshopOROrderableStatusHelp')).'</td>';
 		print '<td>';
-		if ($orderableStatusOpts) {
-			print '<select name="WORKSHOP_OR_ORDERABLE_STATUS[]" id="WORKSHOP_OR_ORDERABLE_STATUS" class="flat" multiple style="height:100px">'.$orderableStatusOpts.'</select>';
+		if ($TOrderableStatus) {
+			print $form->multiselectarray('WORKSHOP_OR_ORDERABLE_STATUS', $TOrderableStatus, $currentOrderableStatus, 0, 0, 'flat', 0, 0);
 		} else {
 			print '<span class="opacitymedium">'.$langs->trans('WorkshopNoStatusDefined').'</span>';
 		}

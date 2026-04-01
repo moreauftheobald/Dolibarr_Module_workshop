@@ -37,8 +37,10 @@ jQuery(function ($) {
 		} else {
 			$dlg.dialog({
 				modal:     true,
-				width:     550,
-				resizable: false,
+				width:     620,
+				height:    'auto',
+				maxHeight: Math.floor($(window).height() * 0.92),
+				resizable: true,
 				buttons: [
 					{
 						text: document.documentElement.lang === 'fr' ? 'Ajouter' : 'Add',
@@ -149,6 +151,29 @@ function orCardOpenNewConducteur() {
 function orCardOpenNewTag() {
 	window.location.href = (window.workshopOrCardSelf || '') + '?action=new_tag' + orCardStateQS();
 }
+
+
+/* ============================================================================
+ * COMMUN — Dialogs redimensionnables (formconfirm + dlg-add-det)
+ * ========================================================================== */
+
+jQuery(document).on('dialogopen', function (e) {
+	var $dlg = jQuery(e.target);
+	var maxH  = Math.floor(jQuery(window).height() * 0.92);
+
+	$dlg.dialog('option', 'resizable', true);
+	$dlg.dialog('option', 'maxHeight', maxH);
+
+	// Passer en hauteur automatique si le contenu tient dans la fenêtre
+	var currentH = $dlg.dialog('option', 'height');
+	if (currentH !== 'auto' && currentH > maxH) {
+		$dlg.dialog('option', 'height', maxH);
+	}
+
+	// Scroll interne si le contenu dépasse
+	$dlg.css('overflow-y', 'auto');
+	$dlg.dialog('widget').css('max-height', maxH + 'px');
+});
 
 
 /* ============================================================================
