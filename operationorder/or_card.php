@@ -63,6 +63,7 @@ dol_include_once('/workshop/class/Tag.class.php');
 dol_include_once('/workshop/class/OperationorderTag.class.php');
 dol_include_once('/workshop/lib/workshop_operationorder.lib.php');
 dol_include_once('/workshop/lib/workshop.lib.php');
+dol_include_once('/workshop/lib/workshop_or_card.lib.php');
 dol_include_once('/workshop/class/operationorder_jobs.class.php');
 dol_include_once('/workshop/class/operationorderdet.class.php');
 dol_include_once('/workshop/class/servicetype.class.php');
@@ -103,120 +104,8 @@ if ($id > 0) {
 	}
 }
 
-// ── AJAX : entrepôts + stock pour un produit donné (appelé par le dialog d'ajout de ligne) ──
-if ($action == 'get_warehouses_for_product' && $id > 0 && $permissiontoadd) {
-	$product_id = GETPOSTINT('product_id');
-	$result = array();
-	if ($product_id > 0) {
-		$sqlWh  = "SELECT e.rowid, e.ref, COALESCE(ps.reel, 0) as qty, p.fk_default_warehouse";
-		$sqlWh .= " FROM ".MAIN_DB_PREFIX."entrepot e";
-		$sqlWh .= " LEFT JOIN ".MAIN_DB_PREFIX."product_stock ps ON (ps.fk_entrepot = e.rowid AND ps.fk_product = ".(int) $product_id.")";
-		$sqlWh .= " LEFT JOIN ".MAIN_DB_PREFIX."product p ON (p.rowid = ".(int) $product_id.")";
-		$sqlWh .= " WHERE e.entity IN (".getEntity('stock').")";
-		$sqlWh .= " AND e.statut >= 0";
-		$sqlWh .= " ORDER BY";
-		$sqlWh .= "   CASE WHEN e.rowid = p.fk_default_warehouse THEN 0 ELSE 1 END ASC,";
-		$sqlWh .= "   CASE WHEN COALESCE(ps.reel, 0) > 0 THEN 0 ELSE 1 END ASC,";
-		$sqlWh .= "   e.ref ASC";
-		$resWh = $db->query($sqlWh);
-		if ($resWh) {
-			while ($oWh = $db->fetch_object($resWh)) {
-				$result[] = array(
-					'rowid'      => (int) $oWh->rowid,
-					'ref'        => (string) $oWh->ref,
-					'qty'        => (float) $oWh->qty,
-					'is_default' => ((int) $oWh->rowid === (int) $oWh->fk_default_warehouse),
-				);
-			}
-			$db->free($resWh);
-		}
-	}
-	header('Content-Type: application/json');
-	echo json_encode($result);
-	$db->close();
-	exit;
-}
-
-
-/*
- * Helpers — encode/decode form state through the creation sub-dialogs
- *
- * State: fk_vehicule (int), km (string), fk_conducteur (int), fk_tags (comma-separated ints)
- */
-
-/**
- * Build the query-string fragment that preserves the current OR-form state.
- * Values are read from GETPOST so they survive successive GET redirects.
- *
- * @return string  URL-encoded fragment, starts with '&'
- */
-function orCardStateQueryString()
-{
-	$fk_vehicule   = GETPOSTINT('fk_vehicule');
-	$km            = GETPOST('km', 'alpha');
-	$fk_conducteur = GETPOSTINT('fk_conducteur');
-	$fk_tags       = array_filter(array_map('intval', (array) GETPOST('fk_tags', 'array:int')));
-
-	$qs = '&fk_vehicule='.((int) $fk_vehicule);
-	$qs .= '&km='.urlencode($km);
-	$qs .= '&fk_conducteur='.((int) $fk_conducteur);
-	foreach ($fk_tags as $t) {
-		$qs .= '&fk_tags[]='.((int) $t);
-	}
-	return $qs;
-}
-
-/**
- * Build the URL fragment that carries the OR-form state for a sub-dialog.
- * Returns a full query string (starting with '?') ready to be appended to PHP_SELF.
- *
- * @param  array $overrides  Associative array of values to override
- * @return string             URL starting with '?'
- */
-function orCardStatePageUrl($overrides = array())
-{
-	$fk_vehicule   = isset($overrides['fk_vehicule'])   ? (int) $overrides['fk_vehicule']   : GETPOSTINT('fk_vehicule');
-	$km            = isset($overrides['km'])             ? $overrides['km']                  : GETPOST('km', 'alpha');
-	$fk_conducteur = isset($overrides['fk_conducteur']) ? (int) $overrides['fk_conducteur'] : GETPOSTINT('fk_conducteur');
-	$fk_tags       = isset($overrides['fk_tags'])
-		? $overrides['fk_tags']
-		: array_filter(array_map('intval', (array) GETPOST('fk_tags', 'array:int')));
-
-	$url  = '?fk_vehicule='.$fk_vehicule;
-	$url .= '&km='.urlencode((string) $km);
-	$url .= '&fk_conducteur='.$fk_conducteur;
-	foreach ($fk_tags as $t) {
-		$url .= '&fk_tags[]='.((int) $t);
-	}
-	return $url;
-}
-
-/**
- * Build the redirect URL that restores the OR-form state after a sub-dialog.
- *
- * @param  string $self       Value of $_SERVER['PHP_SELF']
- * @param  array  $overrides  Associative array of values to override (e.g. fk_conducteur => newId)
- * @return string
- */
-function orCardRestoreUrl($self, $overrides = array())
-{
-	$fk_vehicule   = isset($overrides['fk_vehicule'])   ? (int) $overrides['fk_vehicule']   : GETPOSTINT('fk_vehicule');
-	$km            = isset($overrides['km'])             ? $overrides['km']                  : GETPOST('km', 'alpha');
-	$fk_conducteur = isset($overrides['fk_conducteur']) ? (int) $overrides['fk_conducteur'] : GETPOSTINT('fk_conducteur');
-
-	// Tags: use overrides or read fk_tags[] from request (GET or POST)
-	$fk_tags = isset($overrides['fk_tags'])
-		? $overrides['fk_tags']
-		: array_filter(array_map('intval', (array) GETPOST('fk_tags', 'array:int')));
-
-	$url  = $self.'?fk_vehicule='.$fk_vehicule;
-	$url .= '&km='.urlencode((string) $km);
-	$url .= '&fk_conducteur='.$fk_conducteur;
-	foreach ($fk_tags as $t) {
-		$url .= '&fk_tags[]='.((int) $t);
-	}
-	return $url;
-}
+// Fonctions helpers orCardState* → voir lib/workshop_or_card.lib.php
+// Handler AJAX get_warehouses_for_product → voir ajax/or_card_ajax.php
 
 
 /*
@@ -802,30 +691,8 @@ if (empty($reshook)) {
 // ═══════════════════════════════════════════════════════════════════════════
 if ($id > 0) {
 
-	llxHeader('', $object->ref.' — '.$langs->trans('OperationOrder'), '', '', 0, 0, array(), array(), '', 'mod-workshop page-orcard');
+	llxHeader('', $object->ref.' — '.$langs->trans('OperationOrder'), '', '', 0, 0, array(), array(dol_buildpath('/workshop/css/or_card.css', 1)), '', 'mod-workshop page-orcard');
 
-	print '<style>
-.workshop-job-totals-bar { padding: 2px 4px; }
-.workshop-job-totals-inner {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 1.4em;
-    justify-content: flex-end;
-    align-items: center;
-}
-.workshop-job-total-item {
-    white-space: nowrap;
-    font-size: 0.88em;
-    color: var(--colortext, #555);
-}
-.workshop-job-total-item .fa { margin-right: 2px; opacity: .75; }
-.workshop-job-total-item--grand { font-size: 0.95em; }
-.workshop-job-total-item--grand .fa { opacity: 1; }
-.workshop-job-totals-row td { border-top: none !important; padding-top: 0 !important; }
-.workshop-job-row td { padding-bottom: 2px !important; }
-.workshop-job-row { background-color: #f5f5f5 !important; }
-.workshop-job-row:hover td { background-color: #ebebeb !important; }
-</style>'."\n";
 
 	$head = operationorderPrepareHead($object);
 	print dol_get_fiche_head($head, 'card', $langs->trans('OperationOrder'), -1, 'fa-tools', 0, '', '', 0, '', 1);
@@ -1619,14 +1486,14 @@ if ($id > 0) {
 	print '<div class="fichehalfleft" style="width:100%">'."\n";
 	print '<div class="div-table-responsive-no-min">'."\n";
 
-	// ── Load jobs ────────────────────────────────────────────────────────
+	// ── Chargement des jobs ─────────────────────────────────────────────
 	$jobsObj  = new Operationorder_jobs($db);
 	$jobsList = $jobsObj->fetchAllByOperationorder($object->id);
 	if (!is_array($jobsList)) {
 		$jobsList = array();
 	}
 
-	// ── Pre-load ServiceType labels for display ──────────────────────────
+	// Pré-chargement du cache des types de service (évite N requêtes dans le TPL)
 	$serviceTypeCache = array();
 	foreach ($jobsList as $j) {
 		if (!empty($j->fk_service_type) && !isset($serviceTypeCache[$j->fk_service_type])) {
@@ -1637,193 +1504,8 @@ if ($id > 0) {
 		}
 	}
 
-	// ── Jobs table ───────────────────────────────────────────────────────
-	print '<table class="noborder allwidth workshop-jobs-table">'."\n";
+	include dol_buildpath('/workshop/tpl/or_card_jobs_table.tpl.php', 0);
 
-	// Header — 6 columns
-	print '<tr class="liste_titre workshop-jobs-table__header">'."\n";
-	print '  <th class="wrapcolumntitle workshop-jobs-col-type">'.$langs->trans('ServiceType').'</th>'."\n";
-	print '  <th class="workshop-jobs-col-label">'.$langs->trans('Label').'</th>'."\n";
-	print '  <th class="workshop-jobs-col-desc">'.$langs->trans('Description').'</th>'."\n";
-	print '  <th class="right workshop-jobs-col-mo nowraponall" title="'.dol_escape_htmltag($langs->trans('QtyMOMoRemise')).'">';
-	print '<i class="fa fa-wrench valignmiddle"></i>';
-	print '</th>'."\n";
-	print '  <th class="right workshop-jobs-col-time" title="'.dol_escape_htmltag($langs->trans('TimeSpent')).' / '.$langs->trans('QtyMO').'">';
-	print '<i class="fa fa-stopwatch valignmiddle" title="'.dol_escape_htmltag($langs->trans('TimeSpent')).'"></i>';
-	print '</th>'."\n";
-	print '  <th class="workshop-jobs-col-billing">'.$langs->trans('BillingThirdParty').'</th>'."\n";
-	print '  <th class="workshop-jobs-col-actions">&nbsp;</th>'."\n";
-	print '</tr>'."\n";
-
-	if (empty($jobsList)) {
-		print '<tr class="oddeven"><td colspan="7" class="opacitymedium center">'.$langs->trans('NoJobYet').'</td></tr>'."\n";
-	} else {
-		$ii = 0;
-		foreach ($jobsList as $job) {
-			$trClass = ($ii % 2 == 0) ? 'oddeven' : 'oddeven';
-			$ii++;
-
-			// Badge type de service
-			$serviceTypeBadge = '';
-			if (!empty($job->fk_service_type) && isset($serviceTypeCache[$job->fk_service_type])) {
-				$st = $serviceTypeCache[$job->fk_service_type];
-				$serviceTypeBadge = '<span class="badge badge-status4 badge-status">'.dol_escape_htmltag($st->label).'</span>';
-			}
-
-			$billingHtml = '';
-			if (!empty($job->fk_soc)) {
-				$socBill = new Societe($db);
-				if ($socBill->fetch((int) $job->fk_soc) > 0) {
-					$billingHtml = $socBill->getNomUrl(1);
-				}
-			}
-
-			// MO : qty × taux avec remise
-			$prixMO     = (float) $job->prix_mo;
-			$qtyMO      = (float) $job->qty_mo;
-			$remise     = (float) $job->remise_percent;
-			$moHtml     = price2num($qtyMO, 2).'h × '.price($prixMO);
-			if ($remise > 0) {
-				$moHtml .= ' <span class="badge badge-status1" title="'.dol_escape_htmltag($langs->trans('RemiseMO')).'">-'.price2num($remise, 2).'%</span>';
-			}
-			// TVA info
-			$tvaInfoParts = array();
-			if ($job->tva_tx_mo !== null && $job->tva_tx_mo !== '') {
-				$tvaInfoParts[] = 'MO '.price2num($job->tva_tx_mo, 2).'%';
-			}
-			if ($job->tva_tx_st !== null && $job->tva_tx_st !== '') {
-				$tvaInfoParts[] = 'ST '.price2num($job->tva_tx_st, 2).'%';
-			}
-			if (!empty($tvaInfoParts)) {
-				$moHtml .= '<br><span class="opacitymedium small">TVA: '.implode(' / ', $tvaInfoParts).'</span>';
-			}
-
-			// Temps pointé vs prévu
-			$tsTotal   = (float) $job->time_spent; // secondes
-			$tsH       = (int) floor($tsTotal / 3600);
-			$tsM       = (int) floor(($tsTotal % 3600) / 60);
-			$tsDisplay = $tsH.'h'.($tsM > 0 ? str_pad((string) $tsM, 2, '0', STR_PAD_LEFT) : '');
-			$qtyH      = price2num($qtyMO, 2);
-			$timeHtml  = '<span title="'.dol_escape_htmltag($langs->trans('TimeSpent')).'">'.dol_escape_htmltag($tsDisplay).'</span>'
-				.'<span class="opacitymedium"> / '.$qtyH.' h</span>';
-
-			// ── Ligne haute : infos du job ───────────────────────────
-			$linkedVoIds = $job->fetchLinkedMaintenanceOperationIds();
-			print '<tr class="'.$trClass.' workshop-job-row" id="job_'.(int) $job->id.'">'."\n";
-			print '  <td class="workshop-jobs-col-type">';
-			print $serviceTypeBadge ?: '<span class="opacitymedium">—</span>';
-			if (is_array($linkedVoIds) && !empty($linkedVoIds)) {
-				foreach ($linkedVoIds as $voId) {
-					$voItem = new WorkshopVehiculeOperation($db);
-					if ($voItem->fetch($voId) > 0) {
-						print '<br><small class="opacitymedium"><i class="fa fa-calendar-check"></i> '.$voItem->getName().'</small>';
-					}
-				}
-			}
-			print '</td>'."\n";
-			print '  <td class="workshop-jobs-col-label"><strong>'.dol_escape_htmltag((string) $job->label).'</strong></td>'."\n";
-			print '  <td class="workshop-jobs-col-desc">';
-			print !empty($job->description) ? dol_htmlentitiesbr(dol_string_nohtmltag($job->description, 1)) : '<span class="opacitymedium">—</span>';
-			print '</td>'."\n";
-			print '  <td class="right workshop-jobs-col-mo nowraponall">'.$moHtml.'</td>'."\n";
-			print '  <td class="right workshop-jobs-col-time nowraponall">'.$timeHtml.'</td>'."\n";
-			print '  <td class="workshop-jobs-col-billing">'.$billingHtml.'</td>'."\n";
-			print '  <td class="right workshop-jobs-col-actions nowraponall">'."\n";
-			if ($canEditAtStatus) {
-				$editUrl = $_SERVER['PHP_SELF'].'?id='.$object->id.'&action=edit_job&jobid='.(int) $job->id;
-				print '<a class="reposition marginrightonly" href="'.dol_escape_htmltag($editUrl).'">';
-				print img_picto($langs->trans('Modify'), 'edit');
-				print '</a>';
-				$delUrl = $_SERVER['PHP_SELF'].'?id='.$object->id.'&action=delete_job&jobid='.(int) $job->id.'&token='.newToken();
-				print '<a class="reposition" href="'.dol_escape_htmltag($delUrl).'"';
-				print ' onclick="return confirm(\''.dol_escape_js($langs->trans('ConfirmDeleteJob')).'\');">';
-				print img_picto($langs->trans('Delete'), 'delete');
-				print '</a>';
-			}
-			print '  </td>'."\n";
-			print '</tr>'."\n";
-
-			// ── Lignes de détail (produits / services) ───────────────
-			$detObj  = new Operationorderdet($db);
-			$detList = $detObj->fetchAllByJob($job->id);
-			if (is_array($detList) && !empty($detList)) {
-				foreach ($detList as $det) {
-					$detProductIcon = ($det->product_type == Operationorderdet::TYPE_SERVICE)
-						? '<i class="fa fa-tag opacitymedium" title="'.dol_escape_htmltag($langs->trans('Service')).'"></i>'
-						: '<i class="fa fa-cogs opacitymedium" title="'.dol_escape_htmltag($langs->trans('Product')).'"></i>';
-					$detQtyPrice = price2num($det->qty, 2).' × '.price($det->price);
-					if ((float) $det->remise_percent > 0) {
-						$detQtyPrice .= ' <span class="badge badge-status1">-'.price2num($det->remise_percent, 2).'%</span>';
-					}
-					print '<tr class="'.$trClass.' workshop-det-row">'."\n";
-					print '  <td class="workshop-jobs-col-type" style="padding-left:1.5em">'.$detProductIcon.'</td>'."\n";
-					print '  <td class="workshop-jobs-col-label"><small>'.dol_escape_htmltag($det->label).'</small></td>'."\n";
-					print '  <td class="workshop-jobs-col-desc"><small>';
-					print !empty($det->description) ? dol_htmlentitiesbr(dol_string_nohtmltag($det->description, 1)) : '<span class="opacitymedium">—</span>';
-					print '</small></td>'."\n";
-					print '  <td class="right workshop-jobs-col-mo nowraponall"><small>'.$detQtyPrice.'</small></td>'."\n";
-					print '  <td class="right workshop-jobs-col-time nowraponall"><small><strong>'.price($det->total_ht).'</strong></small></td>'."\n";
-					$whHtml = '';
-				if (!empty($det->fk_warehouse)) {
-					dol_include_once('/product/stock/class/entrepot.class.php');
-					$entrepot = new Entrepot($db);
-					if ($entrepot->fetch((int) $det->fk_warehouse) > 0) {
-						$whHtml = $entrepot->getNomUrl(1);
-					}
-				}
-				print '  <td class="workshop-jobs-col-billing"><small>'.($whHtml ?: '<span class="opacitymedium">—</span>').'</small></td>'."\n";
-					print '  <td class="right workshop-jobs-col-actions nowraponall">'."\n";
-					if ($canEditAtStatus) {
-						$delDetUrl = $_SERVER['PHP_SELF'].'?id='.$object->id.'&action=delete_det&detid='.(int) $det->id.'&token='.newToken();
-						print '<a class="reposition" href="'.dol_escape_htmltag($delDetUrl).'"';
-						print ' onclick="return confirm(\''.dol_escape_js($langs->trans('ConfirmDeleteDetLine')).'\');">';
-						print img_picto($langs->trans('Delete'), 'delete');
-						print '</a>';
-					}
-					print '  </td>'."\n";
-					print '</tr>'."\n";
-				}
-			}
-			// ── Bouton + Ajouter une ligne ────────────────────────────
-			if ($canEditAtStatus) {
-				print '<tr class="'.$trClass.' workshop-det-add-row">'."\n";
-				print '  <td colspan="7" style="padding-left:1.5em;padding-top:2px;padding-bottom:2px">'."\n";
-				print '    <a href="#" class="small" onclick="workshopOpenAddDet('.(int) $job->id.');return false;">';
-				print img_picto($langs->trans('AddDetLine'), 'add', 'class="valignmiddle paddingright"');
-				print dol_escape_htmltag($langs->trans('AddDetLine'));
-				print '</a>'."\n";
-				print '  </td>'."\n";
-				print '</tr>'."\n";
-			}
-
-			// ── Ligne basse : totaux avec pictogrammes ───────────────
-			$totItems = array(
-				array('fa-wrench',            $langs->trans('TotalHTMO'),       (float) $job->total_ht_mo),
-				array('fa-cogs',              $langs->trans('TotalHTPart'),     (float) $job->total_ht_part),
-				array('fa-tag',               $langs->trans('TotalHTService'),  (float) $job->total_ht_service),
-				array('fa-handshake',         $langs->trans('TotalHTExternal'), (float) $job->total_ht_external),
-				array('fa-undo',              $langs->trans('TotalHTRefund'),   (float) $job->total_ht_refund),
-				array('fa-calculator bold',   $langs->trans('TotalHT'),         (float) $job->total_ht),
-			);
-			print '<tr class="'.$trClass.' workshop-job-totals-row">'."\n";
-			print '  <td colspan="7" class="workshop-job-totals-bar">'."\n";
-			print '    <div class="workshop-job-totals-inner">'."\n";
-			foreach ($totItems as $idx => $item) {
-				[$faClass, $lbl, $val] = $item;
-				$isTotal = ($idx === 5);
-				print '      <span class="workshop-job-total-item'.($isTotal ? ' workshop-job-total-item--grand' : '').'" title="'.dol_escape_htmltag($lbl).'">';
-				print '<i class="fa '.dol_escape_htmltag($faClass).' valignmiddle" aria-hidden="true"></i> ';
-				print $isTotal ? '<strong>'.price($val).'</strong>' : price($val);
-				print '</span>'."\n";
-			}
-			print '    </div>'."\n";
-			print '  </td>'."\n";
-			print '</tr>'."\n";
-		}
-	}
-
-
-	print '</table>'."\n";
 	print '</div>'."\n"; // div-table-responsive
 	print '</div>'."\n"; // fichehalfleft
 
@@ -1895,88 +1577,12 @@ if ($id > 0) {
 	print '</div>'."\n";
 
 	// JS
-	print '<script type="text/javascript">'."\n";
-	print 'var workshopProdData = '.json_encode($jsProdData).';'."\n";
-	print 'var workshopOrCardUrl = '.json_encode($_SERVER['PHP_SELF'].'?id='.$id).';'."\n";
-	print <<<'JSCODE'
-jQuery(function ($) {
-
-	var $dlg = $('#dlg-add-det');
-
-	window.workshopOpenAddDet = function (jobid) {
-		$('#dlg_det_jobid').val(jobid);
-		$('#det_fk_product').val('');
-		$('#det_description').val('');
-		$('#det_qty').val('1');
-		$('#det_price').val('0');
-		$('#det_remise_percent').val('0');
-		$('#det_fk_warehouse').html('<option value=""></option>');
-		$('#det_warehouse_row').hide();
-
-		if ($dlg.hasClass('ui-dialog-content')) {
-			$dlg.dialog('open');
-		} else {
-			$dlg.dialog({
-				modal:     true,
-				width:     550,
-				resizable: false,
-				buttons: [
-					{
-						text: document.documentElement.lang === 'fr' ? 'Ajouter' : 'Add',
-						click: function () {
-							var prodId = $('#det_fk_product').val();
-							if (!prodId || prodId === '0' || prodId === '') {
-								alert(document.documentElement.lang === 'fr'
-									? 'Veuillez sélectionner un produit.'
-									: 'Please select a product.');
-								return;
-							}
-							$('#frm-add-det').submit();
-						}
-					},
-					{
-						text: document.documentElement.lang === 'fr' ? 'Annuler' : 'Cancel',
-						click: function () { $(this).dialog('close'); }
-					}
-				]
-			});
-		}
-	};
-
-	// Changement de produit : auto-remplir prix + charger entrepôts par AJAX
-	$(document).on('change', '#det_fk_product', function () {
-		var prodId = parseInt($(this).val(), 10);
-		var info = prodId ? workshopProdData[prodId] : null;
-
-		// Prix
-		$('#det_price').val(info ? info.price.toFixed(2) : '0');
-
-		// Entrepôts (produits seulement)
-		var $whSel = $('#det_fk_warehouse');
-		if (info && info.type === 0) {
-			$('#det_warehouse_row').show();
-			$whSel.html('<option value=""></option>');
-			$.getJSON(workshopOrCardUrl + '&action=get_warehouses_for_product', { product_id: prodId })
-				.done(function (warehouses) {
-					console.log('[workshop] warehouses for product ' + prodId + ':', warehouses);
-					var defaultVal = '';
-					$.each(warehouses, function (i, wh) {
-						var label = wh.ref;
-						if (wh.qty > 0) { label += ' (' + wh.qty + ')'; }
-						var $opt = $('<option>').val(wh.rowid).text(label);
-						if (wh.is_default) { defaultVal = wh.rowid; }
-						$whSel.append($opt);
-					});
-					if (defaultVal) { $whSel.val(defaultVal); }
-				});
-		} else {
-			$('#det_warehouse_row').hide();
-			$whSel.html('<option value=""></option>');
-		}
-	});
-});
-JSCODE;
+	// Variables JS injectées pour or_card.js (mode vue)
+	print '<script>'."\n";
+	print 'window.workshopProdData     = '.json_encode($jsProdData).';'."\n";
+	print 'window.workshopOrCardAjaxUrl = '.json_encode(dol_buildpath('/workshop/ajax/or_card_ajax.php', 1).'?id='.$id).';'."\n";
 	print '</script>'."\n";
+	print '<script src="'.dol_escape_htmltag(dol_buildpath('/workshop/js/or_card.js', 1)).'"></script>'."\n";
 
 
 	llxFooter();
@@ -1989,7 +1595,7 @@ JSCODE;
 // MODE CRÉATION : formulaire de saisie d'un nouvel OR
 // ═══════════════════════════════════════════════════════════════════════════
 
-llxHeader('', $langs->trans('NewOperationOrders'), '', '', 0, 0, array(), array(), '', 'mod-workshop page-orcard');
+llxHeader('', $langs->trans('NewOperationOrders'), '', '', 0, 0, array(), array(dol_buildpath('/workshop/css/or_card.css', 1)), '', 'mod-workshop page-orcard');
 
 print load_fiche_titre($langs->trans('NewOperationOrders'), '', 'fa-tools');
 
@@ -2158,79 +1764,11 @@ print $form->buttonsSaveCancel("Create");
 
 print '</form>'."\n";
 
-// ── JavaScript ───────────────────────────────────────────────────────────────
-$jsself = dol_escape_js($_SERVER['PHP_SELF']);
-print '<script type="text/javascript">
-/**
- * Lit la valeur d\'un champ FK (input hidden) ou d\'un input classique.
- */
-function orCardGetField(name) {
-	// Champ caché FK (ex: select2 Dolibarr)
-	var $hidden = jQuery("input[name=\'" + name + "\'][type=\'hidden\']");
-	if ($hidden.length) return $hidden.val() || "";
-	// Input classique
-	return jQuery("[name=\'" + name + "\']").val() || "";
-}
-
-/**
- * Collecte les tags sélectionnés dans le multi-select.
- */
-function orCardGetTags() {
-	var vals = jQuery("select[name=\'fk_tags[]\']").val();
-	return vals ? vals : [];
-}
-
-/**
- * Construit la query-string d\'état pour préserver le formulaire.
- */
-function orCardStateQS(overrides) {
-	overrides = overrides || {};
-	var fk_vehicule   = overrides.fk_vehicule   !== undefined ? overrides.fk_vehicule   : orCardGetField("fk_vehicule");
-	var km            = overrides.km             !== undefined ? overrides.km            : orCardGetField("km");
-	var fk_conducteur = overrides.fk_conducteur  !== undefined ? overrides.fk_conducteur : orCardGetField("fk_conducteur");
-	var fk_tags       = overrides.fk_tags        !== undefined ? overrides.fk_tags       : orCardGetTags();
-
-	var qs = "&fk_vehicule=" + encodeURIComponent(fk_vehicule);
-	qs += "&km=" + encodeURIComponent(km);
-	qs += "&fk_conducteur=" + encodeURIComponent(fk_conducteur);
-	jQuery.each(fk_tags, function(i, v) { qs += "&fk_tags[]=" + encodeURIComponent(v); });
-	return qs;
-}
-
-function orCardOpenNewConducteur() {
-	window.location.href = "' . $jsself . '?action=new_conducteur" + orCardStateQS();
-}
-
-function orCardOpenNewTag() {
-	window.location.href = "' . $jsself . '?action=new_tag" + orCardStateQS();
-}
-
-// Colour select enhancement: show a coloured swatch next to palette <select> elements.
-(function () {
-	function enhanceColorSelects() {
-		document.querySelectorAll("select").forEach(function (sel) {
-			if (sel.dataset.wsColorEnhanced) return;
-			if (!sel.options.length) return;
-			if (!/^#[0-9a-fA-F]{6}$/i.test(sel.options[0].value)) return;
-			sel.dataset.wsColorEnhanced = "1";
-			var swatch = document.createElement("span");
-			swatch.style.cssText = "display:inline-block;width:18px;height:18px;border-radius:3px;"
-				+ "border:1px solid #999;vertical-align:middle;margin-left:6px;background-color:" + sel.value + ";";
-			sel.parentNode.insertBefore(swatch, sel.nextSibling);
-			sel.addEventListener("change", function () { swatch.style.backgroundColor = sel.value; });
-		});
-	}
-	if (document.readyState === "loading") {
-		document.addEventListener("DOMContentLoaded", enhanceColorSelects);
-	} else {
-		enhanceColorSelects();
-	}
-	if (typeof jQuery !== "undefined") {
-		jQuery(document).on("dialogopen", function () { setTimeout(enhanceColorSelects, 50); });
-	}
-})();
-</script>
-';
+// Variables JS injectées pour or_card.js (mode création)
+print '<script>'."\n";
+print 'window.workshopOrCardSelf = '.json_encode($_SERVER['PHP_SELF']).';'."\n";
+print '</script>'."\n";
+print '<script src="'.dol_escape_htmltag(dol_buildpath('/workshop/js/or_card.js', 1)).'"></script>'."\n";
 
 llxFooter();
 $db->close();

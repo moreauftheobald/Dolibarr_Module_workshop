@@ -217,7 +217,7 @@ $parameters = array();
 $reshook = $hookmanager->executeHooks('printFieldListFrom', $parameters, $object, $action);
 $sql .= $hookmanager->resPrint;
 
-$sql .= ' WHERE t.entity IN ('.getEntity('workshop', 1).')';
+$sql .= ' WHERE t.entity IN ('.getEntity('workshop_vehicule', 1).')';
 
 foreach ($search as $key => $val) {
 	if (array_key_exists($key, $object->fields)) {
