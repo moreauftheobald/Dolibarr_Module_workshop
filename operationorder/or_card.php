@@ -1739,6 +1739,27 @@ if ($id > 0) {
 		}
 	}
 
+	// Pré-chargement des quantités débitées par ligne det (TYPE_PRODUCT uniquement)
+	// Résultat : $detQtyDebitedMap[det_id] = qty_debited (net sorti = valeurs négatives inversées)
+	$detQtyDebitedMap  = array();
+	$_detElemType      = 'operationorderdet@workshop'; // format classname@modulename pour get_origin()
+	$_sqlQtyDebit      = 'SELECT d.rowid, COALESCE(-SUM(sm.value), 0) as qty_debited';
+	$_sqlQtyDebit     .= ' FROM '.MAIN_DB_PREFIX.'workshop_operationorderdet d';
+	$_sqlQtyDebit     .= ' INNER JOIN '.MAIN_DB_PREFIX.'workshop_operationorder_jobs j ON j.rowid = d.fk_operationorder_jobs';
+	$_sqlQtyDebit     .= ' LEFT JOIN '.MAIN_DB_PREFIX.'stock_mouvement sm';
+	$_sqlQtyDebit     .= "   ON sm.fk_origin = d.rowid AND sm.origintype IN ('".$db->escape($_detElemType)."', 'workshop_operationorderdet')";
+	$_sqlQtyDebit     .= ' WHERE j.fk_operationorder = '.((int) $object->id);
+	$_sqlQtyDebit     .= ' AND d.product_type = '.((int) Operationorderdet::TYPE_PRODUCT);
+	$_sqlQtyDebit     .= ' GROUP BY d.rowid';
+	$_resQtyDebit = $db->query($_sqlQtyDebit);
+	if ($_resQtyDebit) {
+		while ($_oQD = $db->fetch_object($_resQtyDebit)) {
+			$detQtyDebitedMap[(int) $_oQD->rowid] = (float) $_oQD->qty_debited;
+		}
+		$db->free($_resQtyDebit);
+	}
+	unset($_detElemType, $_sqlQtyDebit, $_resQtyDebit, $_oQD);
+
 	include dol_buildpath('/workshop/tpl/or_card_jobs_table.tpl.php', 0);
 
 	print '</div>'."\n"; // div-table-responsive

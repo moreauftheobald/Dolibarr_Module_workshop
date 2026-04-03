@@ -73,7 +73,23 @@ if (!empty($det->fk_warehouse)) {
 }
 
 // ── Quantité × prix unitaire + remise ────────────────────────────────────────
-$detQtyPrice = price2num($det->qty, 2).' × '.price($det->price);
+// Pour les produits physiques : affiche [qty_débitée / qty_prévue] × prix
+if ($det->product_type == Operationorderdet::TYPE_PRODUCT) {
+	$_qtyDebit = isset($detQtyDebitedMap[(int) $det->id]) ? (float) $detQtyDebitedMap[(int) $det->id] : 0.0;
+	if ($_qtyDebit <= 0) {
+		$_badgeCls = 'badge-status8';        // gris = rien débité
+	} elseif ($_qtyDebit >= (float) $det->qty) {
+		$_badgeCls = 'badge-status4';        // vert = tout débité
+	} else {
+		$_badgeCls = 'badge-status1';        // orange = partiel
+	}
+	$detQtyPrice  = '<span class="badge '.$_badgeCls.'" title="'.dol_escape_htmltag($langs->trans('QtyDebited')).'">'.price2num($_qtyDebit, 2).'</span>';
+	$detQtyPrice .= '<span class="opacitymedium"> / '.price2num($det->qty, 2).'</span>';
+	$detQtyPrice .= ' × '.price($det->price);
+	unset($_qtyDebit, $_badgeCls);
+} else {
+	$detQtyPrice = price2num($det->qty, 2).' × '.price($det->price);
+}
 if ((float) $det->remise_percent > 0) {
 	$detQtyPrice .= ' <span class="badge badge-status1">-'.price2num($det->remise_percent, 2).'%</span>';
 }

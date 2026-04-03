@@ -358,24 +358,63 @@ class Operationorderdet extends CommonObject
 	}
 
 	/**
-	 * Return a link to the object card (with optionally the picto)
+	 * Return a link pointing to the parent Operationorder (OR) card.
+	 * Operationorderdet has no standalone card page — the meaningful link
+	 * is the OR that contains this detail line.
 	 *
 	 * @param  int    $withpicto             Include picto in link (0=No, 1=With picto, 2=Only picto)
-	 * @param  string $option                On what the link point to
+	 * @param  string $option                Unused (kept for interface compatibility)
 	 * @param  int    $notooltip             1=Disable tooltip
 	 * @param  string $morecss               Additional CSS
-	 * @param  int    $save_lastsearch_value Save last search values
-	 * @return string                        String with URL
+	 * @param  int    $save_lastsearch_value Unused
+	 * @return string                        HTML link to the OR card
 	 */
 	public function getNomUrl($withpicto = 0, $option = '', $notooltip = 0, $morecss = '', $save_lastsearch_value = -1)
 	{
 		global $langs;
 
-		$result = '';
-		if ($withpicto) {
-			$result .= img_picto('', $this->picto, 'class="paddingright"');
+		// Retrieve the parent OR ref via a single join query
+		$orRef  = '';
+		$orId   = 0;
+		if (!empty($this->fk_operationorder_jobs)) {
+			$sql  = 'SELECT o.rowid, o.ref';
+			$sql .= ' FROM '.MAIN_DB_PREFIX.'workshop_operationorder o';
+			$sql .= ' INNER JOIN '.MAIN_DB_PREFIX.'workshop_operationorder_jobs j ON j.fk_operationorder = o.rowid';
+			$sql .= ' WHERE j.rowid = '.((int) $this->fk_operationorder_jobs);
+			$resql = $this->db->query($sql);
+			if ($resql && ($obj = $this->db->fetch_object($resql))) {
+				$orId  = (int) $obj->rowid;
+				$orRef = $obj->ref;
+				$this->db->free($resql);
+			}
 		}
-		$result .= dol_escape_htmltag($this->label);
+
+		// Label affiché : ref OR uniquement
+		$labelDisplay = $orRef ?: $langs->trans('OperationOrder');
+
+		$result = '';
+		if ($orId > 0) {
+			$url = dol_buildpath('/workshop/operationorder/or_card.php', 1).'?id='.$orId;
+			if ($withpicto) {
+				$result .= '<a href="'.dol_escape_htmltag($url).'"'.($morecss ? ' class="'.dol_escape_htmltag($morecss).'"' : '').'>';
+				$result .= img_picto('', 'fa-tools', 'class="paddingright"');
+				$result .= '</a>';
+				if ($withpicto != 2) {
+					$result .= '<a href="'.dol_escape_htmltag($url).'"'.($morecss ? ' class="'.dol_escape_htmltag($morecss).'"' : '').'>';
+					$result .= dol_escape_htmltag($labelDisplay);
+					$result .= '</a>';
+				}
+			} else {
+				$result .= '<a href="'.dol_escape_htmltag($url).'"'.($morecss ? ' class="'.dol_escape_htmltag($morecss).'"' : '').'>';
+				$result .= dol_escape_htmltag($labelDisplay);
+				$result .= '</a>';
+			}
+		} else {
+			if ($withpicto) {
+				$result .= img_picto('', 'fa-tools', 'class="paddingright"');
+			}
+			$result .= dol_escape_htmltag($labelDisplay);
+		}
 
 		return $result;
 	}
