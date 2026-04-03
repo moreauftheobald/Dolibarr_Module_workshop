@@ -54,6 +54,8 @@ if (!$res) {
 }
 
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.form.class.php';
+require_once DOL_DOCUMENT_ROOT.'/core/class/html.formfile.class.php';
+require_once DOL_DOCUMENT_ROOT.'/core/class/html.formactions.class.php';
 require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
 require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
 dol_include_once('/workshop/class/operationorder.class.php');
@@ -90,6 +92,8 @@ $backtopageforcancel = GETPOST('backtopageforcancel', 'alpha');
 $object      = new Operationorder($db);
 $extrafields = new ExtraFields($db);
 $form        = new Form($db);
+$formfile    = new FormFile($db);
+$formactions = new FormActions($db);
 
 $extrafields->fetch_name_optionals_label($object->table_element);
 $hookmanager->initHooks(array('orcard', 'globalcard'));
@@ -835,13 +839,22 @@ if (empty($reshook)) {
 			}
 
 			if (!$error) {
-				// Lien job ↔ commande fournisseur dans llx_element_element (INSERT direct)
+				// Lien job ↔ commande fournisseur dans llx_element_element
 				$sqlLink  = "INSERT INTO ".MAIN_DB_PREFIX."element_element";
 				$sqlLink .= " (fk_source, sourcetype, fk_target, targettype)";
-				$sqlLink .= " VALUES (".(int) $job->id.", '".$db->escape($job->element)."'";
+				$sqlLink .= " VALUES (".(int) $job->id.", '".$db->escape($job->getElementType())."'";
 				$sqlLink .= ", ".(int) $supplierOrder->id.", 'order_supplier')";
 				if (!$db->query($sqlLink)) {
-					dol_syslog(__METHOD__.' element_element link error: '.$db->lasterror(), LOG_WARNING);
+					dol_syslog(__METHOD__.' element_element link job error: '.$db->lasterror(), LOG_WARNING);
+				}
+
+				// Lien OR ↔ commande fournisseur dans llx_element_element
+				$sqlLinkOR  = "INSERT INTO ".MAIN_DB_PREFIX."element_element";
+				$sqlLinkOR .= " (fk_source, sourcetype, fk_target, targettype)";
+				$sqlLinkOR .= " VALUES (".(int) $object->id.", '".$db->escape($object->getElementType())."'";
+				$sqlLinkOR .= ", ".(int) $supplierOrder->id.", 'order_supplier')";
+				if (!$db->query($sqlLinkOR)) {
+					dol_syslog(__METHOD__.' element_element link OR error: '.$db->lasterror(), LOG_WARNING);
 				}
 
 				// Validation de la commande
@@ -1732,6 +1745,31 @@ if ($id > 0) {
 	print '</div>'."\n"; // fichehalfleft
 
 	print '</div>'."\n"; // workshop-jobs-section
+
+
+	// ── Fichiers joints / Objets liés / Derniers événements ─────────────────
+	print '<div class="fichecenter"><div class="fichehalfleft">'."\n";
+	print '<a name="builddoc"></a>'."\n";
+
+	// Fichiers joints
+	$filename   = dol_sanitizeFileName($object->ref);
+	$filedir    = (isset($conf->workshop->multidir_output[$object->entity]) ? $conf->workshop->multidir_output[$object->entity] : $conf->workshop->dir_output).'/operationorder/'.dol_sanitizeFileName($object->ref);
+	$urlsource  = $_SERVER['PHP_SELF'].'?id='.$object->id;
+	$genallowed = $user->hasRight('workshop', 'operationorders', 'read');
+	$delallowed = $user->hasRight('workshop', 'operationorders', 'write');
+
+	print $formfile->showdocuments('workshop', $filename, $filedir, $urlsource, $genallowed, $delallowed, '', 1, 0, 0, 28, 0, '', '', '', '', '', $object);
+
+	// Objets liés
+	$object->fetchObjectLinked();
+	$form->showLinkedObjectBlock($object, '');
+
+	print '</div><div class="fichehalfright">'."\n";
+
+	// Les derniers événements
+	$formactions->showactions($object, $object->element, $object->fk_soc, 1);
+
+	print '</div></div>'."\n";
 
 
 	// ═══════════════════════════════════════════════════════════════════════
