@@ -255,6 +255,8 @@ ConfirmDeleteJob=Êtes-vous sûr de vouloir supprimer ce job ?
 AddDetLine=Ajouter une ligne
 DetLineAdded=Ligne ajoutée avec succès
 DetLineDeleted=Ligne supprimée
+DetLineUpdated=Ligne mise à jour avec succès
+ModifyDetLine=Modifier la ligne
 ConfirmDeleteDetLine=Êtes-vous sûr de vouloir supprimer cette ligne ?
 StockLocation=Emplacement stock
 QtyMO=Qté M.O. (h)
@@ -589,5 +591,16 @@ TagCouleur=Couleur
 ReadWorkshopTags=Consulter les tags des ordres de réparation
 WriteWorkshopTags=Créer/modifier les tags des ordres de réparation
 DeleteWorkshopTags=Supprimer les tags des ordres de réparation
+
+#
+# Sous-traitance des Jobs
+#
+SubcontractingJob=Sous-traitance
+SubcontractingAmount=Montant HT de la prestation
+MaintenanceOperationsLinked=Opérations de maintenance
+SubcontractingOpsHint=Sélectionner les opérations à reporter dans le bon de commande
+SelectMaintenanceOps=Choisir des opérations...
+NoMaintenanceOpsForVehicle=Aucune opération de maintenance active sur ce véhicule
+SubcontractingOrderCreated=Commande fournisseur créée et validée
 
 

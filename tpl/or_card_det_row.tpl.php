@@ -27,6 +27,14 @@
  *   @var Operationorder          $object
  *   @var Translate               $langs
  *   @var DoliDB                  $db
+ *
+ * Colonnes (8 au total, alignées sur la table jobs) :
+ *   1+2  (colspan 2) : picto + ref + désignation sur la même ligne
+ *   3+4  (colspan 2) : description
+ *   5    (colspan 1) : emplacement de stock
+ *   6    (colspan 1) : quantité × prix unitaire + badge remise
+ *   7    (colspan 1) : total HT ligne
+ *   8    (colspan 1) : boutons d'action
  */
 
 // Protection contre l'appel direct
@@ -35,17 +43,26 @@ if (empty($conf) || !is_object($conf)) {
 	exit;
 }
 
-// ── Calculs d'affichage ──────────────────────────────────────────────────────
-
-$detProductIcon = ($det->product_type == Operationorderdet::TYPE_SERVICE)
-	? '<i class="fa fa-tag opacitymedium" title="'.dol_escape_htmltag($langs->trans('Service')).'"></i>'
-	: '<i class="fa fa-cogs opacitymedium" title="'.dol_escape_htmltag($langs->trans('Product')).'"></i>';
-
-$detQtyPrice = price2num($det->qty, 2).' × '.price($det->price);
-if ((float) $det->remise_percent > 0) {
-	$detQtyPrice .= ' <span class="badge badge-status1">-'.price2num($det->remise_percent, 2).'%</span>';
+// ── Produit : picto + ref + désignation ─────────────────────────────────────
+$prodHtml = '';
+if (!empty($det->fk_product)) {
+	dol_include_once('/product/class/product.class.php');
+	$prodObj = new Product($db);
+	if ($prodObj->fetch((int) $det->fk_product) > 0) {
+		$prodHtml = $prodObj->getNomUrl(1);
+		if (!empty($det->label)) {
+			$prodHtml .= ' '.dol_escape_htmltag($det->label);
+		}
+	}
+}
+if (empty($prodHtml)) {
+	$typeIcon = ($det->product_type == Operationorderdet::TYPE_SERVICE)
+		? '<i class="fa fa-tag opacitymedium" title="'.dol_escape_htmltag($langs->trans('Service')).'"></i>'
+		: '<i class="fa fa-cogs opacitymedium" title="'.dol_escape_htmltag($langs->trans('Product')).'"></i>';
+	$prodHtml = $typeIcon.' '.dol_escape_htmltag($det->label ?: '—');
 }
 
+// ── Emplacement de stock ─────────────────────────────────────────────────────
 $whHtml = '';
 if (!empty($det->fk_warehouse)) {
 	dol_include_once('/product/stock/class/entrepot.class.php');
@@ -54,25 +71,62 @@ if (!empty($det->fk_warehouse)) {
 		$whHtml = $entrepot->getNomUrl(1);
 	}
 }
+
+// ── Quantité × prix unitaire + remise ────────────────────────────────────────
+$detQtyPrice = price2num($det->qty, 2).' × '.price($det->price);
+if ((float) $det->remise_percent > 0) {
+	$detQtyPrice .= ' <span class="badge badge-status1">-'.price2num($det->remise_percent, 2).'%</span>';
+}
 ?>
 
 <tr class="<?php echo $trClass; ?> workshop-det-row">
-	<td class="workshop-jobs-col-type" style="padding-left:1.5em"><?php echo $detProductIcon; ?></td>
-	<td class="workshop-jobs-col-label"><small><?php echo dol_escape_htmltag($det->label); ?></small></td>
-	<td class="workshop-jobs-col-desc"><small>
-		<?php echo !empty($det->description) ? dol_htmlentitiesbr(dol_string_nohtmltag($det->description, 1)) : '<span class="opacitymedium">—</span>'; ?>
-	</small></td>
-	<td class="right workshop-jobs-col-mo nowraponall"><small><?php echo $detQtyPrice; ?></small></td>
-	<td class="right workshop-jobs-col-time nowraponall"><small><strong><?php echo price($det->total_ht); ?></strong></small></td>
-	<td class="workshop-jobs-col-billing"><small><?php echo $whHtml ?: '<span class="opacitymedium">—</span>'; ?></small></td>
-	<td class="right workshop-jobs-col-actions nowraponall">
+
+	<!-- 1+2 : picto + ref + désignation sur la même ligne (colspan 2) -->
+	<td class="workshop-jobs-col-type workshop-det-col-product" colspan="2" style="padding-left:2em">
+		<small><?php echo $prodHtml; ?></small>
+	</td>
+
+	<!-- 3+4 : description (colspan 2) -->
+	<td class="workshop-jobs-col-desc" colspan="2">
+		<small><?php echo !empty($det->description) ? dol_htmlentitiesbr(dol_string_nohtmltag($det->description, 1)) : '<span class="opacitymedium">—</span>'; ?></small>
+	</td>
+
+	<!-- 5 : emplacement de stock -->
+	<td class="workshop-jobs-col-mo">
+		<small><?php echo $whHtml ?: '<span class="opacitymedium">—</span>'; ?></small>
+	</td>
+
+	<!-- 6 : quantité × prix + remise -->
+	<td class="right workshop-jobs-col-time nowraponall">
+		<small><?php echo $detQtyPrice; ?></small>
+	</td>
+
+	<!-- 7 : total HT ligne -->
+	<td class="right workshop-jobs-col-billing nowraponall">
+		<small><strong><?php echo price($det->total_ht); ?></strong></small>
+	</td>
+
+	<!-- 8 : boutons d'action -->
+	<td class="right workshop-jobs-col-subcontracting nowraponall">
 		<?php if ($canEditAtStatus) {
 			$delDetUrl = $_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&action=delete_det&detid='.(int) $det->id.'&token='.newToken();
+			// Données pour pré-remplir le dialog d'édition
+			$editLabel       = dol_escape_js(!empty($det->label) ? $det->label : '—');
+			$editDescription = dol_escape_js((string) $det->description);
+			$editQty         = price2num($det->qty, 2);
+			$editPrice       = price2num($det->price, 'MU');
+			$editRemise      = price2num($det->remise_percent, 2);
 			?>
+			<a class="reposition marginrightonly" href="#"
+				onclick="workshopOpenEditDet(<?php echo (int) $det->id; ?>, '<?php echo $editLabel; ?>', '<?php echo $editDescription; ?>', '<?php echo $editQty; ?>', '<?php echo $editPrice; ?>', '<?php echo $editRemise; ?>'); return false;"
+				title="<?php echo dol_escape_htmltag($langs->trans('Modify')); ?>">
+				<?php echo img_picto($langs->trans('Modify'), 'edit'); ?>
+			</a>
 			<a class="reposition" href="<?php echo dol_escape_htmltag($delDetUrl); ?>"
 				onclick="return confirm('<?php echo dol_escape_js($langs->trans('ConfirmDeleteDetLine')); ?>');">
 				<?php echo img_picto($langs->trans('Delete'), 'delete'); ?>
 			</a>
 		<?php } ?>
 	</td>
+
 </tr>

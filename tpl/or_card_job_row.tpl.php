@@ -105,12 +105,28 @@ $timeHtml  = '<span title="'.dol_escape_htmltag($langs->trans('TimeSpent')).'">'
 	</td>
 	<td class="right workshop-jobs-col-mo nowraponall"><?php echo $moHtml; ?></td>
 	<td class="right workshop-jobs-col-time nowraponall"><?php echo $timeHtml; ?></td>
-	<td class="workshop-jobs-col-billing"><?php echo $billingHtml; ?></td>
+	<td class="workshop-jobs-col-billing"><?php echo $billingHtml ?: '<span class="opacitymedium">—</span>'; ?></td>
+	<td class="workshop-jobs-col-subcontracting">
+		<?php
+		if (!empty($jobLinkedOrdersCache[$job->id])) {
+			foreach ($jobLinkedOrdersCache[$job->id] as $cfOrd) {
+				echo $cfOrd->getNomUrl(1).' '.$cfOrd->getLibStatut(5).'<br>';
+			}
+		} else {
+			echo '<span class="opacitymedium">—</span>';
+		}
+		?>
+	</td>
 	<td class="right workshop-jobs-col-actions nowraponall">
 		<?php if ($canEditAtStatus) {
 			$editUrl = $_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&action=edit_job&jobid='.(int) $job->id;
 			$delUrl  = $_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&action=delete_job&jobid='.(int) $job->id.'&token='.newToken();
 			?>
+			<a class="reposition marginrightonly" href="#"
+				onclick="workshopOpenSubcontracting(<?php echo (int) $job->id; ?>);return false;"
+				title="<?php echo dol_escape_htmltag($langs->trans('SubcontractingJob')); ?>">
+				<?php echo img_picto($langs->trans('SubcontractingJob'), 'fa-handshake'); ?>
+			</a>
 			<a class="reposition marginrightonly" href="<?php echo dol_escape_htmltag($editUrl); ?>">
 				<?php echo img_picto($langs->trans('Modify'), 'edit'); ?>
 			</a>
@@ -136,7 +152,7 @@ if (is_array($detList) && !empty($detList)) {
 <?php if ($canEditAtStatus) { ?>
 <!-- Bouton ajout d'une ligne -->
 <tr class="<?php echo $trClass; ?> workshop-det-add-row">
-	<td colspan="7" style="padding-left:1.5em;padding-top:2px;padding-bottom:2px">
+	<td colspan="8" style="padding-left:1.5em;padding-top:2px;padding-bottom:2px">
 		<a href="#" class="small" onclick="workshopOpenAddDet(<?php echo (int) $job->id; ?>);return false;">
 			<?php echo img_picto($langs->trans('AddDetLine'), 'add', 'class="valignmiddle paddingright"'); ?>
 			<?php echo dol_escape_htmltag($langs->trans('AddDetLine')); ?>
@@ -157,7 +173,7 @@ $totItems = array(
 );
 ?>
 <tr class="<?php echo $trClass; ?> workshop-job-totals-row">
-	<td colspan="7" class="workshop-job-totals-bar">
+	<td colspan="8" class="workshop-job-totals-bar">
 		<div class="workshop-job-totals-inner">
 			<?php foreach ($totItems as $idx => $item) {
 				[$faClass, $lbl, $val] = $item;

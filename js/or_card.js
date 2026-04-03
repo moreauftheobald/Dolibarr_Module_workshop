@@ -100,6 +100,120 @@ jQuery(function ($) {
 
 
 /* ============================================================================
+ * MODE VUE — Dialog "Sous-traitance d'un Job"
+ * ========================================================================== */
+
+jQuery(function ($) {
+	var $dlgSc = $('#dlg-subcontracting');
+
+	/**
+	 * Ouvre le dialog de sous-traitance pour le job donné.
+	 * Pré-sélectionne les opérations de maintenance déjà liées au job.
+	 * @param {number} jobid
+	 */
+	window.workshopOpenSubcontracting = function (jobid) {
+		$('#dlg_sc_jobid').val(jobid);
+		$('#sc_fk_soc').val('');
+		$('#sc_amount').val('0');
+		$('#sc_description').val('');
+
+		// Pré-sélectionner les opérations de maintenance déjà liées à ce job
+		var linkedIds = ((window.workshopJobLinkedOps || {})[jobid] || []).map(String);
+		$('#sc_maintenance_ops').val(linkedIds).trigger('change');
+
+		if ($dlgSc.hasClass('ui-dialog-content')) {
+			$dlgSc.dialog('open');
+		} else {
+			$dlgSc.dialog({
+				modal:     true,
+				width:     640,
+				height:    'auto',
+				maxHeight: Math.floor($(window).height() * 0.92),
+				resizable: true,
+				buttons: [
+					{
+						text: document.documentElement.lang === 'fr' ? 'Enregistrer' : 'Save',
+						click: function () {
+							var socId = $('#sc_fk_soc').val();
+							if (!socId || socId === '0' || socId === '') {
+								alert(document.documentElement.lang === 'fr'
+									? 'Veuillez sélectionner un fournisseur.'
+									: 'Please select a supplier.');
+								return;
+							}
+							$('#frm-subcontracting').submit();
+						}
+					},
+					{
+						text: document.documentElement.lang === 'fr' ? 'Annuler' : 'Cancel',
+						click: function () { $(this).dialog('close'); }
+					}
+				]
+			});
+		}
+	};
+});
+
+
+/* ============================================================================
+ * MODE VUE — Dialog "Modifier une ligne produit/service (det)"
+ * ========================================================================== */
+
+jQuery(function ($) {
+	var $dlgEdit = $('#dlg-edit-det');
+
+	/**
+	 * Ouvre le dialog d'édition d'une ligne de détail pré-remplie.
+	 * @param {number} detid        rowid de la ligne
+	 * @param {string} label        libellé produit/service (affiché en lecture seule)
+	 * @param {string} description  description existante
+	 * @param {string} qty          quantité
+	 * @param {string} price        prix unitaire HT
+	 * @param {string} remise       remise en %
+	 */
+	window.workshopOpenEditDet = function (detid, label, description, qty, price, remise) {
+		$('#det_edit_id').val(detid);
+		$('#det_edit_product_label').text(label);
+		$('#det_edit_description').val(description);
+		$('#det_edit_qty').val(qty);
+		$('#det_edit_price').val(price);
+		$('#det_edit_remise_percent').val(remise);
+
+		if ($dlgEdit.hasClass('ui-dialog-content')) {
+			$dlgEdit.dialog('open');
+		} else {
+			$dlgEdit.dialog({
+				modal:     true,
+				width:     560,
+				height:    'auto',
+				maxHeight: Math.floor($(window).height() * 0.92),
+				resizable: true,
+				buttons: [
+					{
+						text: document.documentElement.lang === 'fr' ? 'Enregistrer' : 'Save',
+						click: function () {
+							var qty = $('#det_edit_qty').val();
+							if (!qty || parseFloat(qty) <= 0) {
+								alert(document.documentElement.lang === 'fr'
+									? 'La quantité doit être supérieure à 0.'
+									: 'Quantity must be greater than 0.');
+								return;
+							}
+							$('#frm-edit-det').submit();
+						}
+					},
+					{
+						text: document.documentElement.lang === 'fr' ? 'Annuler' : 'Cancel',
+						click: function () { $(this).dialog('close'); }
+					}
+				]
+			});
+		}
+	};
+});
+
+
+/* ============================================================================
  * MODE CRÉATION — Helpers de préservation de l'état du formulaire OR
  * ========================================================================== */
 

@@ -113,6 +113,8 @@ ConfirmDeleteJob=Are you sure you want to delete this job?
 AddDetLine=Add a line
 DetLineAdded=Line added successfully
 DetLineDeleted=Line deleted
+DetLineUpdated=Line updated successfully
+ModifyDetLine=Modify line
 ConfirmDeleteDetLine=Are you sure you want to delete this line?
 StockLocation=Stock location
 QtyMO=Labour qty (h)
@@ -531,3 +533,14 @@ RemisePercent=Discount (%)
 QtyMOMoRemise=Qty MO / Rate / Discount
 JobTypeLegacy=Job type (legacy)
 BillingThirdParty=Billing third party
+
+#
+# Job Subcontracting
+#
+SubcontractingJob=Subcontracting
+SubcontractingAmount=Pre-tax amount
+MaintenanceOperationsLinked=Maintenance operations
+SubcontractingOpsHint=Select operations to include in the purchase order
+SelectMaintenanceOps=Select operations...
+NoMaintenanceOpsForVehicle=No active maintenance operations for this vehicle
+SubcontractingOrderCreated=Supplier order created and validated

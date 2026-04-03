@@ -69,6 +69,7 @@ dol_include_once('/workshop/class/operationorderdet.class.php');
 dol_include_once('/workshop/class/servicetype.class.php');
 dol_include_once('/workshop/class/workshopjobtype.class.php');
 dol_include_once('/workshop/class/vehiculeOperation.class.php');
+require_once DOL_DOCUMENT_ROOT.'/fourn/class/fournisseur.commande.class.php';
 
 if (!isModEnabled('workshop')) {
 	accessforbidden();
@@ -567,6 +568,41 @@ if (empty($reshook)) {
 		exit;
 	}
 
+	// ── Modification d'une ligne produit/service ─────────────────────────
+	if ($action == 'confirm_edit_det' && $id > 0 && $permissiontoadd) {
+		$detid          = GETPOSTINT('det_edit_id');
+		$qty            = (float) price2num(str_replace(',', '.', GETPOST('det_edit_qty', 'alpha')), 'MU');
+		$price          = (float) price2num(str_replace(',', '.', GETPOST('det_edit_price', 'alpha')), 'MU');
+		$remise_percent = (float) price2num(str_replace(',', '.', GETPOST('det_edit_remise_percent', 'alpha')), 'MU');
+		$description    = GETPOST('det_edit_description', 'restricthtml');
+
+		$det = new Operationorderdet($db);
+		if ($det->fetch($detid) > 0) {
+			$detJob = new Operationorder_jobs($db);
+			if ($detJob->fetch((int) $det->fk_operationorder_jobs) > 0 && (int) $detJob->fk_operationorder === (int) $id) {
+				$det->qty            = $qty > 0 ? $qty : $det->qty;
+				$det->price          = $price;
+				$det->remise_percent = $remise_percent;
+				$det->description    = $description;
+				$det->total_ht       = (float) price2num($qty * $price * (1 - $remise_percent / 100), 'MT');
+
+				if ($det->update($user) >= 0) {
+					$detJob->updateTotals($user);
+					$object->updateTotals($user);
+					setEventMessage($langs->trans('DetLineUpdated'));
+					header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id.'#job_'.(int) $detJob->id);
+					exit;
+				} else {
+					setEventMessages($det->error, $det->errors, 'errors');
+				}
+			}
+		} else {
+			setEventMessages($langs->trans('ErrorRecordNotFound'), null, 'errors');
+		}
+		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
+		exit;
+	}
+
 	// ── Suppression d'une ligne produit/service ───────────────────────────
 	if ($action == 'delete_det' && $id > 0 && $permissiontoadd) {
 		$detid = GETPOSTINT('detid');
@@ -665,6 +701,163 @@ if (empty($reshook)) {
 			exit;
 		}
 		$action = 'edit_job'; // réouvre le dialog en cas d'erreur
+	}
+
+	// ── Création d'une commande fournisseur (sous-traitance d'un job) ────────
+	if ($action == 'confirm_subcontracting' && $id > 0 && $permissiontoadd) {
+		$error        = 0;
+		$jobid        = GETPOSTINT('jobid');
+		$scFkSoc      = GETPOSTINT('sc_fk_soc');
+		$scAmount     = (float) price2num(str_replace(',', '.', GETPOST('sc_amount', 'alpha')), 'MT');
+		$scOpsRaw     = GETPOST('sc_maintenance_ops', 'array:int');
+		$scOpsIds     = is_array($scOpsRaw) ? array_values(array_filter(array_map('intval', $scOpsRaw))) : array();
+		$scDescription = GETPOST('sc_description', 'restricthtml');
+
+		if ($jobid <= 0) {
+			setEventMessages($langs->trans('ErrorFieldRequired').' (jobid)', null, 'errors');
+			$error++;
+		}
+		if ($scFkSoc <= 0) {
+			setEventMessages($langs->trans('ErrorFieldRequired').' ('.$langs->trans('Supplier').')', null, 'errors');
+			$error++;
+		}
+
+		if (!$error) {
+			$job = new Operationorder_jobs($db);
+			if ($job->fetch($jobid) <= 0 || (int) $job->fk_operationorder !== (int) $id) {
+				setEventMessages($langs->trans('ErrorRecordNotFound'), null, 'errors');
+				$error++;
+			}
+		}
+
+		if (!$error) {
+			// ── Note publique : infos du véhicule ────────────────────────────
+			$noteLines = array();
+			if (!empty($object->fk_vehicule)) {
+				$vehicule = new Vehicule($db);
+				if ($vehicule->fetch((int) $object->fk_vehicule) > 0) {
+					if (!empty($vehicule->immatriculation)) {
+						$noteLines[] = $langs->trans('immatriculation').' : '.dol_escape_htmltag($vehicule->immatriculation);
+					}
+					if (!empty($vehicule->vin)) {
+						$noteLines[] = $langs->trans('VIN').' : '.dol_escape_htmltag($vehicule->vin);
+					}
+					if (!empty($vehicule->fk_vehicule_mark)) {
+						$sqlMark  = 'SELECT label FROM '.MAIN_DB_PREFIX.'workshop_vehicule_c_vehicule_mark';
+						$sqlMark .= ' WHERE rowid = '.(int) $vehicule->fk_vehicule_mark;
+						$resMark  = $db->query($sqlMark);
+						if ($resMark && ($oMark = $db->fetch_object($resMark))) {
+							$noteLines[] = $langs->trans('vehiculeMark').' : '.dol_escape_htmltag($oMark->label);
+							$db->free($resMark);
+						}
+					}
+					if (!empty($vehicule->modele)) {
+						$noteLines[] = $langs->trans('modele').' : '.dol_escape_htmltag($vehicule->modele);
+					}
+					if (!empty($vehicule->fk_contract_type)) {
+						$sqlCt  = 'SELECT label FROM '.MAIN_DB_PREFIX.'workshop_vehicule_c_contract_type';
+						$sqlCt .= ' WHERE rowid = '.(int) $vehicule->fk_contract_type;
+						$resCt  = $db->query($sqlCt);
+						if ($resCt && ($oCt = $db->fetch_object($resCt))) {
+							$contractLine = $langs->trans('contractType').' : '.dol_escape_htmltag($oCt->label);
+							if (!empty($vehicule->date_end_contract)) {
+								$contractLine .= ' ('.$langs->trans('date_end_contract').' : '.dol_print_date($vehicule->date_end_contract, 'day').')';
+							}
+							$noteLines[] = $contractLine;
+							$db->free($resCt);
+						}
+					}
+				}
+			}
+			$notePublic = implode('<br>', $noteLines);
+
+			// ── Description de la ligne : ops sélectionnées + note ──────────
+			$descParts = array();
+			if (!empty($scOpsIds)) {
+				$opLabels = array();
+				foreach ($scOpsIds as $voId) {
+					$sqlOp  = 'SELECT cmo.code, cmo.label AS op_label';
+					$sqlOp .= ' FROM '.MAIN_DB_PREFIX.'workshop_vehicule_operation vo';
+					$sqlOp .= ' LEFT JOIN '.MAIN_DB_PREFIX.'workshop_vehicule_c_maintenance_operation cmo';
+					$sqlOp .= '   ON cmo.rowid = vo.fk_maintenance_operation';
+					$sqlOp .= ' WHERE vo.rowid = '.(int) $voId;
+					$resOp = $db->query($sqlOp);
+					if ($resOp && ($oOp = $db->fetch_object($resOp))) {
+						$opLabels[] = dol_escape_htmltag($oOp->code.' — '.$oOp->op_label);
+						$db->free($resOp);
+					}
+				}
+				if (!empty($opLabels)) {
+					$descParts[] = implode('<br>', $opLabels);
+				}
+			}
+			if (!empty($scDescription)) {
+				$descParts[] = $scDescription;
+			}
+			$lineDesc = implode('<br>', $descParts);
+
+			// ── Création de la commande fournisseur ──────────────────────────
+			$supplierOrder               = new CommandeFournisseur($db);
+			$supplierOrder->socid        = $scFkSoc;
+			$supplierOrder->ref_supplier = '';
+			$supplierOrder->note_public  = $notePublic;
+
+			$newOrderId = $supplierOrder->create($user);
+			if ($newOrderId <= 0) {
+				$error++;
+				setEventMessages($supplierOrder->error, $supplierOrder->errors, 'errors');
+			}
+
+			if (!$error) {
+				// Ligne de service libre
+				// Signature Dolibarr 21 : addline($desc, $pu_ht, $qty, $txtva,
+				//   $txlocaltax1, $txlocaltax2, $fk_product, $fk_prod_fourn_price,
+				//   $ref_supplier, $remise_percent, $price_base_type, $pu_ttc, $type, ...)
+				$resLine = $supplierOrder->addline(
+					$lineDesc,  // desc
+					$scAmount,  // pu_ht
+					1,          // qty
+					0,          // txtva
+					0,          // txlocaltax1
+					0,          // txlocaltax2
+					0,          // fk_product (ligne libre)
+					0,          // fk_prod_fourn_price
+					'',         // ref_supplier
+					0,          // remise_percent
+					'HT',       // price_base_type
+					0,          // pu_ttc
+					1           // type = service
+				);
+				if ($resLine <= 0) {
+					$error++;
+					setEventMessages($supplierOrder->error, $supplierOrder->errors, 'errors');
+				}
+			}
+
+			if (!$error) {
+				// Lien job ↔ commande fournisseur dans llx_element_element (INSERT direct)
+				$sqlLink  = "INSERT INTO ".MAIN_DB_PREFIX."element_element";
+				$sqlLink .= " (fk_source, sourcetype, fk_target, targettype)";
+				$sqlLink .= " VALUES (".(int) $job->id.", '".$db->escape($job->element)."'";
+				$sqlLink .= ", ".(int) $supplierOrder->id.", 'order_supplier')";
+				if (!$db->query($sqlLink)) {
+					dol_syslog(__METHOD__.' element_element link error: '.$db->lasterror(), LOG_WARNING);
+				}
+
+				// Validation de la commande
+				$resValid = $supplierOrder->valid($user);
+				if ($resValid < 0) {
+					$error++;
+					setEventMessages($supplierOrder->error, $supplierOrder->errors, 'errors');
+				}
+			}
+
+			if (!$error) {
+				setEventMessage($langs->trans('SubcontractingOrderCreated').' : '.$supplierOrder->getNomUrl(1));
+				header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
+				exit;
+			}
+		}
 	}
 
 	// ── Transition de statut ─────────────────────────────────────────────
@@ -1504,6 +1697,35 @@ if ($id > 0) {
 		}
 	}
 
+	// Rafraîchissement du montant sous-traitance de chaque job à chaque affichage,
+	// puis mise à jour des totaux de l'OR.
+	foreach ($jobsList as $j) {
+		$j->refreshExternalAmount($user);
+	}
+	$object->updateTotals($user);
+
+	// Pré-chargement des commandes fournisseurs liées par job (pour affichage dans le TPL)
+	// jobId → array of CommandeFournisseur
+	$jobLinkedOrdersCache = array();
+	if (!empty($jobsList)) {
+		$allJobIds = array_map(function ($j) { return (int) $j->id; }, $jobsList);
+		$sqlJLO  = 'SELECT ee.fk_source AS job_id, ee.fk_target AS order_id';
+		$sqlJLO .= ' FROM '.MAIN_DB_PREFIX.'element_element ee';
+		$sqlJLO .= ' WHERE ee.fk_source IN ('.implode(',', $allJobIds).')';
+		$sqlJLO .= " AND ee.sourcetype = 'operationorder_jobs'";
+		$sqlJLO .= " AND ee.targettype = 'order_supplier'";
+		$resJLO = $db->query($sqlJLO);
+		if ($resJLO) {
+			while ($oJLO = $db->fetch_object($resJLO)) {
+				$cfObj = new CommandeFournisseur($db);
+				if ($cfObj->fetch((int) $oJLO->order_id) > 0) {
+					$jobLinkedOrdersCache[(int) $oJLO->job_id][] = $cfObj;
+				}
+			}
+			$db->free($resJLO);
+		}
+	}
+
 	include dol_buildpath('/workshop/tpl/or_card_jobs_table.tpl.php', 0);
 
 	print '</div>'."\n"; // div-table-responsive
@@ -1576,11 +1798,125 @@ if ($id > 0) {
 	print '</form>'."\n";
 	print '</div>'."\n";
 
+	// ═══════════════════════════════════════════════════════════════════════
+	// DIALOG : Sous-traitance d'un Job
+	// ═══════════════════════════════════════════════════════════════════════
+
+	// Toutes les opérations de maintenance actives du véhicule (options du multi-select)
+	$scVoOptions = array();
+	if (!empty($object->fk_vehicule)) {
+		$sqlVo  = 'SELECT vo.rowid, cmo.code, cmo.label AS op_label, vo.date_next';
+		$sqlVo .= ' FROM '.MAIN_DB_PREFIX.'workshop_vehicule_operation vo';
+		$sqlVo .= ' LEFT JOIN '.MAIN_DB_PREFIX.'workshop_vehicule_c_maintenance_operation cmo';
+		$sqlVo .= '   ON cmo.rowid = vo.fk_maintenance_operation';
+		$sqlVo .= ' WHERE vo.fk_vehicule = '.(int) $object->fk_vehicule;
+		$sqlVo .= ' AND vo.status != '.WorkshopVehiculeOperation::STATUS_DONE;
+		$sqlVo .= ' ORDER BY cmo.code ASC';
+		$resVo = $db->query($sqlVo);
+		if ($resVo) {
+			while ($oVo = $db->fetch_object($resVo)) {
+				$optLabel = $oVo->code.' — '.$oVo->op_label;
+				if (!empty($oVo->date_next)) {
+					$optLabel .= ' ('.dol_print_date($db->jdate($oVo->date_next), 'day').')';
+				}
+				$scVoOptions[(string)(int) $oVo->rowid] = dol_escape_htmltag($optLabel);
+			}
+			$db->free($resVo);
+		}
+	}
+
+	// Map jobId → [rowids en string] des opérations déjà liées, pour la pré-sélection JS
+	$jobLinkedOpsMap = array();
+	foreach ($jobsList as $jItem) {
+		$linkedIds = $jItem->fetchLinkedMaintenanceOperationIds();
+		$jobLinkedOpsMap[(int) $jItem->id] = is_array($linkedIds) ? array_map('strval', $linkedIds) : array();
+	}
+
+	print '<div id="dlg-subcontracting" style="display:none;" title="'.dol_escape_htmltag($langs->trans('SubcontractingJob')).'">'."\n";
+	print '<form id="frm-subcontracting" method="POST" action="'.dol_escape_htmltag($_SERVER['PHP_SELF'].'?id='.$id).'">'."\n";
+	print '<input type="hidden" name="token" value="'.newToken().'">'."\n";
+	print '<input type="hidden" name="action" value="confirm_subcontracting">'."\n";
+	print '<input type="hidden" name="jobid" id="dlg_sc_jobid" value="">'."\n";
+
+	print '<table class="border centpercent">'."\n";
+
+	// Fournisseur (filtré sur fournisseur=1, forcecombo pour éviter Select2)
+	print '<tr><td class="titlefield fieldrequired">'.$langs->trans('Supplier').'</td><td>';
+	print $form->select_company(0, 'sc_fk_soc', 's.fournisseur = 1', 1, 1, array(), '', '', false, 'maxwidth400');
+	print '</td></tr>'."\n";
+
+	// Montant HT de la prestation
+	print '<tr><td class="fieldrequired">'.$langs->trans('SubcontractingAmount').'</td><td>';
+	print '<input type="text" name="sc_amount" id="sc_amount" class="flat width150" value="0"> '.$langs->getCurrencySymbol($conf->currency);
+	print '</td></tr>'."\n";
+
+	// Opérations de maintenance du véhicule — contrôle standard Dolibarr multiselectarray
+	// La pré-sélection des ops liées au job est appliquée par JS à l'ouverture du dialog
+	print '<tr><td>'.$langs->trans('MaintenanceOperationsLinked').'</td><td>';
+	if (!empty($scVoOptions)) {
+		print $form->multiselectarray('sc_maintenance_ops', $scVoOptions, array(), 0, 0, 'flat', 0, '100%', '', '', $langs->trans('SelectMaintenanceOps'));
+		print '<br><span class="opacitymedium small">'.$langs->trans('SubcontractingOpsHint').'</span>';
+	} else {
+		print '<span class="opacitymedium small">'.$langs->trans('NoMaintenanceOpsForVehicle').'</span>';
+	}
+	print '</td></tr>'."\n";
+
+	// Description
+	print '<tr><td>'.$langs->trans('Description').'</td><td>';
+	print '<textarea name="sc_description" id="sc_description" class="flat" rows="3" style="width:99%;"></textarea>';
+	print '</td></tr>'."\n";
+
+	print '</table>'."\n";
+	print '</form>'."\n";
+	print '</div>'."\n";
+
+	// ═══════════════════════════════════════════════════════════════════════
+	// DIALOG : Modifier une ligne produit/service (det)
+	// ═══════════════════════════════════════════════════════════════════════
+
+	print '<div id="dlg-edit-det" style="display:none;" title="'.dol_escape_htmltag($langs->trans('ModifyDetLine')).'">'."\n";
+	print '<form id="frm-edit-det" method="POST" action="'.dol_escape_htmltag($_SERVER['PHP_SELF'].'?id='.$id).'">'."\n";
+	print '<input type="hidden" name="token" value="'.newToken().'">'."\n";
+	print '<input type="hidden" name="action" value="confirm_edit_det">'."\n";
+	print '<input type="hidden" name="det_edit_id" id="det_edit_id" value="">'."\n";
+
+	print '<table class="border centpercent">'."\n";
+
+	// Produit — lecture seule
+	print '<tr><td class="titlefield">'.$langs->trans('Product').'</td><td>';
+	print '<span id="det_edit_product_label" class="opacitymedium"></span>';
+	print '</td></tr>'."\n";
+
+	// Description
+	print '<tr><td>'.$langs->trans('Description').'</td><td>';
+	print '<textarea name="det_edit_description" id="det_edit_description" class="flat" rows="2" style="width:99%;"></textarea>';
+	print '</td></tr>'."\n";
+
+	// Quantité
+	print '<tr><td class="fieldrequired">'.$langs->trans('Qty').'</td><td>';
+	print '<input type="text" name="det_edit_qty" id="det_edit_qty" class="flat width75" value="1">';
+	print '</td></tr>'."\n";
+
+	// Prix unitaire HT
+	print '<tr><td>'.$langs->trans('UnitPriceHT').'</td><td>';
+	print '<input type="text" name="det_edit_price" id="det_edit_price" class="flat width100" value="0">';
+	print '</td></tr>'."\n";
+
+	// Remise %
+	print '<tr><td>'.$langs->trans('Discount').'</td><td>';
+	print '<input type="text" name="det_edit_remise_percent" id="det_edit_remise_percent" class="flat width75" value="0"> %';
+	print '</td></tr>'."\n";
+
+	print '</table>'."\n";
+	print '</form>'."\n";
+	print '</div>'."\n";
+
 	// JS
 	// Variables JS injectées pour or_card.js (mode vue)
 	print '<script>'."\n";
-	print 'window.workshopProdData     = '.json_encode($jsProdData).';'."\n";
+	print 'window.workshopProdData      = '.json_encode($jsProdData).';'."\n";
 	print 'window.workshopOrCardAjaxUrl = '.json_encode(dol_buildpath('/workshop/ajax/or_card_ajax.php', 1).'?id='.$id).';'."\n";
+	print 'window.workshopJobLinkedOps  = '.json_encode($jobLinkedOpsMap).';'."\n";
 	print '</script>'."\n";
 	print '<script src="'.dol_escape_htmltag(dol_buildpath('/workshop/js/or_card.js', 1)).'"></script>'."\n";
 

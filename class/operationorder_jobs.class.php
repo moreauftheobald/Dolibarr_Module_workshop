@@ -415,7 +415,7 @@ class Operationorder_jobs extends CommonObject
 			$obj = $this->db->fetch_object($resql);
 			$this->total_ht_part     = (float) $obj->total_ht_part;
 			$this->total_ht_service  = (float) $obj->total_ht_service;
-			$this->total_ht_external = 0; // subcontracting – future dev
+			// total_ht_external est géré par refreshExternalAmount() — on conserve la valeur courante
 			$this->total_ht_refund   = (float) $obj->total_ht_refund;
 			$this->total_ht          = $this->total_ht_part
 				+ $this->total_ht_mo
@@ -429,6 +429,35 @@ class Operationorder_jobs extends CommonObject
 			$this->error = $this->db->lasterror();
 			return -1;
 		}
+	}
+
+	/**
+	 * Recalculates total_ht_external as the sum of total_ht of all supplier orders
+	 * linked to this job via llx_element_element, then persists and calls updateTotals().
+	 * Called at each OR card display to keep the amount in sync.
+	 *
+	 * @param  User $user User performing the update
+	 * @return int        <0 if KO, >0 if OK
+	 */
+	public function refreshExternalAmount(User $user): int
+	{
+		$sql  = 'SELECT COALESCE(SUM(cf.total_ht), 0) AS ext_total';
+		$sql .= ' FROM '.$this->db->prefix().'element_element ee';
+		$sql .= ' INNER JOIN '.$this->db->prefix().'commande_fournisseur cf ON cf.rowid = ee.fk_target';
+		$sql .= ' WHERE ee.fk_source = '.(int) $this->id;
+		$sql .= " AND ee.sourcetype = '".$this->db->escape($this->element)."'";
+		$sql .= " AND ee.targettype = 'order_supplier'";
+
+		$res = $this->db->query($sql);
+		if (!$res) {
+			$this->error = $this->db->lasterror();
+			return -1;
+		}
+		$obj = $this->db->fetch_object($res);
+		$this->db->free($res);
+
+		$this->total_ht_external = (float) price2num($obj ? $obj->ext_total : 0, 'MT');
+		return $this->updateTotals($user);
 	}
 
 	/**

@@ -37,7 +37,7 @@ if (empty($conf) || !is_object($conf)) {
 ?>
 <table class="noborder allwidth workshop-jobs-table">
 
-	<!-- En-tête — 7 colonnes -->
+	<!-- En-tête — 8 colonnes -->
 	<tr class="liste_titre workshop-jobs-table__header">
 		<th class="wrapcolumntitle workshop-jobs-col-type"><?php echo $langs->trans('ServiceType'); ?></th>
 		<th class="workshop-jobs-col-label"><?php echo $langs->trans('Label'); ?></th>
@@ -49,12 +49,13 @@ if (empty($conf) || !is_object($conf)) {
 			<i class="fa fa-stopwatch valignmiddle" title="<?php echo dol_escape_htmltag($langs->trans('TimeSpent')); ?>"></i>
 		</th>
 		<th class="workshop-jobs-col-billing"><?php echo $langs->trans('BillingThirdParty'); ?></th>
+		<th class="workshop-jobs-col-subcontracting"><?php echo $langs->trans('SubcontractingJob'); ?></th>
 		<th class="workshop-jobs-col-actions">&nbsp;</th>
 	</tr>
 
 <?php if (empty($jobsList)) { ?>
 	<tr class="oddeven">
-		<td colspan="7" class="opacitymedium center"><?php echo $langs->trans('NoJobYet'); ?></td>
+		<td colspan="8" class="opacitymedium center"><?php echo $langs->trans('NoJobYet'); ?></td>
 	</tr>
 <?php } else {
 	$ii = 0;
