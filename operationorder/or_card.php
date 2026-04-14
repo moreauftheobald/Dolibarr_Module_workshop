@@ -803,7 +803,7 @@ if (empty($reshook)) {
 			}
 
 			if (!$error) {
-				// Lien job ↔ commande fournisseur dans llx_element_element
+				// Lien job ↔ commande fournisseur (raw SQL : job n'est pas un objet natif Dolibarr)
 				$sqlLink  = "INSERT INTO ".MAIN_DB_PREFIX."element_element";
 				$sqlLink .= " (fk_source, sourcetype, fk_target, targettype)";
 				$sqlLink .= " VALUES (".(int) $job->id.", '".$db->escape($job->element)."'";
@@ -812,13 +812,10 @@ if (empty($reshook)) {
 					dol_syslog(__METHOD__.' element_element link job error: '.$db->lasterror(), LOG_WARNING);
 				}
 
-				// Lien OR ↔ commande fournisseur dans llx_element_element
-				$sqlLinkOR  = "INSERT INTO ".MAIN_DB_PREFIX."element_element";
-				$sqlLinkOR .= " (fk_source, sourcetype, fk_target, targettype)";
-				$sqlLinkOR .= " VALUES (".(int) $object->id.", '".$db->escape($object->element)."'";
-				$sqlLinkOR .= ", ".(int) $supplierOrder->id.", 'order_supplier')";
-				if (!$db->query($sqlLinkOR)) {
-					dol_syslog(__METHOD__.' element_element link OR error: '.$db->lasterror(), LOG_WARNING);
+				// Lien OR ↔ commande fournisseur (via add_object_linked standard Dolibarr)
+				$resLink = $supplierOrder->add_object_linked($object->element, $object->id);
+				if ($resLink < 0) {
+					dol_syslog(__METHOD__.' add_object_linked OR error: '.$supplierOrder->error, LOG_WARNING);
 				}
 
 				// Validation de la commande
