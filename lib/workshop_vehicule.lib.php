@@ -55,18 +55,11 @@ function vehiculePrepareHead($object)
 	$head[$h][2] = 'document';
 	$h++;
 
-	if (isModEnabled("operationorder") && $user->hasRight('operationorder', 'read')) {
+	if (isModEnabled("workshop") && $user->hasRight('workshop', 'operationorders', 'read')) {
 		$nbOperationOrder = getNbORVehicle($object->id);
-		$head[$h][0] = dol_buildpath('operationorder/list.php?&origin=vehicule&originid='.$object->id, 1);
+		$head[$h][0] = dol_buildpath('/workshop/or_list.php?origin=vehicule&originid='.$object->id, 1);
 		$head[$h][1] = $langs->trans('ORListHisto').'<span class="badge marginleftonlyshort">'.max($nbOperationOrder, 0).'</span>';
 		$head[$h][2] = 'list';
-		$h++;
-
-		$nbOperationOrder = getNbORVehicle($object->id, 0);
-		$langs->load('operationorder@operationorder');
-		$head[$h][0] = dol_buildpath('operationorder/vsr.php?origin=vehicule&originid='.$object->id, 1);
-		$head[$h][1] = $langs->trans('ORListVSR').'<span class="badge marginleftonlyshort">'.max($nbOperationOrder, 0).'</span>';
-		$head[$h][2] = 'vsr';
 		$h++;
 	}
 
@@ -132,29 +125,27 @@ function getFormConfirmWorkshopVehicule($form, $object, $action)
 
 	$formconfirm = '';
 
-	if ($action === 'valid' && $user->hasRight('workshop', 'vehicule', 'write')) {
-		$body = $langs->trans('ConfirmActivateWorkshopVehiculeBody', $object->immatriculation);
-		$formconfirm = $form->formconfirm(dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id, $langs->trans('ConfirmActivateWorkshopVehiculeTitle'), $body, 'confirm_validate', '', 0, 1);
-	} elseif ($action === 'modif' && $user->hasRight('workshop', 'vehicule', 'write')) {
-		$body = $langs->trans('ConfirmReopenWorkshopVehiculeBody', $object->immatriculation);
-		$formconfirm = $form->formconfirm(dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id, $langs->trans('ConfirmReopenWorkshopVehiculeTitle'), $body, 'confirm_modif', '', 0, 1);
-	} elseif ($action === 'delete' && $user->hasRight('workshop', 'vehicule', 'delete')) {
-		$body = $langs->trans('ConfirmDeleteWorkshopVehiculeBody');
-		$formconfirm = $form->formconfirm(dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id, $langs->trans('ConfirmDeleteWorkshopVehiculeTitle'), $body, 'confirm_delete', '', 0, 1);
-	} elseif ($action === 'clone' && $user->hasRight('workshop', 'vehicule', 'write')) {
-		$body = $langs->trans('ConfirmCloneWorkshopVehiculeBody', $object->immatriculation);
-		$formconfirm = $form->formconfirm(dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id, $langs->trans('ConfirmCloneWorkshopVehiculeTitle'), $body, 'confirm_clone', '', 0, 1);
-	} elseif ($action === 'delActivity' && $user->hasRight('workshop', 'vehicule', 'write')) {
-		$body = $langs->trans('ConfirmDelActivityWorkshopVehiculeBody');
-		$formconfirm = $form->formconfirm(dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id.'&act_id='.GETPOST('act_id'), $langs->trans('ConfirmDeleteWorkshopVehiculeTitle'), $body, 'confirm_delActivity', '', 0, 1);
-	} elseif ($action === 'unlinkVehicule' && $user->hasRight('workshop', 'vehicule', 'write')) {
-		$body = $langs->trans('ConfirmUnlinkVehiculeWorkshopBody');
-		$formconfirm = $form->formconfirm(dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id.'&linkVehicule_id='.GETPOST('linkVehicule_id'), $langs->trans('ConfirmUnlinkVehiculeWorkshopTitle'), $body, 'confirm_unlinkVehicule', '', 0, 1);
-	} elseif ($action === 'delOperation' && $user->hasRight('workshop', 'vehicule', 'write')) {
-		$body = $langs->trans('ConfirmDelOperationWorkshopBody');
-		$formconfirm = $form->formconfirm(dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id.'&ope_id='.GETPOST('ope_id'), $langs->trans('ConfirmDeleteWorkshopVehiculeTitle'), $body, 'confirm_delOperation', '', 0, 1);
+	// Déclaration data-driven des confirmations simples
+	// Format : action => [right, titleKey, bodyKey, confirmAction, extraParams (query string)]
+	$confirmDefs = array(
+		'valid'          => array('write',  'ConfirmActivateWorkshopVehiculeTitle', 'ConfirmActivateWorkshopVehiculeBody', 'confirm_validate',    ''),
+		'modif'          => array('write',  'ConfirmReopenWorkshopVehiculeTitle',   'ConfirmReopenWorkshopVehiculeBody',   'confirm_modif',       ''),
+		'delete'         => array('delete', 'ConfirmDeleteWorkshopVehiculeTitle',   'ConfirmDeleteWorkshopVehiculeBody',   'confirm_delete',      ''),
+		'clone'          => array('write',  'ConfirmCloneWorkshopVehiculeTitle',    'ConfirmCloneWorkshopVehiculeBody',    'confirm_clone',       ''),
+		'delActivity'    => array('write',  'ConfirmDeleteWorkshopVehiculeTitle',   'ConfirmDelActivityWorkshopVehiculeBody',  'confirm_delActivity',    '&act_id='.GETPOSTINT('act_id')),
+		'unlinkVehicule' => array('write',  'ConfirmUnlinkVehiculeWorkshopTitle',   'ConfirmUnlinkVehiculeWorkshopBody',  'confirm_unlinkVehicule', '&linkVehicule_id='.GETPOSTINT('linkVehicule_id')),
+		'delOperation'   => array('write',  'ConfirmDeleteWorkshopVehiculeTitle',   'ConfirmDelOperationWorkshopBody',    'confirm_delOperation',   '&ope_id='.GETPOSTINT('ope_id')),
+	);
+
+	if (isset($confirmDefs[$action])) {
+		list($right, $titleKey, $bodyKey, $confirmAction, $extraParams) = $confirmDefs[$action];
+		if ($user->hasRight('workshop', 'vehicule', $right)) {
+			$url  = dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id.$extraParams;
+			$body = $langs->trans($bodyKey, $object->immatriculation);
+			$formconfirm = $form->formconfirm($url, $langs->trans($titleKey), $body, $confirmAction, '', 0, 1);
+		}
 	} elseif ($action === 'cloneOperations' && $user->hasRight('workshop', 'vehicule', 'write')) {
-		// Build vehicle list of same type (VIN - Immat - Marque)
+		// Cas spécial : sélection du véhicule source
 		$sql = "SELECT v.rowid, v.vin, v.immatriculation, vm.label as marque";
 		$sql .= " FROM ".$db->prefix()."workshop_vehicule as v";
 		$sql .= " LEFT JOIN ".$db->prefix()."workshop_vehicule_c_vehicule_mark as vm ON vm.rowid = v.fk_vehicule_mark";
@@ -409,6 +400,11 @@ function printVehiculeOperations($object)
 {
 	global $langs, $form, $user, $db;
 
+	// Charger la classe OR si le module est actif
+	if (isModEnabled('workshop')) {
+		dol_include_once('/workshop/class/operationorder.class.php');
+	}
+
 	print load_fiche_titre($langs->trans('VehiculeOperations'), '', '');
 
 	if (GETPOST('action', 'alpha') == 'editOperation') {
@@ -425,6 +421,9 @@ function printVehiculeOperations($object)
 		print '<input type="hidden" name="ope_id" value="'.GETPOST('ope_id', 'int').'">';
 	}
 
+	$showOrCol = isModEnabled('workshop');
+	$nbCols    = $showOrCol ? 10 : 9;
+
 	print '<table class="border" width="100%">'."\n";
 	print '<tr class="liste_titre">';
 	print '<td align="center">'.$langs->trans('VehiculeOperation').'</td>';
@@ -435,7 +434,7 @@ function printVehiculeOperations($object)
 	print '<td align="center">'.$langs->trans('VehiculeOperationDateNext').'</td>';
 	print '<td align="center">'.$langs->trans('VehiculeOperationKmNext').'</td>';
 	print '<td align="center">'.$langs->trans('VehiculeOperationOnTime').'</td>';
-	if (isModEnabled('operationorder')) {
+	if ($showOrCol) {
 		print '<td align="center">'.$langs->trans('VehiculeOperationNextOR').'</td>';
 	}
 	print '<td align="center"></td>';
@@ -446,9 +445,23 @@ function printVehiculeOperations($object)
 		setEventMessages($object->error, null, 'errors');
 	}
 	if (empty($object->operations)) {
-		print '<tr><td align="center" colspan="'.(isModEnabled('operationorder') ? 10 : 9).'">'.$langs->trans('NoOperation').'</td></tr>';
+		print '<tr><td align="center" colspan="'.$nbCols.'">'.$langs->trans('NoOperation').'</td></tr>';
 	} else {
 		foreach ($object->operations as $operation) {
+			// Cellules communes (identiques en lecture et en édition)
+			$onTimeTd = '<td align="center">'.(!empty($operation->on_time) ? dolGetBadge($langs->trans('VehiculeOperationOnTime'), '', 'danger') : '').'</td>';
+			$orNextTd = '';
+			if ($showOrCol) {
+				$orNextTd = '<td align="center">';
+				if (!empty($operation->or_next) && class_exists('Operationorder')) {
+					$operationorder = new Operationorder($object->db);
+					if ($operationorder->fetch($operation->or_next, false) > 0) {
+						$orNextTd .= $operationorder->getNomUrl(0);
+					}
+				}
+				$orNextTd .= '</td>';
+			}
+
 			print '<tr>';
 			if (GETPOST('action', 'alpha') == 'editOperation'
 				&& $operation->id == GETPOST('ope_id', 'int')) {
@@ -468,17 +481,8 @@ function printVehiculeOperations($object)
 				print '<td align="center"><input class="quatrevingtpercent" type="number" name="km_done" id="km_done" step="1" value="'.$operation->km_done.'"></td>';
 				print '<td align="center">'.$operation->date_next.'</td>';
 				print '<td align="center">'.$operation->km_next.'</td>';
-				print '<td align="center">'.(!empty($operation->on_time) ? dolGetBadge($langs->trans('VehiculeOperationOnTime'), '', 'danger') : '').'</td>';
-				if (isModEnabled('operationorder')) {
-					print '<td align="center">';
-					if (!empty($operation->or_next) && class_exists('OperationOrder')) {
-						$operationorder = new OperationOrder($object->db);
-						if ($operationorder->fetch($operation->or_next, false) > 0) {
-							print $operationorder->getNomUrl(0);
-						}
-					}
-					print '</td>';
-				}
+				print $onTimeTd;
+				print $orNextTd;
 				print '<td align="center">';
 				print '<input class="button quatrevingtpercent" type="submit" name="saveOperation" value="'.$langs->trans("Save").'">';
 				print '</td>';
@@ -498,17 +502,8 @@ function printVehiculeOperations($object)
 				}
 				print '</td>';
 				print '<td align="center">'.$operation->km_next.'</td>';
-				print '<td align="center">'.(!empty($operation->on_time) ? dolGetBadge($langs->trans('VehiculeOperationOnTime'), '', 'danger') : '').'</td>';
-				if (isModEnabled('operationorder')) {
-					print '<td align="center">';
-					if (!empty($operation->or_next) && class_exists('OperationOrder')) {
-						$operationorder = new OperationOrder($object->db);
-						if ($operationorder->fetch($operation->or_next, false) > 0) {
-							print $operationorder->getNomUrl(0);
-						}
-					}
-					print '</td>';
-				}
+				print $onTimeTd;
+				print $orNextTd;
 				print '<td align="center">';
 				print '<a href="'.dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id.'&action=editOperation&ope_id='.$operation->id.'&token='.newToken().'">'.img_edit().'</a>';
 				print '<a href="'.dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id.'&action=delOperation&ope_id='.$operation->id.'&token='.newToken().'">'.img_delete().'</a>';
@@ -540,7 +535,7 @@ function printVehiculeOperations($object)
 		print $form->selectDate($date_done, 'date_done');
 		print '</td>';
 		print '<td align="center"><input class="quatrevingtpercent" type="number" name="km_done" id="km_done" step="1" value="'.GETPOST('km_done', 'int').'"></td>';
-		print '<td align="center" colspan="'.(isModEnabled('operationorder') ? 4 : 3).'">';
+		print '<td align="center" colspan="'.($showOrCol ? 4 : 3).'">';
 		print '<input class="button quatrevingtpercent" type="submit" name="addOperation" value="'.$langs->trans("Add").'">';
 		print '</td>';
 		print '</tr>';
@@ -570,14 +565,14 @@ function getNbORVehicle($idvehicle, $checkEntity = 1)
 {
 	global $db;
 
-	if (!isModEnabled('operationorder')) {
+	if (!isModEnabled('workshop')) {
 		return 0;
 	}
 
-	$sql = 'SELECT COUNT(o.rowid) as nb FROM '.$db->prefix().'operationorder as o ';
+	$sql = 'SELECT COUNT(o.rowid) as nb FROM '.$db->prefix().'workshop_operationorder as o';
 	$sql .= ' WHERE o.fk_vehicule = '.(int) $idvehicle;
 	if ($checkEntity) {
-		$sql .= ' AND o.entity IN ('.getEntity('operationorder').')';
+		$sql .= ' AND o.entity IN ('.getEntity('workshop_operationorder').')';
 	}
 	$resql = $db->query($sql);
 
