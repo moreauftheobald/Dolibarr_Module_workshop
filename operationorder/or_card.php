@@ -110,7 +110,6 @@ if ($id > 0) {
 }
 
 // Fonctions helpers orCardState* → voir lib/workshop_or_card.lib.php
-// Handler AJAX get_warehouses_for_product → voir ajax/or_card_ajax.php
 
 
 /*
@@ -532,18 +531,17 @@ if (empty($reshook)) {
 				setEventMessages($det->error, $det->errors, 'errors');
 			}
 		}
-		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
-		exit;
+		$action = 'add_det_details'; // réouvre le dialog détails en cas d'erreur
 	}
 
 	// ── Modification d'une ligne produit/service ─────────────────────────
 	if ($action == 'confirm_edit_det' && $id > 0 && $permissiontoadd) {
-		$detid          = GETPOSTINT('det_edit_id');
-		$qty            = (float) price2num(str_replace(',', '.', GETPOST('det_edit_qty', 'alpha')), 'MU');
-		$price          = (float) price2num(str_replace(',', '.', GETPOST('det_edit_price', 'alpha')), 'MU');
-		$remise_percent = (float) price2num(str_replace(',', '.', GETPOST('det_edit_remise_percent', 'alpha')), 'MU');
-		$description    = GETPOST('det_edit_description', 'restricthtml');
-		$fk_warehouse   = GETPOSTINT('det_edit_fk_warehouse');
+		$detid          = GETPOSTINT('detid');
+		$qty            = (float) price2num(str_replace(',', '.', GETPOST('det_qty', 'alpha')), 'MU');
+		$price          = (float) price2num(str_replace(',', '.', GETPOST('det_price', 'alpha')), 'MU');
+		$remise_percent = (float) price2num(str_replace(',', '.', GETPOST('det_remise_percent', 'alpha')), 'MU');
+		$description    = GETPOST('det_description', 'restricthtml');
+		$fk_warehouse   = GETPOSTINT('det_fk_warehouse');
 
 		$det = new Operationorderdet($db);
 		if ($det->fetch($detid) > 0) {
@@ -569,8 +567,7 @@ if (empty($reshook)) {
 		} else {
 			setEventMessages($langs->trans('ErrorRecordNotFound'), null, 'errors');
 		}
-		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
-		exit;
+		$action = 'edit_det'; // réouvre le dialog en cas d'erreur
 	}
 
 	// ── Suppression d'une ligne produit/service ───────────────────────────
@@ -679,8 +676,9 @@ if (empty($reshook)) {
 		$jobid        = GETPOSTINT('jobid');
 		$scFkSoc      = GETPOSTINT('sc_fk_soc');
 		$scAmount     = (float) price2num(str_replace(',', '.', GETPOST('sc_amount', 'alpha')), 'MT');
-		$scOpsRaw     = GETPOST('sc_maintenance_ops', 'array:int');
-		$scOpsIds     = is_array($scOpsRaw) ? array_values(array_filter(array_map('intval', $scOpsRaw))) : array();
+		// formconfirm soumet en GET : le multi-select arrive en comma-separated (ex: "1,2,3")
+		$scOpsRaw     = GETPOST('sc_maintenance_ops', 'alpha');
+		$scOpsIds     = !empty($scOpsRaw) ? array_values(array_filter(array_map('intval', explode(',', $scOpsRaw)))) : array();
 		$scDescription = GETPOST('sc_description', 'restricthtml');
 
 		if ($jobid <= 0) {
@@ -805,22 +803,21 @@ if (empty($reshook)) {
 			}
 
 			if (!$error) {
-				// Lien job ↔ commande fournisseur dans llx_element_element
+				// Lien job ↔ commande fournisseur (raw SQL : job n'est pas un objet natif Dolibarr)
 				$sqlLink  = "INSERT INTO ".MAIN_DB_PREFIX."element_element";
 				$sqlLink .= " (fk_source, sourcetype, fk_target, targettype)";
-				$sqlLink .= " VALUES (".(int) $job->id.", '".$db->escape($job->getElementType())."'";
+				$sqlLink .= " VALUES (".(int) $job->id.", '".$db->escape($job->element)."'";
 				$sqlLink .= ", ".(int) $supplierOrder->id.", 'order_supplier')";
 				if (!$db->query($sqlLink)) {
 					dol_syslog(__METHOD__.' element_element link job error: '.$db->lasterror(), LOG_WARNING);
 				}
 
-				// Lien OR ↔ commande fournisseur dans llx_element_element
-				$sqlLinkOR  = "INSERT INTO ".MAIN_DB_PREFIX."element_element";
-				$sqlLinkOR .= " (fk_source, sourcetype, fk_target, targettype)";
-				$sqlLinkOR .= " VALUES (".(int) $object->id.", '".$db->escape($object->getElementType())."'";
-				$sqlLinkOR .= ", ".(int) $supplierOrder->id.", 'order_supplier')";
-				if (!$db->query($sqlLinkOR)) {
-					dol_syslog(__METHOD__.' element_element link OR error: '.$db->lasterror(), LOG_WARNING);
+				// Lien OR ↔ commande fournisseur (via add_object_linked standard Dolibarr)
+				// getElementType() retourne 'workshop_operationorder' (format module_element)
+				// utilisé par fetchObjectLinked + showLinkedObjectBlock pour la résolution
+				$resLink = $supplierOrder->add_object_linked($object->getElementType(), $object->id);
+				if ($resLink < 0) {
+					dol_syslog(__METHOD__.' add_object_linked OR error: '.$supplierOrder->error, LOG_WARNING);
 				}
 
 				// Validation de la commande
@@ -1625,6 +1622,320 @@ if ($id > 0) {
 		}
 	}
 
+	// ── Dialog étape 1 : Sélection du produit/service (ajout) ────────────
+	if ($action === 'add_det' && $id > 0 && $canEditAtStatus) {
+		$detJobId = GETPOSTINT('jobid');
+		$htmlProdSelect = $form->select_produits(GETPOSTINT('det_fk_product'), 'det_fk_product', '', 0, 0, 1, 2, '', 0, array(), 0, '1', 1, 'maxwidth400', 0, '', null, 1);
+
+		$fqProd = array(
+			array('type' => 'hidden', 'name' => 'jobid', 'value' => (string) $detJobId),
+			array(
+				'type'  => 'other',
+				'label' => $langs->trans('Product').' <span class="fieldrequired">*</span>',
+				'name'  => 'det_fk_product',
+				'value' => $htmlProdSelect,
+			),
+		);
+
+		print $form->formconfirm(
+			$_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&token='.newToken(),
+			$langs->trans('AddDetLine').' — '.$langs->trans('SelectProduct'),
+			'',
+			'add_det_details',
+			$fqProd,
+			'yes',
+			1,
+			0,
+			600,
+			0,
+			$langs->trans('Next'),
+			$langs->trans('Cancel')
+		);
+	}
+
+	// ── Dialog étape 2 : Détails d'une ligne (ajout après sélection / modification) ──
+	if (in_array($action, array('add_det_details', 'edit_det', 'confirm_add_det', 'confirm_edit_det')) && $id > 0 && $canEditAtStatus) {
+		$isEditDet = in_array($action, array('edit_det', 'confirm_edit_det'));
+
+		// ── Charger les données selon le contexte ──
+		$detFkProduct   = 0;
+		$detJobId       = 0;
+		$detId          = 0;
+		$detDescription = '';
+		$detQty         = '1';
+		$detPrice       = '0';
+		$detRemise      = '0';
+		$detFkWarehouse = 0;
+		$_showDialog    = true;
+
+		if ($isEditDet) {
+			$detId  = GETPOSTINT('detid');
+			$detObj = new Operationorderdet($db);
+			if ($detObj->fetch($detId) > 0) {
+				$detFkProduct = (int) $detObj->fk_product;
+				$detJobId     = (int) $detObj->fk_operationorder_jobs;
+				// Sur erreur (confirm=yes dans l'URL) : reprendre les saisies utilisateur
+				$isRetry = (GETPOST('confirm', 'alpha') === 'yes');
+				if ($isRetry) {
+					$detDescription = GETPOST('det_description', 'restricthtml');
+					$detQty         = GETPOST('det_qty', 'alpha');
+					$detPrice       = GETPOST('det_price', 'alpha');
+					$detRemise      = GETPOST('det_remise_percent', 'alpha');
+					$detFkWarehouse = GETPOSTINT('det_fk_warehouse');
+				} else {
+					$detDescription = (string) $detObj->description;
+					$detQty         = price2num($detObj->qty, 2);
+					$detPrice       = price2num($detObj->price, 'MU');
+					$detRemise      = price2num($detObj->remise_percent, 2);
+					$detFkWarehouse = (int) $detObj->fk_warehouse;
+				}
+			} else {
+				setEventMessages($langs->trans('ErrorRecordNotFound'), null, 'errors');
+				$_showDialog = false;
+			}
+		} else {
+			$detFkProduct   = GETPOSTINT('det_fk_product');
+			$detJobId       = GETPOSTINT('jobid');
+			$detDescription = GETPOST('det_description', 'restricthtml');
+			$detQty         = GETPOST('det_qty', 'alpha') ?: '1';
+			$detPrice       = GETPOST('det_price', 'alpha');
+			$detRemise      = GETPOST('det_remise_percent', 'alpha');
+			if ($detRemise === '' || $detRemise === null) {
+				$detRemise = '0';
+			}
+			$detFkWarehouse = GETPOSTINT('det_fk_warehouse');
+		}
+
+		if ($_showDialog) {
+			// Charger le produit pour label, type et pré-remplissage (ajout)
+			require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
+			$prodTmp        = new Product($db);
+			$detProductType = -1;
+			$prodLabel      = '';
+			if ($detFkProduct > 0 && $prodTmp->fetch($detFkProduct) > 0) {
+				$detProductType = (int) $prodTmp->type;
+				$prodLabel = $prodTmp->getNomUrl(1).' '.dol_escape_htmltag($prodTmp->label);
+				// Pour l'ajout : pré-remplir depuis le produit si pas encore de valeurs
+				if (!$isEditDet) {
+					if ($detDescription === '' || $detDescription === null) {
+						$detDescription = dol_string_nohtmltag($prodTmp->description ?? '', 0);
+					}
+					if ($detPrice === '' || $detPrice === null) {
+						$detPrice = price2num($prodTmp->price, 'MU');
+					}
+				}
+			}
+			if ($detPrice === '' || $detPrice === null) {
+				$detPrice = '0';
+			}
+
+			// ── Construction des formquestions ──
+			$fqDet = array();
+			if ($isEditDet) {
+				$fqDet[] = array('type' => 'hidden', 'name' => 'detid', 'value' => (string) $detId);
+			} else {
+				$fqDet[] = array('type' => 'hidden', 'name' => 'jobid', 'value' => (string) $detJobId);
+				$fqDet[] = array('type' => 'hidden', 'name' => 'det_fk_product', 'value' => (string) $detFkProduct);
+			}
+
+			// Produit (lecture seule — pas de 'name' pour éviter un $('#') invalide dans le JS formconfirm)
+			$fqDet[] = array(
+				'type'  => 'other',
+				'label' => $langs->trans('Product'),
+				'value' => $prodLabel ?: '<span class="opacitymedium">—</span>',
+			);
+
+			$fqDet[] = array(
+				'type'     => 'textarea',
+				'label'    => $langs->trans('Description'),
+				'name'     => 'det_description',
+				'value'    => $detDescription,
+				'moreattr' => 'rows="6" style="width:99%"',
+			);
+			$fqDet[] = array(
+				'type'  => 'text',
+				'label' => $langs->trans('Qty').' <span class="fieldrequired">*</span>',
+				'name'  => 'det_qty',
+				'value' => $detQty,
+				'size'  => 10,
+			);
+			$fqDet[] = array(
+				'type'  => 'text',
+				'label' => $langs->trans('UnitPriceHT'),
+				'name'  => 'det_price',
+				'value' => $detPrice,
+				'size'  => 10,
+			);
+			$fqDet[] = array(
+				'type'  => 'text',
+				'label' => $langs->trans('Discount').' (%)',
+				'name'  => 'det_remise_percent',
+				'value' => $detRemise,
+				'size'  => 8,
+			);
+
+			// Sélecteur entrepôt (produits physiques uniquement)
+			if ($detFkProduct > 0 && $detProductType === 0) {
+				$sqlWh  = "SELECT e.rowid, e.ref, COALESCE(ps.reel, 0) as qty, p.fk_default_warehouse";
+				$sqlWh .= " FROM ".MAIN_DB_PREFIX."entrepot e";
+				$sqlWh .= " LEFT JOIN ".MAIN_DB_PREFIX."product_stock ps ON (ps.fk_entrepot = e.rowid AND ps.fk_product = ".(int) $detFkProduct.")";
+				$sqlWh .= " LEFT JOIN ".MAIN_DB_PREFIX."product p ON (p.rowid = ".(int) $detFkProduct.")";
+				$sqlWh .= " WHERE e.entity IN (".getEntity('stock').")";
+				$sqlWh .= " AND e.statut >= 0";
+				$sqlWh .= " ORDER BY CASE WHEN e.rowid = p.fk_default_warehouse THEN 0 ELSE 1 END ASC,";
+				$sqlWh .= " CASE WHEN COALESCE(ps.reel, 0) > 0 THEN 0 ELSE 1 END ASC, e.ref ASC";
+				$resWh = $db->query($sqlWh);
+
+				$htmlWhSelect = '<select name="det_fk_warehouse" id="det_fk_warehouse" class="flat maxwidth400">';
+				$htmlWhSelect .= '<option value="">&nbsp;</option>';
+				if ($resWh) {
+					while ($objWh = $db->fetch_object($resWh)) {
+						$whLabel = dol_escape_htmltag($objWh->ref);
+						if ((float) $objWh->qty > 0) {
+							$whLabel .= ' ('.price2num($objWh->qty, 2).')';
+						}
+						$sel = '';
+						if ($detFkWarehouse > 0 && (int) $objWh->rowid === $detFkWarehouse) {
+							$sel = ' selected';
+						} elseif ($detFkWarehouse <= 0 && (int) $objWh->fk_default_warehouse > 0 && (int) $objWh->rowid === (int) $objWh->fk_default_warehouse) {
+							$sel = ' selected';
+						}
+						$htmlWhSelect .= '<option value="'.(int) $objWh->rowid.'"'.$sel.'>'.$whLabel.'</option>';
+					}
+					$db->free($resWh);
+				}
+				$htmlWhSelect .= '</select>';
+
+				$fqDet[] = array(
+					'type'  => 'other',
+					'label' => $langs->trans('StockLocation'),
+					'name'  => 'det_fk_warehouse',
+					'value' => $htmlWhSelect,
+				);
+			}
+
+			// ── Paramètres du formconfirm ──
+			$confirmAction = $isEditDet ? 'confirm_edit_det' : 'confirm_add_det';
+			$confirmTitle  = $isEditDet ? $langs->trans('ModifyDetLine') : $langs->trans('AddDetLine');
+			$confirmPageUrl = $_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&token='.newToken();
+			if ($isEditDet) {
+				$confirmPageUrl .= '&detid='.(int) $detId;
+			} else {
+				$confirmPageUrl .= '&jobid='.(int) $detJobId.'&det_fk_product='.(int) $detFkProduct;
+			}
+
+			print $form->formconfirm(
+				$confirmPageUrl,
+				$confirmTitle,
+				'',
+				$confirmAction,
+				$fqDet,
+				'yes',
+				1,
+				550,
+				700,
+				0,
+				$langs->trans('Save'),
+				$langs->trans('Cancel')
+			);
+		}
+	}
+
+	// ── Dialog : Sous-traitance d'un Job ─────────────────────────────────
+	if (($action === 'subcontracting_job' || $action === 'confirm_subcontracting') && $id > 0 && $canEditAtStatus) {
+		$scJobId = GETPOSTINT('jobid');
+
+		// Sélecteur fournisseur (type 'other' : le select_company génère un <select id="sc_fk_soc">)
+		$htmlSupplier = $form->select_company(GETPOSTINT('sc_fk_soc'), 'sc_fk_soc', 's.fournisseur = 1', 1, 1, 0, array(), '', false, 'maxwidth400');
+
+		// Opérations de maintenance du véhicule
+		$scVoOptions = array();
+		if (!empty($object->fk_vehicule)) {
+			$sqlVo  = 'SELECT vo.rowid, cmo.code, cmo.label AS op_label, vo.date_next';
+			$sqlVo .= ' FROM '.MAIN_DB_PREFIX.'workshop_vehicule_operation vo';
+			$sqlVo .= ' LEFT JOIN '.MAIN_DB_PREFIX.'workshop_vehicule_c_maintenance_operation cmo';
+			$sqlVo .= '   ON cmo.rowid = vo.fk_maintenance_operation';
+			$sqlVo .= ' WHERE vo.fk_vehicule = '.(int) $object->fk_vehicule;
+			$sqlVo .= ' AND vo.status != '.WorkshopVehiculeOperation::STATUS_DONE;
+			$sqlVo .= ' ORDER BY cmo.code ASC';
+			$resVo = $db->query($sqlVo);
+			if ($resVo) {
+				while ($oVo = $db->fetch_object($resVo)) {
+					$optLabel = $oVo->code.' — '.$oVo->op_label;
+					if (!empty($oVo->date_next)) {
+						$optLabel .= ' ('.dol_print_date($db->jdate($oVo->date_next), 'day').')';
+					}
+					$scVoOptions[(string)(int) $oVo->rowid] = dol_escape_htmltag($optLabel);
+				}
+				$db->free($resVo);
+			}
+		}
+
+		// Pré-sélection : opérations déjà liées à ce job
+		$preSelectedOps = array();
+		if ($scJobId > 0) {
+			$tmpJob = new Operationorder_jobs($db);
+			if ($tmpJob->fetch($scJobId) > 0) {
+				$linkedIds = $tmpJob->fetchLinkedMaintenanceOperationIds();
+				$preSelectedOps = is_array($linkedIds) ? array_map('strval', $linkedIds) : array();
+			}
+		}
+
+		// Construire le HTML du multiselect (ou message si vide)
+		$htmlOpsSelect = '';
+		if (!empty($scVoOptions)) {
+			$htmlOpsSelect = $form->multiselectarray('sc_maintenance_ops', $scVoOptions, $preSelectedOps, 0, 0, 'flat', 0, '100%', '', '', $langs->trans('SelectMaintenanceOps'));
+			$htmlOpsSelect .= '<br><span class="opacitymedium small">'.$langs->trans('SubcontractingOpsHint').'</span>';
+		} else {
+			$htmlOpsSelect = '<span class="opacitymedium small">'.$langs->trans('NoMaintenanceOpsForVehicle').'</span>';
+		}
+
+		$fqSc = array(
+			array('type' => 'hidden', 'name' => 'jobid', 'value' => (string) $scJobId),
+			array(
+				'type'  => 'other',
+				'label' => $langs->trans('Supplier').' <span class="fieldrequired">*</span>',
+				'name'  => 'sc_fk_soc',
+				'value' => $htmlSupplier,
+			),
+			array(
+				'type'  => 'text',
+				'label' => $langs->trans('SubcontractingAmount').' <span class="fieldrequired">*</span>',
+				'name'  => 'sc_amount',
+				'value' => GETPOST('sc_amount', 'alpha') ?: '0',
+				'size'  => 15,
+			),
+			array(
+				'type'  => 'other',
+				'label' => $langs->trans('MaintenanceOperationsLinked'),
+				'name'  => 'sc_maintenance_ops',
+				'value' => $htmlOpsSelect,
+			),
+			array(
+				'type'     => 'textarea',
+				'label'    => $langs->trans('Description'),
+				'name'     => 'sc_description',
+				'value'    => GETPOST('sc_description', 'restricthtml'),
+				'moreattr' => 'rows="4" style="width:99%"',
+			),
+		);
+
+		print $form->formconfirm(
+			$_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&jobid='.(int) $scJobId.'&token='.newToken(),
+			$langs->trans('SubcontractingJob'),
+			'',
+			'confirm_subcontracting',
+			$fqSc,
+			'yes',
+			1,
+			500,
+			640,
+			0,
+			$langs->trans('Save'),
+			$langs->trans('Cancel')
+		);
+	}
+
 	// ═══════════════════════════════════════════════════════════════════════
 	// SECTION JOBS
 	// ═══════════════════════════════════════════════════════════════════════
@@ -1734,205 +2045,7 @@ if ($id > 0) {
 	print '</div></div>'."\n";
 
 
-	// ═══════════════════════════════════════════════════════════════════════
-	// DIALOG : Ajouter une ligne produit/service dans un Job
-	// ═══════════════════════════════════════════════════════════════════════
-
-	// Map prix+type+description pour les produits (auto-remplissage JS) + options du <select> PHP
-	$jsProdData    = array();
-	$phpProdOptions = array();
-	$sqlAllProds  = "SELECT p.rowid, p.ref, p.label, p.price, p.fk_product_type, p.description";
-	$sqlAllProds .= " FROM ".MAIN_DB_PREFIX."product p";
-	$sqlAllProds .= " WHERE p.entity IN (".getEntity('product').")";
-	$sqlAllProds .= " AND p.tosell = 1";
-	$sqlAllProds .= " ORDER BY p.ref ASC";
-	$resAllProds = $db->query($sqlAllProds);
-	if ($resAllProds) {
-		while ($oProd = $db->fetch_object($resAllProds)) {
-			$pid = (int) $oProd->rowid;
-			$jsProdData[$pid] = array(
-				'price'       => (float) $oProd->price,
-				'type'        => (int) $oProd->fk_product_type,
-				'description' => (string) dol_string_nohtmltag($oProd->description ?? '', 1),
-			);
-			$plabel = $oProd->ref;
-			if (!empty($oProd->label)) {
-				$plabel .= ' — '.$oProd->label;
-			}
-			$phpProdOptions[$pid] = $plabel;
-		}
-		$db->free($resAllProds);
-	}
-
-	// HTML du dialog
-	print '<div id="dlg-add-det" style="display:none;" title="'.dol_escape_htmltag($langs->trans('AddDetLine')).'">'."\n";
-	print '<form id="frm-add-det" method="POST" action="'.dol_escape_htmltag($_SERVER['PHP_SELF'].'?id='.$id).'">'."\n";
-	print '<input type="hidden" name="token" value="'.newToken().'">'."\n";
-	print '<input type="hidden" name="action" value="confirm_add_det">'."\n";
-	print '<input type="hidden" name="jobid" id="dlg_det_jobid" value="">'."\n";
-
-	print '<table class="border centpercent">'."\n";
-
-	// Produit — forcecombo=1 : <select> statique, pas d'ajax_combobox, pas de Select2
-	print '<tr><td class="titlefield fieldrequired">'.$langs->trans('Product').'</td><td>';
-	print $form->select_produits(0, 'det_fk_product', '', 0, 0, 1, 2, '', 0, array(), 0, '1', 1, 'maxwidth400', 0, '', null, 0);
-	print '</td></tr>'."\n";
-
-	// Description
-	print '<tr><td>'.$langs->trans('Description').'</td><td>';
-	print '<textarea name="det_description" id="det_description" class="flat" rows="2" style="width:99%;"></textarea>';
-	print '</td></tr>'."\n";
-
-	// Quantité
-	print '<tr><td class="fieldrequired">'.$langs->trans('Qty').'</td><td>';
-	print '<input type="text" name="det_qty" id="det_qty" class="flat width75" value="1">';
-	print '</td></tr>'."\n";
-
-	// Prix unitaire HT
-	print '<tr><td>'.$langs->trans('UnitPriceHT').'</td><td>';
-	print '<input type="text" name="det_price" id="det_price" class="flat width100" value="0">';
-	print '</td></tr>'."\n";
-
-	// Remise %
-	print '<tr><td>'.$langs->trans('Discount').'</td><td>';
-	print '<input type="text" name="det_remise_percent" id="det_remise_percent" class="flat width75" value="0"> %';
-	print '</td></tr>'."\n";
-
-	// Emplacement stock (masqué pour les services, chargé par AJAX au choix du produit)
-	print '<tr id="det_warehouse_row" style="display:none;"><td>'.$langs->trans('StockLocation').'</td><td>';
-	print '<select name="det_fk_warehouse" id="det_fk_warehouse" class="flat maxwidth400"><option value=""></option></select>';
-	print '</td></tr>'."\n";
-
-	print '</table>'."\n";
-	print '</form>'."\n";
-	print '</div>'."\n";
-
-	// ═══════════════════════════════════════════════════════════════════════
-	// DIALOG : Sous-traitance d'un Job
-	// ═══════════════════════════════════════════════════════════════════════
-
-	// Toutes les opérations de maintenance actives du véhicule (options du multi-select)
-	$scVoOptions = array();
-	if (!empty($object->fk_vehicule)) {
-		$sqlVo  = 'SELECT vo.rowid, cmo.code, cmo.label AS op_label, vo.date_next';
-		$sqlVo .= ' FROM '.MAIN_DB_PREFIX.'workshop_vehicule_operation vo';
-		$sqlVo .= ' LEFT JOIN '.MAIN_DB_PREFIX.'workshop_vehicule_c_maintenance_operation cmo';
-		$sqlVo .= '   ON cmo.rowid = vo.fk_maintenance_operation';
-		$sqlVo .= ' WHERE vo.fk_vehicule = '.(int) $object->fk_vehicule;
-		$sqlVo .= ' AND vo.status != '.WorkshopVehiculeOperation::STATUS_DONE;
-		$sqlVo .= ' ORDER BY cmo.code ASC';
-		$resVo = $db->query($sqlVo);
-		if ($resVo) {
-			while ($oVo = $db->fetch_object($resVo)) {
-				$optLabel = $oVo->code.' — '.$oVo->op_label;
-				if (!empty($oVo->date_next)) {
-					$optLabel .= ' ('.dol_print_date($db->jdate($oVo->date_next), 'day').')';
-				}
-				$scVoOptions[(string)(int) $oVo->rowid] = dol_escape_htmltag($optLabel);
-			}
-			$db->free($resVo);
-		}
-	}
-
-	// Map jobId → [rowids en string] des opérations déjà liées, pour la pré-sélection JS
-	$jobLinkedOpsMap = array();
-	foreach ($jobsList as $jItem) {
-		$linkedIds = $jItem->fetchLinkedMaintenanceOperationIds();
-		$jobLinkedOpsMap[(int) $jItem->id] = is_array($linkedIds) ? array_map('strval', $linkedIds) : array();
-	}
-
-	print '<div id="dlg-subcontracting" style="display:none;" title="'.dol_escape_htmltag($langs->trans('SubcontractingJob')).'">'."\n";
-	print '<form id="frm-subcontracting" method="POST" action="'.dol_escape_htmltag($_SERVER['PHP_SELF'].'?id='.$id).'">'."\n";
-	print '<input type="hidden" name="token" value="'.newToken().'">'."\n";
-	print '<input type="hidden" name="action" value="confirm_subcontracting">'."\n";
-	print '<input type="hidden" name="jobid" id="dlg_sc_jobid" value="">'."\n";
-
-	print '<table class="border centpercent">'."\n";
-
-	// Fournisseur (filtré sur fournisseur=1, forcecombo pour éviter Select2)
-	print '<tr><td class="titlefield fieldrequired">'.$langs->trans('Supplier').'</td><td>';
-	print $form->select_company(0, 'sc_fk_soc', 's.fournisseur = 1', 1, 1, array(), '', '', false, 'maxwidth400');
-	print '</td></tr>'."\n";
-
-	// Montant HT de la prestation
-	print '<tr><td class="fieldrequired">'.$langs->trans('SubcontractingAmount').'</td><td>';
-	print '<input type="text" name="sc_amount" id="sc_amount" class="flat width150" value="0"> '.$langs->getCurrencySymbol($conf->currency);
-	print '</td></tr>'."\n";
-
-	// Opérations de maintenance du véhicule — contrôle standard Dolibarr multiselectarray
-	// La pré-sélection des ops liées au job est appliquée par JS à l'ouverture du dialog
-	print '<tr><td>'.$langs->trans('MaintenanceOperationsLinked').'</td><td>';
-	if (!empty($scVoOptions)) {
-		print $form->multiselectarray('sc_maintenance_ops', $scVoOptions, array(), 0, 0, 'flat', 0, '100%', '', '', $langs->trans('SelectMaintenanceOps'));
-		print '<br><span class="opacitymedium small">'.$langs->trans('SubcontractingOpsHint').'</span>';
-	} else {
-		print '<span class="opacitymedium small">'.$langs->trans('NoMaintenanceOpsForVehicle').'</span>';
-	}
-	print '</td></tr>'."\n";
-
-	// Description
-	print '<tr><td>'.$langs->trans('Description').'</td><td>';
-	print '<textarea name="sc_description" id="sc_description" class="flat" rows="3" style="width:99%;"></textarea>';
-	print '</td></tr>'."\n";
-
-	print '</table>'."\n";
-	print '</form>'."\n";
-	print '</div>'."\n";
-
-	// ═══════════════════════════════════════════════════════════════════════
-	// DIALOG : Modifier une ligne produit/service (det)
-	// ═══════════════════════════════════════════════════════════════════════
-
-	print '<div id="dlg-edit-det" style="display:none;" title="'.dol_escape_htmltag($langs->trans('ModifyDetLine')).'">'."\n";
-	print '<form id="frm-edit-det" method="POST" action="'.dol_escape_htmltag($_SERVER['PHP_SELF'].'?id='.$id).'">'."\n";
-	print '<input type="hidden" name="token" value="'.newToken().'">'."\n";
-	print '<input type="hidden" name="action" value="confirm_edit_det">'."\n";
-	print '<input type="hidden" name="det_edit_id" id="det_edit_id" value="">'."\n";
-	print '<input type="hidden" id="det_edit_fk_product" value="">'."\n";
-
-	print '<table class="border centpercent">'."\n";
-
-	// Produit — lecture seule
-	print '<tr><td class="titlefield">'.$langs->trans('Product').'</td><td>';
-	print '<span id="det_edit_product_label" class="opacitymedium"></span>';
-	print '</td></tr>'."\n";
-
-	// Description
-	print '<tr><td>'.$langs->trans('Description').'</td><td>';
-	print '<textarea name="det_edit_description" id="det_edit_description" class="flat" rows="2" style="width:99%;"></textarea>';
-	print '</td></tr>'."\n";
-
-	// Quantité
-	print '<tr><td class="fieldrequired">'.$langs->trans('Qty').'</td><td>';
-	print '<input type="text" name="det_edit_qty" id="det_edit_qty" class="flat width75" value="1">';
-	print '</td></tr>'."\n";
-
-	// Prix unitaire HT
-	print '<tr><td>'.$langs->trans('UnitPriceHT').'</td><td>';
-	print '<input type="text" name="det_edit_price" id="det_edit_price" class="flat width100" value="0">';
-	print '</td></tr>'."\n";
-
-	// Remise %
-	print '<tr><td>'.$langs->trans('Discount').'</td><td>';
-	print '<input type="text" name="det_edit_remise_percent" id="det_edit_remise_percent" class="flat width75" value="0"> %';
-	print '</td></tr>'."\n";
-
-	// Emplacement stock (masqué pour les services, chargé par AJAX)
-	print '<tr id="det_edit_warehouse_row" style="display:none;"><td>'.$langs->trans('StockLocation').'</td><td>';
-	print '<select name="det_edit_fk_warehouse" id="det_edit_fk_warehouse" class="flat maxwidth400"><option value=""></option></select>';
-	print '</td></tr>'."\n";
-
-	print '</table>'."\n";
-	print '</form>'."\n";
-	print '</div>'."\n";
-
-	// JS
-	// Variables JS injectées pour or_card.js (mode vue)
-	print '<script>'."\n";
-	print 'window.workshopProdData      = '.json_encode($jsProdData).';'."\n";
-	print 'window.workshopOrCardAjaxUrl = '.json_encode(dol_buildpath('/workshop/ajax/or_card_ajax.php', 1).'?id='.$id).';'."\n";
-	print 'window.workshopJobLinkedOps  = '.json_encode($jobLinkedOpsMap).';'."\n";
-	print '</script>'."\n";
+	// JS — fichier externe (mode création helpers, dialog resize, color swatches)
 	print '<script src="'.dol_escape_htmltag(dol_buildpath('/workshop/js/or_card.js', 1)).'"></script>'."\n";
 
 

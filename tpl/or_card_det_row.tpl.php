@@ -104,7 +104,16 @@ if ((float) $det->remise_percent > 0) {
 
 	<!-- 3+4 : description (colspan 2) -->
 	<td class="workshop-jobs-col-desc" colspan="2">
-		<small><?php echo !empty($det->description) ? dol_htmlentitiesbr(dol_string_nohtmltag($det->description, 1)) : '<span class="opacitymedium">—</span>'; ?></small>
+		<small><?php
+		if (!empty($det->description)) {
+			$_descFull  = dol_string_nohtmltag($det->description, 0);
+			$_descFirst = strtok($_descFull, "\n");
+			echo '<span class="classfortooltip" title="'.dol_escape_htmltag(dol_htmlentitiesbr($_descFull)).'">'.dol_escape_htmltag($_descFirst).'</span>';
+			unset($_descFull, $_descFirst);
+		} else {
+			echo '<span class="opacitymedium">—</span>';
+		}
+		?></small>
 	</td>
 
 	<!-- 5 : emplacement de stock -->
@@ -125,19 +134,10 @@ if ((float) $det->remise_percent > 0) {
 	<!-- 8 : boutons d'action -->
 	<td class="right workshop-jobs-col-subcontracting nowraponall">
 		<?php if ($canEditAtStatus) {
-			$delDetUrl = $_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&action=delete_det&detid='.(int) $det->id.'&token='.newToken();
-			// Données pour pré-remplir le dialog d'édition
-			$editLabel       = dol_escape_js(!empty($det->label) ? $det->label : '—');
-			$editDescription = dol_escape_js((string) $det->description);
-			$editQty         = price2num($det->qty, 2);
-			$editPrice       = price2num($det->price, 'MU');
-			$editRemise      = price2num($det->remise_percent, 2);
-			$editFkProduct   = (int) $det->fk_product;
-			$editFkWarehouse = (int) $det->fk_warehouse;
-			$editProductType = (int) $det->product_type;
+			$editDetUrl = $_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&action=edit_det&detid='.(int) $det->id.'&token='.newToken();
+			$delDetUrl  = $_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&action=delete_det&detid='.(int) $det->id.'&token='.newToken();
 			?>
-			<a class="reposition marginrightonly" href="#"
-				onclick="workshopOpenEditDet(<?php echo (int) $det->id; ?>, '<?php echo $editLabel; ?>', '<?php echo $editDescription; ?>', '<?php echo $editQty; ?>', '<?php echo $editPrice; ?>', '<?php echo $editRemise; ?>', <?php echo $editFkProduct; ?>, <?php echo $editFkWarehouse; ?>, <?php echo $editProductType; ?>); return false;"
+			<a class="reposition marginrightonly" href="<?php echo dol_escape_htmltag($editDetUrl); ?>"
 				title="<?php echo dol_escape_htmltag($langs->trans('Modify')); ?>">
 				<?php echo img_picto($langs->trans('Modify'), 'edit'); ?>
 			</a>
