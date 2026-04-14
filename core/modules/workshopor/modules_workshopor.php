@@ -28,7 +28,7 @@ require_once DOL_DOCUMENT_ROOT.'/core/class/commonnumrefgenerator.class.php';
 /**
  * Parent class for Workshop OR document (PDF) models
  */
-abstract class ModelePDFWorkshopOR extends CommonDocGenerator
+abstract class ModelePDFWorkshopor extends CommonDocGenerator
 {
 	// phpcs:disable PEAR.NamingConventions.ValidFunctionName.ScopeNotCamelCaps
 	/**

@@ -806,6 +806,12 @@ class modWorkshop extends DolibarrModules
 			}
 		}
 
+		// Register default PDF model for Repair Orders (type = 'workshop')
+		$sql = array_merge($sql, array(
+			"DELETE FROM ".MAIN_DB_PREFIX."document_model WHERE nom = 'standard_or' AND type = 'workshop' AND entity = ".((int) $conf->entity),
+			"INSERT INTO ".MAIN_DB_PREFIX."document_model (nom, type, entity) VALUES('standard_or', 'workshop', ".((int) $conf->entity).")",
+		));
+
 		return $this->_init($sql, $options);
 	}
 
@@ -819,7 +825,9 @@ class modWorkshop extends DolibarrModules
 	 */
 	public function remove($options = '')
 	{
-		$sql = array();
+		$sql = array(
+			"DELETE FROM ".MAIN_DB_PREFIX."document_model WHERE nom = 'standard_or' AND type = 'workshop'",
+		);
 		return $this->_remove($sql, $options);
 	}
 }

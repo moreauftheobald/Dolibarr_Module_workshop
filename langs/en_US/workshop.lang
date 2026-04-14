@@ -544,3 +544,13 @@ SubcontractingOpsHint=Select operations to include in the purchase order
 SelectMaintenanceOps=Select operations...
 NoMaintenanceOpsForVehicle=No active maintenance operations for this vehicle
 SubcontractingOrderCreated=Supplier order created and validated
+
+ORPdfStandardDescription=Standard PDF model for Repair Orders
+WorkshopPDFCreatedBy=Created by
+WorkshopPDFDocumentDate=Document date
+WorkshopPDFVehicle=Vehicle
+vehiculeModele=Model
+WorkshopPDFComments=Comments
+WorkshopPDFSignatureWorkshop=Workshop signature
+WorkshopPDFSignatureCustomer=Customer signature
+WorkshopPDFLaborLabel=Labour

@@ -395,7 +395,7 @@ VIN=Numéro VIN
 vehiculeType=Type de véhicule
 vehiculeMark=Marque
 immatriculation=Immatriculation
-immatriculation_date=Date de première mise en circulation
+immatriculation_date=Date 1ère mise en circulation
 immatriculation_date_short=Mise en circulation
 date_customer_exploit=Date de mise en exploitation
 date_customer_exploit_help=Mise en exploitation peut différer de la mise en circulation
@@ -604,3 +604,13 @@ NoMaintenanceOpsForVehicle=Aucune opération de maintenance active sur ce véhic
 SubcontractingOrderCreated=Commande fournisseur créée et validée
 
 
+
+ORPdfStandardDescription=Modèle PDF standard pour les Ordres de Réparation
+WorkshopPDFCreatedBy=Créé par
+WorkshopPDFDocumentDate=Date du document
+WorkshopPDFVehicle=Véhicule
+vehiculeModele=Modèle
+WorkshopPDFComments=Commentaires
+WorkshopPDFSignatureWorkshop=Visa atelier
+WorkshopPDFSignatureCustomer=Visa client
+WorkshopPDFLaborLabel=Main d'oeuvre

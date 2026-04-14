@@ -64,14 +64,36 @@ jQuery(function ($) {
 		}
 	};
 
-	// Changement de produit : auto-remplir prix + charger entrepôts via AJAX
+	// Flag : la description vient-elle d'être renseignée par un select2:select ?
+	// Permet au handler change de ne pas écraser ce que select2:select a déjà posé.
+	var _detDescFromS2 = false;
+
+	// ── Select2 AJAX autocomplete (Dolibarr transforme le select en autocomplete) ──
+	// Capture e.params.data.desc directement depuis la réponse de l'API produit.
+	// Cet événement se déclenche AVANT le change, ce qui permet au flag de fonctionner.
+	$(document).on('select2:select', function (e) {
+		if (!$(e.target).closest('#dlg-add-det').length) { return; }
+		var data = (e.params || {}).data || {};
+		if (typeof data.desc === 'undefined') { return; }   // pas une sélection produit
+		_detDescFromS2 = true;
+		// Extraire le texte brut depuis la description HTML retournée par l'API
+		$('#det_description').val($('<div>').html(data.desc || '').text().trim());
+	});
+
+	// ── Plain <select> ou fallback : auto-remplir prix + description + entrepôts ──
 	$(document).on('change', '#det_fk_product', function () {
-		var prodId  = parseInt($(this).val(), 10);
+		var prodId   = parseInt($(this).val(), 10);
 		var prodData = window.workshopProdData || {};
-		var info    = prodId ? prodData[prodId] : null;
+		var info     = prodId ? prodData[prodId] : null;
 
 		// Prix unitaire HT
 		$('#det_price').val(info ? info.price.toFixed(2) : '0');
+
+		// Description : seulement si select2:select ne l'a pas déjà renseignée
+		if (!_detDescFromS2) {
+			$('#det_description').val(info ? (info.description || '') : '');
+		}
+		_detDescFromS2 = false;   // reset du flag après traitement
 
 		// Entrepôts (produits physiques uniquement, pas les services)
 		var $whSel = $('#det_fk_warehouse');
@@ -80,7 +102,6 @@ jQuery(function ($) {
 			$whSel.html('<option value=""></option>');
 			$.getJSON(window.workshopOrCardAjaxUrl + '&action=get_warehouses_for_product', { product_id: prodId })
 				.done(function (warehouses) {
-					console.log('[workshop] warehouses for product ' + prodId + ':', warehouses);
 					var defaultVal = '';
 					$.each(warehouses, function (i, wh) {
 						var label = wh.ref;
@@ -170,24 +191,57 @@ jQuery(function ($) {
 	 * @param {string} qty          quantité
 	 * @param {string} price        prix unitaire HT
 	 * @param {string} remise       remise en %
+	 * @param {number} fkProduct    rowid du produit (0 si non lié)
+	 * @param {number} fkWarehouse  rowid de l'emplacement de stock courant (0 si aucun)
+	 * @param {number} productType  0=produit physique, 1=service
 	 */
-	window.workshopOpenEditDet = function (detid, label, description, qty, price, remise) {
+	window.workshopOpenEditDet = function (detid, label, description, qty, price, remise, fkProduct, fkWarehouse, productType) {
 		$('#det_edit_id').val(detid);
+		$('#det_edit_fk_product').val(fkProduct || 0);
 		$('#det_edit_product_label').text(label);
 		$('#det_edit_description').val(description);
 		$('#det_edit_qty').val(qty);
 		$('#det_edit_price').val(price);
 		$('#det_edit_remise_percent').val(remise);
 
+		// Applique la visibilité + chargement AJAX de l'emplacement de stock.
+		// Appelée dans le callback open() du dialog pour garantir que le DOM
+		// est rendu avant de modifier display — évite le reset de jQuery UI.
+		function applyWarehouse() {
+			var $whSel = $('#det_edit_fk_warehouse');
+			$whSel.html('<option value=""></option>');
+			if (productType === 0) {
+				$('#det_edit_warehouse_row').show();
+				if (fkProduct) {
+					$.getJSON(window.workshopOrCardAjaxUrl + '&action=get_warehouses_for_product', { product_id: fkProduct })
+						.done(function (warehouses) {
+							$.each(warehouses, function (i, wh) {
+								var whLabel = wh.ref;
+								if (wh.qty > 0) { whLabel += ' (' + wh.qty + ')'; }
+								$whSel.append($('<option>').val(wh.rowid).text(whLabel));
+							});
+							if (fkWarehouse) { $whSel.val(fkWarehouse); }
+						});
+				}
+			} else {
+				$('#det_edit_warehouse_row').hide();
+			}
+		}
+
 		if ($dlgEdit.hasClass('ui-dialog-content')) {
+			// Dialog déjà créé — on applique avant d'ouvrir (dialog est fermé, DOM stable)
+			applyWarehouse();
 			$dlgEdit.dialog('open');
 		} else {
+			// Première ouverture — on applique dans le callback open, après que jQuery UI
+			// a terminé de construire le widget et que le contenu est rendu
 			$dlgEdit.dialog({
 				modal:     true,
 				width:     560,
 				height:    'auto',
 				maxHeight: Math.floor($(window).height() * 0.92),
 				resizable: true,
+				open:      applyWarehouse,
 				buttons: [
 					{
 						text: document.documentElement.lang === 'fr' ? 'Enregistrer' : 'Save',

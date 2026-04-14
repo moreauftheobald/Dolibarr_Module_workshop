@@ -132,9 +132,12 @@ if ((float) $det->remise_percent > 0) {
 			$editQty         = price2num($det->qty, 2);
 			$editPrice       = price2num($det->price, 'MU');
 			$editRemise      = price2num($det->remise_percent, 2);
+			$editFkProduct   = (int) $det->fk_product;
+			$editFkWarehouse = (int) $det->fk_warehouse;
+			$editProductType = (int) $det->product_type;
 			?>
 			<a class="reposition marginrightonly" href="#"
-				onclick="workshopOpenEditDet(<?php echo (int) $det->id; ?>, '<?php echo $editLabel; ?>', '<?php echo $editDescription; ?>', '<?php echo $editQty; ?>', '<?php echo $editPrice; ?>', '<?php echo $editRemise; ?>'); return false;"
+				onclick="workshopOpenEditDet(<?php echo (int) $det->id; ?>, '<?php echo $editLabel; ?>', '<?php echo $editDescription; ?>', '<?php echo $editQty; ?>', '<?php echo $editPrice; ?>', '<?php echo $editRemise; ?>', <?php echo $editFkProduct; ?>, <?php echo $editFkWarehouse; ?>, <?php echo $editProductType; ?>); return false;"
 				title="<?php echo dol_escape_htmltag($langs->trans('Modify')); ?>">
 				<?php echo img_picto($langs->trans('Modify'), 'edit'); ?>
 			</a>

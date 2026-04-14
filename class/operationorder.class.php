@@ -455,6 +455,35 @@ class Operationorder extends CommonObject
 	}
 
 	/**
+	 * Generate PDF document for this Repair Order
+	 *
+	 * @param  string    $modele      Model name (default: 'standard_or')
+	 * @param  Translate $outputlangs Output language object
+	 * @param  int       $hidedetails Do not show line details
+	 * @param  int       $hidedesc    Do not show descriptions
+	 * @param  int       $hideref     Do not show references
+	 * @param  array     $moreparams  Extra parameters
+	 * @return int                    1 if OK, <=0 if KO
+	 */
+	public function generateDocument($modele, $outputlangs, $hidedetails = 0, $hidedesc = 0, $hideref = 0, $moreparams = null)
+	{
+		global $langs;
+
+		$outputlangs->loadLangs(array('workshop@workshop'));
+
+		if (!dol_strlen($modele)) {
+			$modele = 'standard_or';
+			if (!empty($this->model_pdf)) {
+				$modele = $this->model_pdf;
+			}
+		}
+
+		$modelpath = 'workshop/core/modules/workshopor/doc/';
+
+		return $this->commonGenerateDocument($modelpath, $modele, $outputlangs, $hidedetails, $hidedesc, $hideref, $moreparams);
+	}
+
+	/**
 	 * Recalculate totals from jobs and their detail lines
 	 *
 	 * @param  User $user User performing the update

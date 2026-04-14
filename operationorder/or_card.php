@@ -579,6 +579,7 @@ if (empty($reshook)) {
 		$price          = (float) price2num(str_replace(',', '.', GETPOST('det_edit_price', 'alpha')), 'MU');
 		$remise_percent = (float) price2num(str_replace(',', '.', GETPOST('det_edit_remise_percent', 'alpha')), 'MU');
 		$description    = GETPOST('det_edit_description', 'restricthtml');
+		$fk_warehouse   = GETPOSTINT('det_edit_fk_warehouse');
 
 		$det = new Operationorderdet($db);
 		if ($det->fetch($detid) > 0) {
@@ -588,6 +589,7 @@ if (empty($reshook)) {
 				$det->price          = $price;
 				$det->remise_percent = $remise_percent;
 				$det->description    = $description;
+				$det->fk_warehouse   = $fk_warehouse > 0 ? $fk_warehouse : null;
 				$det->total_ht       = (float) price2num($qty * $price * (1 - $remise_percent / 100), 'MT');
 
 				if ($det->update($user) >= 0) {
@@ -885,6 +887,13 @@ if (empty($reshook)) {
 		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
 		exit;
 	}
+}
+
+// ── Génération / suppression de document PDF ─────────────────────────────
+if ($id > 0 && $object->id > 0) {
+	$upload_dir  = (isset($conf->workshop->multidir_output[$object->entity]) ? $conf->workshop->multidir_output[$object->entity] : $conf->workshop->dir_output).'/operationorder/'.(int) $object->id;
+	$permissiontocreate = $permissiontoadd;
+	include DOL_DOCUMENT_ROOT.'/core/actions_builddoc.inc.php';
 }
 
 
@@ -1773,13 +1782,13 @@ if ($id > 0) {
 	print '<a name="builddoc"></a>'."\n";
 
 	// Fichiers joints
-	$filename   = dol_sanitizeFileName($object->ref);
-	$filedir    = (isset($conf->workshop->multidir_output[$object->entity]) ? $conf->workshop->multidir_output[$object->entity] : $conf->workshop->dir_output).'/operationorder/'.dol_sanitizeFileName($object->ref);
+	$modulesubdir = 'operationorder/'.(int) $object->id;
+	$filedir    = (isset($conf->workshop->multidir_output[$object->entity]) ? $conf->workshop->multidir_output[$object->entity] : $conf->workshop->dir_output).'/'.$modulesubdir;
 	$urlsource  = $_SERVER['PHP_SELF'].'?id='.$object->id;
 	$genallowed = $user->hasRight('workshop', 'operationorders', 'read');
 	$delallowed = $user->hasRight('workshop', 'operationorders', 'write');
 
-	print $formfile->showdocuments('workshop', $filename, $filedir, $urlsource, $genallowed, $delallowed, '', 1, 0, 0, 28, 0, '', '', '', '', '', $object);
+	print $formfile->showdocuments('workshop', $modulesubdir, $filedir, $urlsource, $genallowed, $delallowed, $object->model_pdf, 1, 0, 0, 28, 0, '', '', '', '', '', $object);
 
 	// Objets liés
 	$object->fetchObjectLinked();
@@ -1797,19 +1806,28 @@ if ($id > 0) {
 	// DIALOG : Ajouter une ligne produit/service dans un Job
 	// ═══════════════════════════════════════════════════════════════════════
 
-	// Map prix+type pour les produits (auto-remplissage JS à la sélection)
-	$jsProdData = array();
-	$sqlAllProds  = "SELECT p.rowid, p.price, p.fk_product_type";
+	// Map prix+type+description pour les produits (auto-remplissage JS) + options du <select> PHP
+	$jsProdData    = array();
+	$phpProdOptions = array();
+	$sqlAllProds  = "SELECT p.rowid, p.ref, p.label, p.price, p.fk_product_type, p.description";
 	$sqlAllProds .= " FROM ".MAIN_DB_PREFIX."product p";
 	$sqlAllProds .= " WHERE p.entity IN (".getEntity('product').")";
+	$sqlAllProds .= " AND p.tosell = 1";
 	$sqlAllProds .= " ORDER BY p.ref ASC";
 	$resAllProds = $db->query($sqlAllProds);
 	if ($resAllProds) {
 		while ($oProd = $db->fetch_object($resAllProds)) {
-			$jsProdData[(int) $oProd->rowid] = array(
-				'price' => (float) $oProd->price,
-				'type'  => (int) $oProd->fk_product_type,
+			$pid = (int) $oProd->rowid;
+			$jsProdData[$pid] = array(
+				'price'       => (float) $oProd->price,
+				'type'        => (int) $oProd->fk_product_type,
+				'description' => (string) dol_string_nohtmltag($oProd->description ?? '', 1),
 			);
+			$plabel = $oProd->ref;
+			if (!empty($oProd->label)) {
+				$plabel .= ' — '.$oProd->label;
+			}
+			$phpProdOptions[$pid] = $plabel;
 		}
 		$db->free($resAllProds);
 	}
@@ -1938,6 +1956,7 @@ if ($id > 0) {
 	print '<input type="hidden" name="token" value="'.newToken().'">'."\n";
 	print '<input type="hidden" name="action" value="confirm_edit_det">'."\n";
 	print '<input type="hidden" name="det_edit_id" id="det_edit_id" value="">'."\n";
+	print '<input type="hidden" id="det_edit_fk_product" value="">'."\n";
 
 	print '<table class="border centpercent">'."\n";
 
@@ -1964,6 +1983,11 @@ if ($id > 0) {
 	// Remise %
 	print '<tr><td>'.$langs->trans('Discount').'</td><td>';
 	print '<input type="text" name="det_edit_remise_percent" id="det_edit_remise_percent" class="flat width75" value="0"> %';
+	print '</td></tr>'."\n";
+
+	// Emplacement stock (masqué pour les services, chargé par AJAX)
+	print '<tr id="det_edit_warehouse_row" style="display:none;"><td>'.$langs->trans('StockLocation').'</td><td>';
+	print '<select name="det_edit_fk_warehouse" id="det_edit_fk_warehouse" class="flat maxwidth400"><option value=""></option></select>';
 	print '</td></tr>'."\n";
 
 	print '</table>'."\n";
