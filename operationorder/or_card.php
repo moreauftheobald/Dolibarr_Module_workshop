@@ -806,7 +806,7 @@ if (empty($reshook)) {
 				// Lien job ↔ commande fournisseur dans llx_element_element
 				$sqlLink  = "INSERT INTO ".MAIN_DB_PREFIX."element_element";
 				$sqlLink .= " (fk_source, sourcetype, fk_target, targettype)";
-				$sqlLink .= " VALUES (".(int) $job->id.", '".$db->escape($job->getElementType())."'";
+				$sqlLink .= " VALUES (".(int) $job->id.", '".$db->escape($job->element)."'";
 				$sqlLink .= ", ".(int) $supplierOrder->id.", 'order_supplier')";
 				if (!$db->query($sqlLink)) {
 					dol_syslog(__METHOD__.' element_element link job error: '.$db->lasterror(), LOG_WARNING);
@@ -815,7 +815,7 @@ if (empty($reshook)) {
 				// Lien OR ↔ commande fournisseur dans llx_element_element
 				$sqlLinkOR  = "INSERT INTO ".MAIN_DB_PREFIX."element_element";
 				$sqlLinkOR .= " (fk_source, sourcetype, fk_target, targettype)";
-				$sqlLinkOR .= " VALUES (".(int) $object->id.", '".$db->escape($object->getElementType())."'";
+				$sqlLinkOR .= " VALUES (".(int) $object->id.", '".$db->escape($object->element)."'";
 				$sqlLinkOR .= ", ".(int) $supplierOrder->id.", 'order_supplier')";
 				if (!$db->query($sqlLinkOR)) {
 					dol_syslog(__METHOD__.' element_element link OR error: '.$db->lasterror(), LOG_WARNING);
@@ -1929,7 +1929,7 @@ if ($id > 0) {
 			$fqSc,
 			'yes',
 			1,
-			0,
+			500,
 			640,
 			0,
 			$langs->trans('Save'),
