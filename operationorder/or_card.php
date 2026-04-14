@@ -813,7 +813,9 @@ if (empty($reshook)) {
 				}
 
 				// Lien OR ↔ commande fournisseur (via add_object_linked standard Dolibarr)
-				$resLink = $supplierOrder->add_object_linked($object->element, $object->id);
+				// getElementType() retourne 'workshop_operationorder' (format module_element)
+				// utilisé par fetchObjectLinked + showLinkedObjectBlock pour la résolution
+				$resLink = $supplierOrder->add_object_linked($object->getElementType(), $object->id);
 				if ($resLink < 0) {
 					dol_syslog(__METHOD__.' add_object_linked OR error: '.$supplierOrder->error, LOG_WARNING);
 				}
