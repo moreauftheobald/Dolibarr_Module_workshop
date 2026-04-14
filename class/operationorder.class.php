@@ -519,6 +519,39 @@ class Operationorder extends CommonObject
 	}
 
 	/**
+	 * Synchronise la remise du tiers sur tous les jobs de cet OR, puis recalcule les totaux.
+	 *
+	 * Appelé après un changement de tiers (fk_soc) ou de véhicule (qui change le tiers).
+	 * Remplace la logique dupliquée dans or_card.php (save_fk_soc / save_fk_vehicule).
+	 *
+	 * @param  User $user  Utilisateur courant
+	 * @return int         1 si OK ou rien à faire, <0 si erreur
+	 */
+	public function syncThirdPartyDiscount(User $user): int
+	{
+		if ($this->fk_soc <= 0) {
+			return 1;
+		}
+
+		require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
+		$socObj = new Societe($this->db);
+		if ($socObj->fetch($this->fk_soc) <= 0) {
+			return 1;
+		}
+
+		dol_include_once('/workshop/class/operationorder_jobs.class.php');
+		$jobsObj = new Operationorder_jobs($this->db);
+		$res = $jobsObj->updateRemiseForOR($this->id, (float) $socObj->remise_percent, $user);
+		if ($res < 0) {
+			$this->error = $jobsObj->error;
+			$this->errors = $jobsObj->errors;
+			return -1;
+		}
+
+		return $this->updateTotals($user);
+	}
+
+	/**
 	 * Return a link to the object card (with optionally the picto)
 	 *
 	 * @param  int    $withpicto             Include picto in link (0=No, 1=With picto, 2=Only picto)

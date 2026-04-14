@@ -98,3 +98,38 @@ function orCardRestoreUrl($self, $overrides = array())
 	}
 	return $url;
 }
+
+/**
+ * Affiche un formulaire inline d'édition pour un champ de la fiche OR.
+ *
+ * Génère le <form> complet avec token, hidden id, boutons Save/Cancel,
+ * ou bien la valeur en lecture seule avec le lien d'édition.
+ *
+ * @param  string  $action         Action courante (GETPOST('action'))
+ * @param  string  $fieldName      Nom du champ (ex: 'date_or', 'km', 'fk_conducteur')
+ * @param  string  $saveAction     Action de sauvegarde (ex: 'save_date_or')
+ * @param  int     $objectId       ID de l'objet OR
+ * @param  string  $editWidgetHtml HTML du widget d'édition (selectDate, input, etc.)
+ * @param  string  $displayHtml    HTML d'affichage en lecture seule
+ * @param  bool    $canEdit        L'utilisateur a-t-il le droit d'éditer ?
+ * @return string                  HTML complet de la cellule <td>
+ */
+function orCardInlineEditTd(string $action, string $fieldName, string $saveAction, int $objectId, string $editWidgetHtml, string $displayHtml, bool $canEdit): string
+{
+	global $langs;
+
+	$out = '';
+	if ($action === 'edit'.$fieldName && $canEdit) {
+		$out .= '<form method="POST" action="'.$_SERVER['PHP_SELF'].'">';
+		$out .= '<input type="hidden" name="token" value="'.newToken().'">';
+		$out .= '<input type="hidden" name="action" value="'.$saveAction.'">';
+		$out .= '<input type="hidden" name="id" value="'.$objectId.'">';
+		$out .= $editWidgetHtml;
+		$out .= ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
+		$out .= ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$objectId.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
+		$out .= '</form>';
+	} else {
+		$out .= $displayHtml;
+	}
+	return $out;
+}
