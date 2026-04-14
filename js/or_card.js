@@ -204,44 +204,15 @@ jQuery(function ($) {
 		$('#det_edit_price').val(price);
 		$('#det_edit_remise_percent').val(remise);
 
-		// Applique la visibilité + chargement AJAX de l'emplacement de stock.
-		// Appelée dans le callback open() du dialog pour garantir que le DOM
-		// est rendu avant de modifier display — évite le reset de jQuery UI.
-		function applyWarehouse() {
-			var $whSel = $('#det_edit_fk_warehouse');
-			$whSel.html('<option value=""></option>');
-			if (productType === 0) {
-				$('#det_edit_warehouse_row').show();
-				if (fkProduct) {
-					$.getJSON(window.workshopOrCardAjaxUrl + '&action=get_warehouses_for_product', { product_id: fkProduct })
-						.done(function (warehouses) {
-							$.each(warehouses, function (i, wh) {
-								var whLabel = wh.ref;
-								if (wh.qty > 0) { whLabel += ' (' + wh.qty + ')'; }
-								$whSel.append($('<option>').val(wh.rowid).text(whLabel));
-							});
-							if (fkWarehouse) { $whSel.val(fkWarehouse); }
-						});
-				}
-			} else {
-				$('#det_edit_warehouse_row').hide();
-			}
-		}
-
-		if ($dlgEdit.hasClass('ui-dialog-content')) {
-			// Dialog déjà créé — on applique avant d'ouvrir (dialog est fermé, DOM stable)
-			applyWarehouse();
-			$dlgEdit.dialog('open');
-		} else {
-			// Première ouverture — on applique dans le callback open, après que jQuery UI
-			// a terminé de construire le widget et que le contenu est rendu
+		// Création unique du dialog (autoOpen désactivé pour maîtriser le cycle)
+		if (!$dlgEdit.hasClass('ui-dialog-content')) {
 			$dlgEdit.dialog({
+				autoOpen:  false,
 				modal:     true,
 				width:     560,
 				height:    'auto',
 				maxHeight: Math.floor($(window).height() * 0.92),
 				resizable: true,
-				open:      applyWarehouse,
 				buttons: [
 					{
 						text: document.documentElement.lang === 'fr' ? 'Enregistrer' : 'Save',
@@ -262,6 +233,32 @@ jQuery(function ($) {
 					}
 				]
 			});
+		}
+
+		// Ouverture du dialog, puis affichage conditionnel de l'emplacement de stock.
+		// On utilise css('display','') / css('display','none') au lieu de .show()/.hide()
+		// car jQuery .show() sur un <tr> dans un dialog caché peut calculer un mauvais
+		// display (block au lieu de table-row).
+		$dlgEdit.dialog('open');
+
+		var $whRow = $('#det_edit_warehouse_row');
+		var $whSel = $('#det_edit_fk_warehouse');
+		$whSel.html('<option value=""></option>');
+		if (productType === 0) {
+			$whRow.css('display', '');
+			if (fkProduct) {
+				$.getJSON(window.workshopOrCardAjaxUrl + '&action=get_warehouses_for_product', { product_id: fkProduct })
+					.done(function (warehouses) {
+						$.each(warehouses, function (i, wh) {
+							var whLabel = wh.ref;
+							if (wh.qty > 0) { whLabel += ' (' + wh.qty + ')'; }
+							$whSel.append($('<option>').val(wh.rowid).text(whLabel));
+						});
+						if (fkWarehouse) { $whSel.val(fkWarehouse); }
+					});
+			}
+		} else {
+			$whRow.css('display', 'none');
 		}
 	};
 });
