@@ -54,11 +54,13 @@ if (!$res) {
 	die("Include of main fails");
 }
 
-require_once DOL_DOCUMENT_ROOT.'/core/class/html.form.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.formcompany.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/date.lib.php';
 dol_include_once('/workshop/class/Vehicule.class.php');
 
+if (!isModEnabled('workshop')) {
+	accessforbidden('Module workshop not enabled');
+}
 if (!$user->hasRight('workshop', 'vehicule', 'read')) {
 	accessforbidden();
 }
@@ -71,7 +73,7 @@ $massaction = GETPOST('massaction', 'alpha');
 $confirm = GETPOST('confirm', 'alpha');
 $cancel = GETPOST('cancel', 'alpha');
 $toselect = GETPOST('toselect', 'array:int');
-$contextpage = GETPOST('contextpage', 'aZ') ? GETPOST('contextpage', 'aZ') : 'vehiculelist';
+$contextpage = GETPOST('contextpage', 'aZ') ? GETPOST('contextpage', 'aZ') : str_replace('_', '', basename(dirname(__FILE__)).basename(__FILE__, '.php'));
 $backtopage = GETPOST('backtopage', 'alpha');
 $optioncss = GETPOST('optioncss', 'aZ');
 $mode = GETPOST('mode', 'aZ');
@@ -91,8 +93,8 @@ $pagenext = $page + 1;
 // Initialize technical objects
 $object = new Vehicule($db);
 $extrafields = new ExtraFields($db);
-$form = new Form($db);
-$hookmanager->initHooks(array('vehiculelist'));
+$diroutputmassaction = $conf->workshop->dir_output.'/temp/massgeneration/'.$user->id;
+$hookmanager->initHooks(array($contextpage));
 
 // Fetch optionals attributes and labels
 $extrafields->fetch_name_optionals_label($object->table_element);
@@ -184,12 +186,20 @@ if (empty($reshook)) {
 		|| GETPOST('button_search_x', 'alpha') || GETPOST('button_search.x', 'alpha') || GETPOST('button_search', 'alpha')) {
 		$massaction = '';
 	}
+
+	// Mass actions
+	$objectclass = 'Vehicule';
+	$objectlabel = 'Vehicule';
+	$uploaddir = $conf->workshop->dir_output;
+	include DOL_DOCUMENT_ROOT.'/core/actions_massactions.inc.php';
 }
 
 
 /*
  * View
  */
+
+$form = new Form($db);
 
 $title = $langs->trans('VehiculeList');
 $help_url = '';
@@ -217,7 +227,11 @@ $parameters = array();
 $reshook = $hookmanager->executeHooks('printFieldListFrom', $parameters, $object, $action);
 $sql .= $hookmanager->resPrint;
 
-$sql .= ' WHERE t.entity IN ('.getEntity('workshop_vehicule', 1).')';
+if ($object->ismultientitymanaged == 1) {
+	$sql .= ' WHERE t.entity IN ('.getEntity('workshop_vehicule', (GETPOSTINT('search_current_entity') ? 0 : 1)).')';
+} else {
+	$sql .= ' WHERE 1 = 1';
+}
 
 foreach ($search as $key => $val) {
 	if (array_key_exists($key, $object->fields)) {
@@ -369,6 +383,7 @@ print '<input type="hidden" name="sortfield" value="'.$sortfield.'">';
 print '<input type="hidden" name="sortorder" value="'.$sortorder.'">';
 print '<input type="hidden" name="page" value="'.$page.'">';
 print '<input type="hidden" name="contextpage" value="'.$contextpage.'">';
+print '<input type="hidden" name="page_y" value="">';
 print '<input type="hidden" name="mode" value="'.$mode.'">';
 
 $newcardbutton = '';
@@ -427,7 +442,11 @@ foreach ($object->fields as $key => $val) {
 	if (!empty($arrayfields['t.'.$key]['checked'])) {
 		print '<td class="liste_titre'.($cssforfield ? ' '.$cssforfield : '').($key == 'status' ? ' parentonrightofpage' : '').'">';
 		if (!empty($val['arrayofkeyval']) && is_array($val['arrayofkeyval'])) {
-			print $form->selectarray('search_'.$key, $val['arrayofkeyval'], (isset($search[$key]) ? $search[$key] : ''), 1, 0, 0, '', 1, 0, 0, '', 'maxwidth100'.($key == 'status' ? ' search_status width100 onrightofpage' : ''), 1);
+			if (empty($val['searchmulti'])) {
+				print $form->selectarray('search_'.$key, $val['arrayofkeyval'], (isset($search[$key]) ? $search[$key] : ''), 1, 0, 0, '', 1, 0, 0, '', 'maxwidth100'.($key == 'status' ? ' search_status width100 onrightofpage' : ''), 1);
+			} else {
+				print $form->multiselectarray('search_'.$key, $val['arrayofkeyval'], (isset($search[$key]) ? $search[$key] : ''), 0, 0, 'maxwidth100'.($key == 'status' ? ' search_status width100 onrightofpage' : ''), 1);
+			}
 		} elseif ((strpos($val['type'], 'integer:') === 0) || (strpos($val['type'], 'sellist:') === 0)) {
 			print $object->showInputField($val, $key, (isset($search[$key]) ? $search[$key] : ''), '', '', 'search_', $cssforfield.' maxwidth250', 1);
 		} elseif (preg_match('/^(date|timestamp|datetime)/', $val['type'])) {
@@ -519,7 +538,6 @@ while ($i < $imaxinloop) {
 
 	$object->setVarsFromFetchObj($obj);
 
-	$j = 0;
 	print '<tr data-rowid="'.$object->id.'" class="oddeven">';
 
 	if ($conf->main_checkbox_left_column) {
