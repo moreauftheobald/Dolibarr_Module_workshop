@@ -1755,15 +1755,20 @@ if ($id > 0) {
 		);
 
 		// JS minimal : rechargement du formconfirm au changement de produit (Option B)
+		// Note : formconfirm en mode dialog n'utilise pas de <form>, il faut construire l'URL manuellement
 		print '<script>'."\n";
 		print 'jQuery(document).on("change", "[name=\'det_fk_product\']", function() {'."\n";
-		print '    var $frm = jQuery(this).closest("form");'."\n";
-		print '    if (!$frm.length) return;'."\n";
-		print '    if (!$frm.find("input[name=\'_reload_product\']").length) {'."\n";
-		print '        $frm.append(\'<input type="hidden" name="_reload_product" value="1">\');'."\n";
-		print '    }'."\n";
-		print '    $frm.find("input[name=\'action\']").val("add_det");'."\n";
-		print '    $frm.submit();'."\n";
+		print '    var productId = jQuery(this).val();'."\n";
+		print '    if (!productId) return;'."\n";
+		print '    var url = '.json_encode($_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&token='.newToken()).';'."\n";
+		print '    url += "&action=add_det";'."\n";
+		print '    url += "&jobid=" + encodeURIComponent(jQuery("#jobid").val() || "");'."\n";
+		print '    url += "&det_fk_product=" + encodeURIComponent(productId);'."\n";
+		print '    url += "&_reload_product=1";'."\n";
+		print '    url += "&det_description=" + encodeURIComponent(jQuery("#det_description").val() || "");'."\n";
+		print '    url += "&det_qty=" + encodeURIComponent(jQuery("#det_qty").val() || "1");'."\n";
+		print '    url += "&det_remise_percent=" + encodeURIComponent(jQuery("#det_remise_percent").val() || "0");'."\n";
+		print '    location.href = url;'."\n";
 		print '});'."\n";
 		print '</script>'."\n";
 	}
