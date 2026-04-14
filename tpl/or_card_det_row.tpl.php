@@ -104,7 +104,16 @@ if ((float) $det->remise_percent > 0) {
 
 	<!-- 3+4 : description (colspan 2) -->
 	<td class="workshop-jobs-col-desc" colspan="2">
-		<small><?php echo !empty($det->description) ? dol_htmlentitiesbr(dol_string_nohtmltag($det->description, 1)) : '<span class="opacitymedium">—</span>'; ?></small>
+		<small><?php
+		if (!empty($det->description)) {
+			$_descFull  = dol_string_nohtmltag($det->description, 0);
+			$_descFirst = strtok($_descFull, "\n");
+			echo textwithtooltip(dol_escape_htmltag($_descFirst), dol_htmlentitiesbr($_descFull), 1, 0, '', '', 3, '', 1);
+			unset($_descFull, $_descFirst);
+		} else {
+			echo '<span class="opacitymedium">—</span>';
+		}
+		?></small>
 	</td>
 
 	<!-- 5 : emplacement de stock -->

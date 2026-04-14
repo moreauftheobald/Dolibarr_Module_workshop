@@ -1751,7 +1751,7 @@ if ($id > 0) {
 				'label'    => $langs->trans('Description'),
 				'name'     => 'det_description',
 				'value'    => $detDescription,
-				'moreattr' => 'style=width:99%',
+				'moreattr' => 'rows="6" style="width:99%"',
 			);
 			$fqDet[] = array(
 				'type'  => 'text',
