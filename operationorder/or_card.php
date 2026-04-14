@@ -1739,11 +1739,10 @@ if ($id > 0) {
 				$fqDet[] = array('type' => 'hidden', 'name' => 'det_fk_product', 'value' => (string) $detFkProduct);
 			}
 
-			// Produit (lecture seule)
+			// Produit (lecture seule — pas de 'name' pour éviter un $('#') invalide dans le JS formconfirm)
 			$fqDet[] = array(
 				'type'  => 'other',
 				'label' => $langs->trans('Product'),
-				'name'  => '',
 				'value' => $prodLabel ?: '<span class="opacitymedium">—</span>',
 			);
 
