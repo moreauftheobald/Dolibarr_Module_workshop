@@ -149,11 +149,13 @@ if (is_array($detList) && !empty($detList)) {
 }
 ?>
 
-<?php if ($canEditAtStatus) { ?>
+<?php if ($canEditAtStatus) {
+	$addDetUrl = $_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&action=add_det&jobid='.(int) $job->id;
+?>
 <!-- Bouton ajout d'une ligne -->
 <tr class="<?php echo $trClass; ?> workshop-det-add-row">
 	<td colspan="8" style="padding-left:1.5em;padding-top:2px;padding-bottom:2px">
-		<a href="#" class="small" onclick="workshopOpenAddDet(<?php echo (int) $job->id; ?>);return false;">
+		<a href="<?php echo dol_escape_htmltag($addDetUrl); ?>" class="small">
 			<?php echo img_picto($langs->trans('AddDetLine'), 'add', 'class="valignmiddle paddingright"'); ?>
 			<?php echo dol_escape_htmltag($langs->trans('AddDetLine')); ?>
 		</a>

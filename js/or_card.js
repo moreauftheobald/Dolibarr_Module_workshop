@@ -4,120 +4,11 @@
  * Ce fichier dépend des variables globales injectées en ligne par or_card.php :
  *
  *   Mode vue (id > 0) :
- *     window.workshopProdData     {Object}  map produit_id → { price, type }
  *     window.workshopOrCardAjaxUrl {string} URL de base vers ajax/or_card_ajax.php?id=X
  *
  *   Mode création (id == 0) :
  *     window.workshopOrCardSelf   {string}  valeur de PHP_SELF (pour les redirections)
  */
-
-/* ============================================================================
- * MODE VUE — Dialog "Ajouter une ligne produit/service dans un Job"
- * ========================================================================== */
-
-jQuery(function ($) {
-	var $dlg = $('#dlg-add-det');
-
-	/**
-	 * Ouvre le dialog d'ajout de ligne de détail pour le job donné.
-	 * @param {number} jobid
-	 */
-	window.workshopOpenAddDet = function (jobid) {
-		$('#dlg_det_jobid').val(jobid);
-		$('#det_fk_product').val('');
-		$('#det_description').val('');
-		$('#det_qty').val('1');
-		$('#det_price').val('0');
-		$('#det_remise_percent').val('0');
-		$('#det_fk_warehouse').html('<option value=""></option>');
-		$('#det_warehouse_row').hide();
-
-		if ($dlg.hasClass('ui-dialog-content')) {
-			$dlg.dialog('open');
-		} else {
-			$dlg.dialog({
-				modal:     true,
-				width:     620,
-				height:    'auto',
-				maxHeight: Math.floor($(window).height() * 0.92),
-				resizable: true,
-				buttons: [
-					{
-						text: document.documentElement.lang === 'fr' ? 'Ajouter' : 'Add',
-						click: function () {
-							var prodId = $('#det_fk_product').val();
-							if (!prodId || prodId === '0' || prodId === '') {
-								alert(document.documentElement.lang === 'fr'
-									? 'Veuillez sélectionner un produit.'
-									: 'Please select a product.');
-								return;
-							}
-							$('#frm-add-det').submit();
-						}
-					},
-					{
-						text: document.documentElement.lang === 'fr' ? 'Annuler' : 'Cancel',
-						click: function () { $(this).dialog('close'); }
-					}
-				]
-			});
-		}
-	};
-
-	// Flag : la description vient-elle d'être renseignée par un select2:select ?
-	// Permet au handler change de ne pas écraser ce que select2:select a déjà posé.
-	var _detDescFromS2 = false;
-
-	// ── Select2 AJAX autocomplete (Dolibarr transforme le select en autocomplete) ──
-	// Capture e.params.data.desc directement depuis la réponse de l'API produit.
-	// Cet événement se déclenche AVANT le change, ce qui permet au flag de fonctionner.
-	$(document).on('select2:select', function (e) {
-		if (!$(e.target).closest('#dlg-add-det').length) { return; }
-		var data = (e.params || {}).data || {};
-		if (typeof data.desc === 'undefined') { return; }   // pas une sélection produit
-		_detDescFromS2 = true;
-		// Extraire le texte brut depuis la description HTML retournée par l'API
-		$('#det_description').val($('<div>').html(data.desc || '').text().trim());
-	});
-
-	// ── Plain <select> ou fallback : auto-remplir prix + description + entrepôts ──
-	$(document).on('change', '#det_fk_product', function () {
-		var prodId   = parseInt($(this).val(), 10);
-		var prodData = window.workshopProdData || {};
-		var info     = prodId ? prodData[prodId] : null;
-
-		// Prix unitaire HT
-		$('#det_price').val(info ? info.price.toFixed(2) : '0');
-
-		// Description : seulement si select2:select ne l'a pas déjà renseignée
-		if (!_detDescFromS2) {
-			$('#det_description').val(info ? (info.description || '') : '');
-		}
-		_detDescFromS2 = false;   // reset du flag après traitement
-
-		// Entrepôts (produits physiques uniquement, pas les services)
-		var $whSel = $('#det_fk_warehouse');
-		if (info && info.type === 0) {
-			$('#det_warehouse_row').show();
-			$whSel.html('<option value=""></option>');
-			$.getJSON(window.workshopOrCardAjaxUrl + '&action=get_warehouses_for_product', { product_id: prodId })
-				.done(function (warehouses) {
-					var defaultVal = '';
-					$.each(warehouses, function (i, wh) {
-						var label = wh.ref;
-						if (wh.qty > 0) { label += ' (' + wh.qty + ')'; }
-						var $opt = $('<option>').val(wh.rowid).text(label);
-						if (wh.is_default) { defaultVal = wh.rowid; }
-						$whSel.append($opt);
-					});
-					if (defaultVal) { $whSel.val(defaultVal); }
-				});
-		} else {
-			$('#det_warehouse_row').hide();
-			$whSel.html('<option value=""></option>');
-		}
-	});
-});
 
 
 /* ============================================================================
@@ -319,7 +210,7 @@ function orCardOpenNewTag() {
 
 
 /* ============================================================================
- * COMMUN — Dialogs redimensionnables (formconfirm + dlg-add-det)
+ * COMMUN — Dialogs redimensionnables (formconfirm)
  * ========================================================================== */
 
 jQuery(document).on('dialogopen', function (e) {
