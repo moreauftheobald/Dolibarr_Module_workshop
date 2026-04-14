@@ -55,18 +55,11 @@ function vehiculePrepareHead($object)
 	$head[$h][2] = 'document';
 	$h++;
 
-	if (isModEnabled("operationorder") && $user->hasRight('operationorder', 'read')) {
+	if (isModEnabled("workshop") && $user->hasRight('workshop', 'operationorders', 'read')) {
 		$nbOperationOrder = getNbORVehicle($object->id);
-		$head[$h][0] = dol_buildpath('operationorder/list.php?&origin=vehicule&originid='.$object->id, 1);
+		$head[$h][0] = dol_buildpath('/workshop/or_list.php?origin=vehicule&originid='.$object->id, 1);
 		$head[$h][1] = $langs->trans('ORListHisto').'<span class="badge marginleftonlyshort">'.max($nbOperationOrder, 0).'</span>';
 		$head[$h][2] = 'list';
-		$h++;
-
-		$nbOperationOrder = getNbORVehicle($object->id, 0);
-		$langs->load('operationorder@operationorder');
-		$head[$h][0] = dol_buildpath('operationorder/vsr.php?origin=vehicule&originid='.$object->id, 1);
-		$head[$h][1] = $langs->trans('ORListVSR').'<span class="badge marginleftonlyshort">'.max($nbOperationOrder, 0).'</span>';
-		$head[$h][2] = 'vsr';
 		$h++;
 	}
 
@@ -132,29 +125,27 @@ function getFormConfirmWorkshopVehicule($form, $object, $action)
 
 	$formconfirm = '';
 
-	if ($action === 'valid' && $user->hasRight('workshop', 'vehicule', 'write')) {
-		$body = $langs->trans('ConfirmActivateWorkshopVehiculeBody', $object->immatriculation);
-		$formconfirm = $form->formconfirm(dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id, $langs->trans('ConfirmActivateWorkshopVehiculeTitle'), $body, 'confirm_validate', '', 0, 1);
-	} elseif ($action === 'modif' && $user->hasRight('workshop', 'vehicule', 'write')) {
-		$body = $langs->trans('ConfirmReopenWorkshopVehiculeBody', $object->immatriculation);
-		$formconfirm = $form->formconfirm(dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id, $langs->trans('ConfirmReopenWorkshopVehiculeTitle'), $body, 'confirm_modif', '', 0, 1);
-	} elseif ($action === 'delete' && $user->hasRight('workshop', 'vehicule', 'delete')) {
-		$body = $langs->trans('ConfirmDeleteWorkshopVehiculeBody');
-		$formconfirm = $form->formconfirm(dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id, $langs->trans('ConfirmDeleteWorkshopVehiculeTitle'), $body, 'confirm_delete', '', 0, 1);
-	} elseif ($action === 'clone' && $user->hasRight('workshop', 'vehicule', 'write')) {
-		$body = $langs->trans('ConfirmCloneWorkshopVehiculeBody', $object->immatriculation);
-		$formconfirm = $form->formconfirm(dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id, $langs->trans('ConfirmCloneWorkshopVehiculeTitle'), $body, 'confirm_clone', '', 0, 1);
-	} elseif ($action === 'delActivity' && $user->hasRight('workshop', 'vehicule', 'write')) {
-		$body = $langs->trans('ConfirmDelActivityWorkshopVehiculeBody');
-		$formconfirm = $form->formconfirm(dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id.'&act_id='.GETPOST('act_id'), $langs->trans('ConfirmDeleteWorkshopVehiculeTitle'), $body, 'confirm_delActivity', '', 0, 1);
-	} elseif ($action === 'unlinkVehicule' && $user->hasRight('workshop', 'vehicule', 'write')) {
-		$body = $langs->trans('ConfirmUnlinkVehiculeWorkshopBody');
-		$formconfirm = $form->formconfirm(dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id.'&linkVehicule_id='.GETPOST('linkVehicule_id'), $langs->trans('ConfirmUnlinkVehiculeWorkshopTitle'), $body, 'confirm_unlinkVehicule', '', 0, 1);
-	} elseif ($action === 'delOperation' && $user->hasRight('workshop', 'vehicule', 'write')) {
-		$body = $langs->trans('ConfirmDelOperationWorkshopBody');
-		$formconfirm = $form->formconfirm(dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id.'&ope_id='.GETPOST('ope_id'), $langs->trans('ConfirmDeleteWorkshopVehiculeTitle'), $body, 'confirm_delOperation', '', 0, 1);
+	// Déclaration data-driven des confirmations simples
+	// Format : action => [right, titleKey, bodyKey, confirmAction, extraParams (query string)]
+	$confirmDefs = array(
+		'valid'          => array('write',  'ConfirmActivateWorkshopVehiculeTitle', 'ConfirmActivateWorkshopVehiculeBody', 'confirm_validate',    ''),
+		'modif'          => array('write',  'ConfirmReopenWorkshopVehiculeTitle',   'ConfirmReopenWorkshopVehiculeBody',   'confirm_modif',       ''),
+		'delete'         => array('delete', 'ConfirmDeleteWorkshopVehiculeTitle',   'ConfirmDeleteWorkshopVehiculeBody',   'confirm_delete',      ''),
+		'clone'          => array('write',  'ConfirmCloneWorkshopVehiculeTitle',    'ConfirmCloneWorkshopVehiculeBody',    'confirm_clone',       ''),
+		'delActivity'    => array('write',  'ConfirmDeleteWorkshopVehiculeTitle',   'ConfirmDelActivityWorkshopVehiculeBody',  'confirm_delActivity',    '&act_id='.GETPOSTINT('act_id')),
+		'unlinkVehicule' => array('write',  'ConfirmUnlinkVehiculeWorkshopTitle',   'ConfirmUnlinkVehiculeWorkshopBody',  'confirm_unlinkVehicule', '&linkVehicule_id='.GETPOSTINT('linkVehicule_id')),
+		'delOperation'   => array('write',  'ConfirmDeleteWorkshopVehiculeTitle',   'ConfirmDelOperationWorkshopBody',    'confirm_delOperation',   '&ope_id='.GETPOSTINT('ope_id')),
+	);
+
+	if (isset($confirmDefs[$action])) {
+		list($right, $titleKey, $bodyKey, $confirmAction, $extraParams) = $confirmDefs[$action];
+		if ($user->hasRight('workshop', 'vehicule', $right)) {
+			$url  = dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id.$extraParams;
+			$body = $langs->trans($bodyKey, $object->immatriculation);
+			$formconfirm = $form->formconfirm($url, $langs->trans($titleKey), $body, $confirmAction, '', 0, 1);
+		}
 	} elseif ($action === 'cloneOperations' && $user->hasRight('workshop', 'vehicule', 'write')) {
-		// Build vehicle list of same type (VIN - Immat - Marque)
+		// Cas spécial : sélection du véhicule source
 		$sql = "SELECT v.rowid, v.vin, v.immatriculation, vm.label as marque";
 		$sql .= " FROM ".$db->prefix()."workshop_vehicule as v";
 		$sql .= " LEFT JOIN ".$db->prefix()."workshop_vehicule_c_vehicule_mark as vm ON vm.rowid = v.fk_vehicule_mark";
@@ -197,89 +188,7 @@ function printVehiculeActivities($object, $fromcard = false)
 	global $langs, $db, $form;
 
 	print load_fiche_titre($langs->trans('VehiculeActivities'), '', '');
-
-	if (GETPOST('action', 'alpha') == 'editActivity') {
-		$actionForm = 'updateActivity';
-	} else {
-		$actionForm = 'addActivity';
-	}
-
-	print '<form id="activityForm" method="POST" action="'.dol_escape_htmltag($_SERVER["PHP_SELF"]).'?id='.$object->id.'">';
-	print '<input type="hidden" name="token" value="'.newToken().'">';
-	print '<input type="hidden" name="action" value="'.$actionForm.'">';
-	print '<input type="hidden" name="id" value="'.$object->id.'">';
-	if (!empty(GETPOST('act_id', 'int'))) {
-		print '<input type="hidden" name="act_id" value="'.GETPOST('act_id', 'int').'">';
-	}
-
-	print '<table class="border" width="100%">'."\n";
-	print '<tr class="liste_titre">
-					<td align="center">'.$langs->trans('DateStart').'</td>
-					<td align="center">'.$langs->trans('DateEnd').'</td>
-					<td align="center">'.$langs->trans('soc').'</td>
-					<td></td>
-					</tr>';
-
-	$date_start = $date_end = '';
-	if ($fromcard) {
-		$date_start = dol_now();
-		$date_end = strtotime("+3 month", $date_start);
-	}
-
-	$ret = $object->getActivities($date_start, $date_end);
-	if ($ret == 0) {
-		print '<tr><td align="center" colspan="4">'.$langs->trans('NoActivity').'</td></tr>';
-	} elseif ($ret > 0) {
-		foreach ($object->activities as $activity) {
-			if (GETPOST('action', 'alpha') == 'editActivity'
-				&& $activity->id == GETPOST('act_id', 'int')) {
-				print '<tr>';
-				print '<td align="center">'.$form->selectDate($activity->date_start, 'activityDate_start').'</td>';
-				print '<td align="center">'.$form->selectDate($activity->date_end, 'activityDate_end').'</td>';
-				print '<td align="center">'.$form->select_thirdparty_list($activity->fk_soc, 'socid', 's.client = 1', '', 0, 0, array(), '', 0, 0, '', 'style="width: 80%"').'</td>';
-				print '<td align="center"><input class="button" type="submit" name="saveActivity" value="'.$langs->trans("Save").'"></td>';
-				print '</tr>';
-			} else {
-				print '<tr>';
-				print '<td align="center">'.dol_print_date($activity->date_start, "%d/%m/%Y").'</td>';
-				print '<td align="center">'.(!empty($activity->date_end) ? dol_print_date($activity->date_end, "%d/%m/%Y") : '').'</td>';
-				print '<td align="center">'.$activity->showOutputField($activity->fields['fk_soc'], 'fk_soc', $activity->fk_soc).'</td>';
-				print '<td align="center">';
-				print '<a href="'.dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id.'&action=editActivity&act_id='.$activity->id.'&token='.newToken().'">'.img_edit().'</a>';
-				print '<a href="'.dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id.'&action=delActivity&act_id='.$activity->id.'&token='.newToken().'">'.img_delete().'</a>';
-				print '</td>';
-				print '</tr>';
-			}
-		}
-	}
-
-	if (GETPOST('action', 'alpha') !== 'editActivity'
-		&& GETPOST('action', 'alpha') !== 'delActivity') {
-		// Nouvelle ligne activité
-		print '<tr id="newActivity">';
-		print '<td align="center">';
-		print $form->selectDate('', 'activityDate_start');
-		print '</td>';
-		print '<td align="center">';
-		print $form->selectDate('', 'activityDate_end');
-		print '</td>';
-		print '<td align="center">';
-		print $object->showOutputField($object->fields['fk_soc'], 'fk_soc', $object->fk_soc);
-		print '</td>';
-		print '<td align="center">';
-		print '<input class="button" type="submit" name="addActivity" value="'.$langs->trans("Add").'">';
-		print '</td>';
-		print '</tr>';
-	}
-
-	print '</table>';
-	print '</form>';
-	?>
-	<script>
-		$("#activityDate_start").addClass("quatrevingtpercent");
-		$("#activityDate_end").addClass("quatrevingtpercent");
-	</script>
-	<?php
+	include dol_buildpath('/workshop/tpl/vehicule_activities.tpl.php', 0);
 }
 
 
@@ -294,86 +203,10 @@ function printLinkedVehicules($object, $fromcard = false)
 	global $langs, $db, $form;
 
 	print load_fiche_titre($langs->trans('LinkedVehicules'), '', '');
-
-	print '<form id="vehiculeLinkedForm" method="POST" action="'.dol_escape_htmltag($_SERVER["PHP_SELF"]).'?id='.$object->id.'">';
-	print '<input type="hidden" name="token" value="'.newToken().'">';
-	print '<input type="hidden" name="action" value="addVehiculeLink">';
-	print '<input type="hidden" name="id" value="'.$object->id.'">';
-
-	print '<table class="border" width="100%">'."\n";
-	print '<tr class="liste_titre">';
-	print '<td align="center">Immatriculation</td>';
-	print '<td align="center">'.$langs->trans('DateStart').'</td>';
-	print '<td align="center">'.$langs->trans('DateEnd').'</td>';
-	print '<td align="center"></td>';
-	print '</tr>';
-
-	$object->getLinkedVehicules();
-	if (empty($object->linkedVehicules)) {
-		print '<tr><td align="center" colspan="4">'.$langs->trans('NoLinkedVehicule').'</td></tr>';
-	} else {
-		foreach ($object->linkedVehicules as $vehiculelink) {
-			$veh = new Vehicule($db);
-			$veh->fetch($vehiculelink->fk_other_vehicule);
-			print '<tr>';
-			print '<td align="center">'.$veh->getLinkUrl(0, '', 'immatriculation').'</td>';
-			print '<td align="center">'.dol_print_date($vehiculelink->date_start, "%d/%m/%Y").'</td>';
-			print '<td align="center">'.(!empty($vehiculelink->date_end) ? dol_print_date($vehiculelink->date_end, "%d/%m/%Y") : '').'</td>';
-			print '<td align="center"><a href="'.dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id.'&action=unlinkVehicule&linkVehicule_id='.$vehiculelink->id.'&token='.newToken().'"><span class="fas fa-unlink"></span></a></td>';
-			print '</tr>';
-		}
-	}
-
-	// New link row
-	print '<tr>';
-	$sql = "SELECT v.rowid, v.immatriculation, vt.label FROM ".$db->prefix()."workshop_vehicule as v";
-	$sql .= " LEFT JOIN ".$db->prefix()."workshop_vehicule_c_vehicule_type as vt ON vt.rowid = v.fk_vehicule_type";
-	$sql .= " WHERE v.status = 1";
-	$tmpMotriceTypes = getDolGlobalString("WORKSHOP_MOTRICE_TYPES");
-	$WORKSHOP_MOTRICE_TYPES = !empty($tmpMotriceTypes) ? @unserialize($tmpMotriceTypes) : false;
-	if (is_array($WORKSHOP_MOTRICE_TYPES) && !empty($WORKSHOP_MOTRICE_TYPES)) {
-		$sanitizedTypes = array_map('intval', $WORKSHOP_MOTRICE_TYPES);
-		if (in_array($object->fk_vehicule_type, $sanitizedTypes)) {
-			$sql .= " AND v.fk_vehicule_type NOT IN (".implode(', ', $sanitizedTypes).")";
-		} else {
-			$sql .= " AND v.fk_vehicule_type IN (".implode(', ', $sanitizedTypes).")";
-		}
-	} else {
-		$sql .= " AND v.fk_vehicule_type <> ".((int) $object->fk_vehicule_type);
-	}
-	$sql .= " AND v.fk_soc = ".((int) $object->fk_soc);
-	$resql = $db->query($sql);
-	$Tab = array();
-	if ($resql) {
-		while ($obj = $db->fetch_object($resql)) {
-			$Tab[$obj->rowid] = $obj->label.' - '.$obj->immatriculation;
-		}
-	}
-
-	print '<td align="center">';
-	print $form->selectarray('linkVehicule_id', $Tab, GETPOST('linkVehicule_id'), 1, 0, 0, '', 0, 0, 0, '', '', 1);
-	print '</td>';
-	print '<td align="center">';
-	print $form->selectDate('', 'linkDate_start');
-	print '</td>';
-	print '<td align="center">';
-	print $form->selectDate('', 'linkDate_end');
-	print '</td>';
-	print '<td align="center">';
-	print '<input class="button" type="submit" name="linkVehicule" value="'.$langs->trans("Add").'">';
-	print '</td>';
-	print '</tr>';
-
-	print '</table>';
-	print '</form>';
+	include dol_buildpath('/workshop/tpl/vehicule_links.tpl.php', 0);
 }
 
 
-/**
- * Print vehicule operations (maintenance schedule)
- *
- * @param Vehicule $object Vehicule object
- */
 /**
  * Build a select array of maintenance operations, optionally filtered by vehicule type/mark
  *
@@ -410,152 +243,7 @@ function printVehiculeOperations($object)
 	global $langs, $form, $user, $db;
 
 	print load_fiche_titre($langs->trans('VehiculeOperations'), '', '');
-
-	if (GETPOST('action', 'alpha') == 'editOperation') {
-		$actionForm = 'updateOperation';
-	} else {
-		$actionForm = 'addVehiculeOperation';
-	}
-
-	print '<form id="vehiculeOperationsForm" method="POST" action="'.dol_escape_htmltag($_SERVER["PHP_SELF"]).'?id='.$object->id.'">';
-	print '<input type="hidden" name="token" value="'.newToken().'">';
-	print '<input type="hidden" name="action" value="'.$actionForm.'">';
-	print '<input type="hidden" name="id" value="'.$object->id.'">';
-	if (!empty(GETPOST('ope_id', 'int'))) {
-		print '<input type="hidden" name="ope_id" value="'.GETPOST('ope_id', 'int').'">';
-	}
-
-	print '<table class="border" width="100%">'."\n";
-	print '<tr class="liste_titre">';
-	print '<td align="center">'.$langs->trans('VehiculeOperation').'</td>';
-	print '<td align="center">'.$langs->trans('KM').'</td>';
-	print '<td align="center">'.$langs->trans('VehiculeOperationDelay').'</td>';
-	print '<td align="center">'.$langs->trans('VehiculeOperationLastDateDone').'</td>';
-	print '<td align="center">'.$langs->trans('VehiculeOperationLastKmDone').'</td>';
-	print '<td align="center">'.$langs->trans('VehiculeOperationDateNext').'</td>';
-	print '<td align="center">'.$langs->trans('VehiculeOperationKmNext').'</td>';
-	print '<td align="center">'.$langs->trans('VehiculeOperationOnTime').'</td>';
-	if (isModEnabled('operationorder')) {
-		print '<td align="center">'.$langs->trans('VehiculeOperationNextOR').'</td>';
-	}
-	print '<td align="center"></td>';
-	print '</tr>';
-
-	$res = $object->getOperations();
-	if ($res < 0) {
-		setEventMessages($object->error, null, 'errors');
-	}
-	if (empty($object->operations)) {
-		print '<tr><td align="center" colspan="'.(isModEnabled('operationorder') ? 10 : 9).'">'.$langs->trans('NoOperation').'</td></tr>';
-	} else {
-		foreach ($object->operations as $operation) {
-			print '<tr>';
-			if (GETPOST('action', 'alpha') == 'editOperation'
-				&& $operation->id == GETPOST('ope_id', 'int')) {
-				print '<td align="center">';
-				$mainOpeArray = getMaintenanceOperationSelectArray($db, $object->fk_vehicule_type, $object->fk_vehicule_mark);
-				print $form->selectarray('fk_maintenance_operation', $mainOpeArray, $operation->fk_maintenance_operation, 1, 0, 0, '', 0, 0, 0, '', 'minwidth200');
-				print '</td>';
-				print '<td align="center">';
-				print '<input class="quatrevingtpercent" type="number" name="km" id="km" step="1" value="'.$operation->km.'">';
-				print '</td>';
-				print '<td align="center">';
-				print '<input class="soixantepercent" type="number" name="delay" id="delay" step="1" value="'.$operation->delai_from_last_op.'">&nbsp;'.$langs->trans('Months');
-				print '</td>';
-				print '<td align="center">';
-				print $form->selectDate($operation->date_done, 'date_done');
-				print '</td>';
-				print '<td align="center"><input class="quatrevingtpercent" type="number" name="km_done" id="km_done" step="1" value="'.$operation->km_done.'"></td>';
-				print '<td align="center">'.$operation->date_next.'</td>';
-				print '<td align="center">'.$operation->km_next.'</td>';
-				print '<td align="center">'.(!empty($operation->on_time) ? dolGetBadge($langs->trans('VehiculeOperationOnTime'), '', 'danger') : '').'</td>';
-				if (isModEnabled('operationorder')) {
-					print '<td align="center">';
-					if (!empty($operation->or_next) && class_exists('OperationOrder')) {
-						$operationorder = new OperationOrder($object->db);
-						if ($operationorder->fetch($operation->or_next, false) > 0) {
-							print $operationorder->getNomUrl(0);
-						}
-					}
-					print '</td>';
-				}
-				print '<td align="center">';
-				print '<input class="button quatrevingtpercent" type="submit" name="saveOperation" value="'.$langs->trans("Save").'">';
-				print '</td>';
-			} else {
-				print '<td align="left">'.$operation->getName().'</td>';
-				print '<td align="center">'.(!empty($operation->km) ? price2num($operation->km) : '').'</td>';
-				print '<td align="center">'.(!empty($operation->delai_from_last_op) ? $operation->delai_from_last_op.' '.$langs->trans('Months') : '').'</td>';
-				print '<td align="center">';
-				if (!empty($operation->date_done)) {
-					print dol_print_date($operation->date_done, "%d/%m/%Y");
-				}
-				print '</td>';
-				print '<td align="center">'.(!empty($operation->km_done) ? $operation->km_done : '').'</td>';
-				print '<td align="center">';
-				if (!empty($operation->date_next)) {
-					print dol_print_date($operation->date_next, "%d/%m/%Y");
-				}
-				print '</td>';
-				print '<td align="center">'.$operation->km_next.'</td>';
-				print '<td align="center">'.(!empty($operation->on_time) ? dolGetBadge($langs->trans('VehiculeOperationOnTime'), '', 'danger') : '').'</td>';
-				if (isModEnabled('operationorder')) {
-					print '<td align="center">';
-					if (!empty($operation->or_next) && class_exists('OperationOrder')) {
-						$operationorder = new OperationOrder($object->db);
-						if ($operationorder->fetch($operation->or_next, false) > 0) {
-							print $operationorder->getNomUrl(0);
-						}
-					}
-					print '</td>';
-				}
-				print '<td align="center">';
-				print '<a href="'.dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id.'&action=editOperation&ope_id='.$operation->id.'&token='.newToken().'">'.img_edit().'</a>';
-				print '<a href="'.dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id.'&action=delOperation&ope_id='.$operation->id.'&token='.newToken().'">'.img_delete().'</a>';
-				print '</td>';
-			}
-			print '</tr>';
-		}
-	}
-
-	if (GETPOST('action', 'alpha') !== 'editOperation'
-		&& GETPOST('action', 'alpha') !== 'delOperation') {
-		// New operation line
-		print '<tr>';
-		print '<td align="center">';
-		$mainOpeArray = getMaintenanceOperationSelectArray($db, $object->fk_vehicule_type, $object->fk_vehicule_mark);
-		print $form->selectarray('fk_maintenance_operation', $mainOpeArray, GETPOSTINT('fk_maintenance_operation'), 1, 0, 0, '', 0, 0, 0, '', 'minwidth200');
-		print '</td>';
-		print '<td align="center">';
-		print '<input class="quatrevingtpercent" type="number" name="km" id="km" step="1" value="'.GETPOST('km').'">';
-		print '</td>';
-		print '<td align="center">';
-		print '<input class="soixantepercent" type="number" name="delay" id="delay" step="1" value="'.GETPOST('delay').'">&nbsp;'.$langs->trans('Months');
-		print '</td>';
-		print '<td align="center">';
-		$date_done = dol_mktime(0, 0, 0,
-			GETPOST('date_donemonth', 'int'),
-			GETPOST('date_doneday', 'int'),
-			GETPOST('date_doneyear', 'int'));
-		print $form->selectDate($date_done, 'date_done');
-		print '</td>';
-		print '<td align="center"><input class="quatrevingtpercent" type="number" name="km_done" id="km_done" step="1" value="'.GETPOST('km_done', 'int').'"></td>';
-		print '<td align="center" colspan="'.(isModEnabled('operationorder') ? 4 : 3).'">';
-		print '<input class="button quatrevingtpercent" type="submit" name="addOperation" value="'.$langs->trans("Add").'">';
-		print '</td>';
-		print '</tr>';
-	}
-
-	print '</table>';
-	print '</form>';
-
-	// Clone operations button
-	if ($user->hasRight('workshop', 'vehicule', 'write')) {
-		print '<div class="tabsAction">';
-		print '<a class="butAction" href="'.dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$object->id.'&action=cloneOperations&token='.newToken().'">'.$langs->trans("CloneOperationsFromVehicle").'</a>';
-		print '</div>';
-	}
-
+	include dol_buildpath('/workshop/tpl/vehicule_operations.tpl.php', 0);
 }
 
 
@@ -570,14 +258,14 @@ function getNbORVehicle($idvehicle, $checkEntity = 1)
 {
 	global $db;
 
-	if (!isModEnabled('operationorder')) {
+	if (!isModEnabled('workshop')) {
 		return 0;
 	}
 
-	$sql = 'SELECT COUNT(o.rowid) as nb FROM '.$db->prefix().'operationorder as o ';
+	$sql = 'SELECT COUNT(o.rowid) as nb FROM '.$db->prefix().'workshop_operationorder as o';
 	$sql .= ' WHERE o.fk_vehicule = '.(int) $idvehicle;
 	if ($checkEntity) {
-		$sql .= ' AND o.entity IN ('.getEntity('operationorder').')';
+		$sql .= ' AND o.entity IN ('.getEntity('workshop_operationorder').')';
 	}
 	$resql = $db->query($sql);
 

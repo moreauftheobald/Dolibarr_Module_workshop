@@ -287,37 +287,60 @@ if (empty($reshook)) {
 
 	// ── Mode vue : sauvegarde des éditions en ligne ──────────────────────────
 
+	// ── Sauvegarde des champs simples (inline edit) ────────────────────
+	$inlineSaveActions = array(
+		'save_ref_client'    => array('field' => 'ref_client',    'getpost' => array('ref_client', 'alphanohtml')),
+		'save_date_or'       => array('field' => 'date_valid',    'type' => 'date', 'dateprefix' => 'date_or'),
+		'save_date_planned'  => array('field' => 'date_planned',  'type' => 'date', 'dateprefix' => 'date_planned'),
+		'save_fk_conducteur' => array('field' => 'fk_conducteur', 'getpost' => array('fk_conducteur', 'int'), 'nullifempty' => true),
+		'save_km'            => array('field' => 'km',            'type' => 'price', 'getpost' => array('km', 'alpha')),
+		'save_check_or'      => array('field' => 'check_or',     'getpost' => array('check_or', 'int'), 'perm' => 'admin'),
+	);
+
+	foreach ($inlineSaveActions as $actionName => $cfg) {
+		if ($action !== $actionName || $id <= 0) {
+			continue;
+		}
+		// Vérification des droits
+		$hasPerm = !empty($cfg['perm']) ? ($cfg['perm'] === 'admin' ? $user->admin : $permissiontoadd) : $permissiontoadd;
+		if (!$hasPerm) {
+			continue;
+		}
+		// Lecture de la valeur depuis POST
+		if (!empty($cfg['type']) && $cfg['type'] === 'date') {
+			$dp = $cfg['dateprefix'];
+			$val = dol_mktime(GETPOSTINT($dp.'hour'), GETPOSTINT($dp.'min'), 0, GETPOSTINT($dp.'month'), GETPOSTINT($dp.'day'), GETPOSTINT($dp.'year'));
+		} elseif (!empty($cfg['type']) && $cfg['type'] === 'price') {
+			$val = price2num(GETPOST($cfg['getpost'][0], $cfg['getpost'][1]));
+		} else {
+			$val = GETPOST($cfg['getpost'][0], $cfg['getpost'][1]);
+		}
+		if (!empty($cfg['nullifempty']) && empty($val)) {
+			$val = null;
+		}
+		$object->{$cfg['field']} = $val;
+		if ($object->update($user) < 0) {
+			setEventMessages($object->error, $object->errors, 'errors');
+		}
+		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
+		exit;
+	}
+
+	// ── Sauvegarde fk_soc (avec sync remise tiers) ──────────────────
 	if ($action == 'save_fk_soc' && $id > 0 && $permissiontoadd) {
 		$object->fk_soc = GETPOSTINT('fk_soc');
 		if ($object->update($user) < 0) {
 			setEventMessages($object->error, $object->errors, 'errors');
 		} else {
-			// Recalculate job discounts from new third-party remise_percent
-			if ($object->fk_soc > 0) {
-				$socObj = new Societe($db);
-				if ($socObj->fetch($object->fk_soc) > 0) {
-					$jobsObj = new Operationorder_jobs($db);
-					$jobsObj->updateRemiseForOR($id, (float) $socObj->remise_percent, $user);
-					$object->updateTotals($user);
-				}
-			}
+			$object->syncThirdPartyDiscount($user);
 		}
 		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
 		exit;
 	}
 
-	if ($action == 'save_ref_client' && $id > 0 && $permissiontoadd) {
-		$object->ref_client = GETPOST('ref_client', 'alphanohtml');
-		if ($object->update($user) < 0) {
-			setEventMessages($object->error, $object->errors, 'errors');
-		}
-		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
-		exit;
-	}
-
+	// ── Sauvegarde fk_vehicule (re-sync tiers + remise) ─────────────
 	if ($action == 'save_fk_vehicule' && $id > 0 && $permissiontoadd) {
 		$object->fk_vehicule = GETPOSTINT('fk_vehicule');
-		// Re-synchroniser le tiers avec le nouveau véhicule
 		if ($object->fk_vehicule > 0) {
 			$vehicule = new Vehicule($db);
 			if ($vehicule->fetch($object->fk_vehicule) > 0) {
@@ -327,66 +350,7 @@ if (empty($reshook)) {
 		if ($object->update($user) < 0) {
 			setEventMessages($object->error, $object->errors, 'errors');
 		} else {
-			// Recalculate job discounts from new third-party remise_percent
-			if ($object->fk_soc > 0) {
-				$socObj = new Societe($db);
-				if ($socObj->fetch($object->fk_soc) > 0) {
-					$jobsObj = new Operationorder_jobs($db);
-					$jobsObj->updateRemiseForOR($id, (float) $socObj->remise_percent, $user);
-					$object->updateTotals($user);
-				}
-			}
-		}
-		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
-		exit;
-	}
-
-	if ($action == 'save_date_or' && $id > 0 && $permissiontoadd) {
-		$object->date_valid = dol_mktime(
-			GETPOSTINT('date_orhour'), GETPOSTINT('date_ormin'), 0,
-			GETPOSTINT('date_ormonth'), GETPOSTINT('date_orday'), GETPOSTINT('date_oryear')
-		);
-		if ($object->update($user) < 0) {
-			setEventMessages($object->error, $object->errors, 'errors');
-		}
-		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
-		exit;
-	}
-
-	if ($action == 'save_date_planned' && $id > 0 && $permissiontoadd) {
-		$object->date_planned = dol_mktime(
-			GETPOSTINT('date_plannedhour'), GETPOSTINT('date_plannedmin'), 0,
-			GETPOSTINT('date_plannedmonth'), GETPOSTINT('date_plannedday'), GETPOSTINT('date_plannedyear')
-		);
-		if ($object->update($user) < 0) {
-			setEventMessages($object->error, $object->errors, 'errors');
-		}
-		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
-		exit;
-	}
-
-	if ($action == 'save_fk_conducteur' && $id > 0 && $permissiontoadd) {
-		$object->fk_conducteur = GETPOSTINT('fk_conducteur') ?: null;
-		if ($object->update($user) < 0) {
-			setEventMessages($object->error, $object->errors, 'errors');
-		}
-		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
-		exit;
-	}
-
-	if ($action == 'save_km' && $id > 0 && $permissiontoadd) {
-		$object->km = price2num(GETPOST('km', 'alpha'));
-		if ($object->update($user) < 0) {
-			setEventMessages($object->error, $object->errors, 'errors');
-		}
-		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
-		exit;
-	}
-
-	if ($action == 'save_check_or' && $id > 0 && $user->admin) {
-		$object->check_or = GETPOSTINT('check_or');
-		if ($object->update($user) < 0) {
-			setEventMessages($object->error, $object->errors, 'errors');
+			$object->syncThirdPartyDiscount($user);
 		}
 		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
 		exit;
@@ -1051,36 +1015,24 @@ if ($id > 0) {
 	print '<tr><td>';
 	print $form->editfieldkey($langs->trans('DateOR'), 'date_or', $object->date_valid, $object, $permissiontoadd);
 	print '</td><td>';
-	if ($action == 'editdate_or' && $permissiontoadd) {
-		print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'">';
-		print '<input type="hidden" name="token" value="'.newToken().'">';
-		print '<input type="hidden" name="action" value="save_date_or">';
-		print '<input type="hidden" name="id" value="'.$object->id.'">';
-		print $form->selectDate($object->date_valid ?: -1, 'date_or', 1, 1, 0, '', 1, 1);
-		print ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
-		print ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
-		print '</form>';
-	} else {
-		print $form->editfieldval($langs->trans('DateOR'), 'date_or', $object->date_valid, $object, $permissiontoadd, 'dayhour');
-	}
+	print orCardInlineEditTd(
+		$action, 'date_or', 'save_date_or', $object->id,
+		$form->selectDate($object->date_valid ?: -1, 'date_or', 1, 1, 0, '', 1, 1),
+		$form->editfieldval($langs->trans('DateOR'), 'date_or', $object->date_valid, $object, $permissiontoadd, 'dayhour'),
+		$permissiontoadd
+	);
 	print '</td></tr>'."\n";
 
 	// ── Date planification — éditable * ───────────────────────────────────
 	print '<tr><td>';
 	print $form->editfieldkey($langs->trans('DatePlanned'), 'date_planned', $object->date_planned, $object, $permissiontoadd);
 	print '</td><td>';
-	if ($action == 'editdate_planned' && $permissiontoadd) {
-		print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'">';
-		print '<input type="hidden" name="token" value="'.newToken().'">';
-		print '<input type="hidden" name="action" value="save_date_planned">';
-		print '<input type="hidden" name="id" value="'.$object->id.'">';
-		print $form->selectDate($object->date_planned ?: -1, 'date_planned', 1, 1, 0, '', 1, 1);
-		print ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
-		print ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
-		print '</form>';
-	} else {
-		print $form->editfieldval($langs->trans('DatePlanned'), 'date_planned', $object->date_planned, $object, $permissiontoadd, 'dayhour');
-	}
+	print orCardInlineEditTd(
+		$action, 'date_planned', 'save_date_planned', $object->id,
+		$form->selectDate($object->date_planned ?: -1, 'date_planned', 1, 1, 0, '', 1, 1),
+		$form->editfieldval($langs->trans('DatePlanned'), 'date_planned', $object->date_planned, $object, $permissiontoadd, 'dayhour'),
+		$permissiontoadd
+	);
 	print '</td></tr>'."\n";
 
 	// ── Temps d'immobilisation théorique (calculé !) ───────────────────────
@@ -1140,21 +1092,15 @@ if ($id > 0) {
 		print ' <a class="editfielda" href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'&action=editcheck_or">'.img_edit().'</a>';
 	}
 	print '</td><td>';
-	if ($action == 'editcheck_or' && $user->admin) {
-		print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'">';
-		print '<input type="hidden" name="token" value="'.newToken().'">';
-		print '<input type="hidden" name="action" value="save_check_or">';
-		print '<input type="hidden" name="id" value="'.$object->id.'">';
-		print $form->selectarray('check_or', $checkOrLabels, (int) $object->check_or, 0);
-		print ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
-		print ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
-		print '</form>';
-	} else {
-		$checkOrVal = (int) $object->check_or;
-		$checkOrLabel = isset($checkOrLabels[$checkOrVal]) ? $checkOrLabels[$checkOrVal] : $checkOrLabels[0];
-		$checkOrBadge = isset($checkOrBadgeTypes[$checkOrVal]) ? $checkOrBadgeTypes[$checkOrVal] : 'secondary';
-		print dolGetBadge($checkOrLabel, '', $checkOrBadge);
-	}
+	$checkOrVal = (int) $object->check_or;
+	$checkOrLabel = isset($checkOrLabels[$checkOrVal]) ? $checkOrLabels[$checkOrVal] : $checkOrLabels[0];
+	$checkOrBadge = isset($checkOrBadgeTypes[$checkOrVal]) ? $checkOrBadgeTypes[$checkOrVal] : 'secondary';
+	print orCardInlineEditTd(
+		$action, 'check_or', 'save_check_or', $object->id,
+		$form->selectarray('check_or', $checkOrLabels, (int) $object->check_or, 0),
+		dolGetBadge($checkOrLabel, '', $checkOrBadge),
+		$user->admin
+	);
 	print '</td></tr>'."\n";
 
 	if ($vehiculeObj) {
@@ -1240,51 +1186,37 @@ if ($id > 0) {
 	print '<tr><td class="titlefield">';
 	print $form->editfieldkey($langs->trans('Conducteur'), 'fk_conducteur', $object->fk_conducteur, $object, $permissiontoadd);
 	print '</td><td>';
-	if ($action == 'editfk_conducteur' && $permissiontoadd) {
-		print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'">';
-		print '<input type="hidden" name="token" value="'.newToken().'">';
-		print '<input type="hidden" name="action" value="save_fk_conducteur">';
-		print '<input type="hidden" name="id" value="'.$object->id.'">';
-		print $object->showInputField($object->fields['fk_conducteur'], 'fk_conducteur', $object->fk_conducteur, '', '', '', 'maxwidth300');
-		print ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
-		print ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
-		print '</form>';
-	} else {
-		if ($object->fk_conducteur > 0) {
-			$conducteurObj = new Conducteur($db);
-			if ($conducteurObj->fetch($object->fk_conducteur) > 0) {
-				print $conducteurObj->getNomUrl(1);
-			} else {
-				print $object->fk_conducteur;
-			}
+	// Build display HTML for conducteur
+	$conducteurDisplay = '';
+	if ($object->fk_conducteur > 0) {
+		$conducteurObj = new Conducteur($db);
+		if ($conducteurObj->fetch($object->fk_conducteur) > 0) {
+			$conducteurDisplay = $conducteurObj->getNomUrl(1);
 		} else {
-			print '<span class="opacitymedium">'.$langs->trans('None').'</span>';
+			$conducteurDisplay = (string) $object->fk_conducteur;
 		}
-		if ($permissiontoadd) {
-			print ' <a class="editfielda" href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'&action=editfk_conducteur">'.img_edit().'</a>';
-		}
+	} else {
+		$conducteurDisplay = '<span class="opacitymedium">'.$langs->trans('None').'</span>';
 	}
+	print orCardInlineEditTd(
+		$action, 'fk_conducteur', 'save_fk_conducteur', $object->id,
+		$object->showInputField($object->fields['fk_conducteur'], 'fk_conducteur', $object->fk_conducteur, '', '', '', 'maxwidth300'),
+		$conducteurDisplay,
+		$permissiontoadd
+	);
 	print '</td></tr>'."\n";
 
 	// ── Kilométrage à la création de l'OR — éditable * ───────────────────
 	print '<tr><td class="titlefield">';
 	print $form->editfieldkey($langs->trans('KmCreationOR'), 'km', $object->km, $object, $permissiontoadd);
 	print '</td><td>';
-	if ($action == 'editkm' && $permissiontoadd) {
-		print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'">';
-		print '<input type="hidden" name="token" value="'.newToken().'">';
-		print '<input type="hidden" name="action" value="save_km">';
-		print '<input type="hidden" name="id" value="'.$object->id.'">';
-		print '<input type="text" name="km" class="maxwidth100" value="'.dol_escape_htmltag((string) $object->km).'">';
-		print ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
-		print ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
-		print '</form>';
-	} else {
-		print (!empty($object->km) ? dol_escape_htmltag(number_format((float) $object->km, 0, ',', ' ')).' km' : '<span class="opacitymedium">'.$langs->trans('NA').'</span>');
-		if ($permissiontoadd) {
-			print ' <a class="editfielda" href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'&action=editkm">'.img_edit().'</a>';
-		}
-	}
+	$kmDisplay = (!empty($object->km) ? dol_escape_htmltag(number_format((float) $object->km, 0, ',', ' ')).' km' : '<span class="opacitymedium">'.$langs->trans('NA').'</span>');
+	print orCardInlineEditTd(
+		$action, 'km', 'save_km', $object->id,
+		'<input type="text" name="km" class="maxwidth100" value="'.dol_escape_htmltag((string) $object->km).'">',
+		$kmDisplay,
+		$permissiontoadd
+	);
 	print '</td></tr>'."\n";
 
 	// ── Date de clôture (calculé !) ───────────────────────────────────────

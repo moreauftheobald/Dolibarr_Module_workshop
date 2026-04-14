@@ -24,6 +24,12 @@
 
 require_once DOL_DOCUMENT_ROOT.'/core/class/commonobject.class.php';
 
+dol_include_once('/workshop/class/vehiculeActivity.class.php');
+dol_include_once('/workshop/class/vehiculeLink.class.php');
+dol_include_once('/workshop/class/vehiculeOperation.class.php');
+dol_include_once('/workshop/class/vehiculemark.class.php');
+dol_include_once('/workshop/class/vehiculetype.class.php');
+
 class Vehicule extends CommonObject
 {
 	/**
@@ -556,7 +562,6 @@ class Vehicule extends CommonObject
 	{
 		$this->activities = array();
 
-		dol_include_once('/workshop/class/vehiculeActivity.class.php');
 		$act = new WorkshopVehiculeActivity($this->db);
 
 		$sql = "SELECT rowid FROM ".$this->db->prefix().$act->table_element;
@@ -604,8 +609,6 @@ class Vehicule extends CommonObject
 			$this->error = "ErrNoActivityType";
 			return -1;
 		}
-
-		dol_include_once("/workshop/class/vehiculeActivity.class.php");
 
 		// Auto-close the previous activity: set its date_end to new date_start - 1 day (23:59:59)
 		if (!empty($date_start)) {
@@ -660,7 +663,6 @@ class Vehicule extends CommonObject
 			return -1;
 		}
 
-		dol_include_once("/workshop/class/vehiculeActivity.class.php");
 		$act = new WorkshopVehiculeActivity($this->db);
 		$result = $act->fetch($act_id);
 		if ($result < 0) {
@@ -685,7 +687,6 @@ class Vehicule extends CommonObject
 
 	public function delActivity($user, $act_id)
 	{
-		dol_include_once("/workshop/class/vehiculeActivity.class.php");
 		$act = new WorkshopVehiculeActivity($this->db);
 
 		$ret = $act->fetch($act_id);
@@ -725,8 +726,6 @@ class Vehicule extends CommonObject
 
 			$resql = $this->db->query($sql);
 			if ($resql) {
-				dol_include_once('/workshop/class/vehiculeLink.class.php');
-
 				while ($obj = $this->db->fetch_object($resql)) {
 					$Vlink = new WorkshopVehiculeLink($this->db);
 					$ret   = $Vlink->fetch($obj->rowid);
@@ -764,7 +763,6 @@ class Vehicule extends CommonObject
 
 		// Auto-close the previous link: set its date_end to new date_start - 1 day (23:59:59)
 		if (!empty($date_start)) {
-			dol_include_once('/workshop/class/vehiculeLink.class.php');
 			$sqlPrevLink = "SELECT rowid FROM ".$this->db->prefix()."workshop_vehicule_link";
 			$sqlPrevLink .= " WHERE (fk_source = ".((int) $this->id)." OR fk_target = ".((int) $this->id).")";
 			$sqlPrevLink .= " AND date_start < '".$this->db->idate($date_start)."'";
@@ -828,7 +826,6 @@ class Vehicule extends CommonObject
 		if (!empty($this->errors)) {
 			return -1;
 		} else {
-			dol_include_once('/workshop/class/vehiculeLink.class.php');
 			$Vlink = new WorkshopVehiculeLink($this->db);
 			$Vlink->fk_source              = $this->id;
 			$Vlink->fk_soc_vehicule_source = $this->fk_soc;
@@ -851,7 +848,6 @@ class Vehicule extends CommonObject
 	{
 		global $user;
 
-		dol_include_once('/workshop/class/vehiculeLink.class.php');
 		$link = new WorkshopVehiculeLink($this->db);
 
 		$ret = $link->fetch($id);
@@ -889,8 +885,6 @@ class Vehicule extends CommonObject
 		if ($resql) {
 			$num = $this->db->num_rows($resql);
 			if ($num) {
-				dol_include_once('/workshop/class/vehiculeOperation.class.php');
-
 				while ($obj = $this->db->fetch_object($resql)) {
 					$ope = new WorkshopVehiculeOperation($this->db);
 					$ret = $ope->fetch($obj->rowid);
@@ -922,8 +916,6 @@ class Vehicule extends CommonObject
 	{
 		global $user;
 
-		dol_include_once('/workshop/class/vehiculeOperation.class.php');
-
 		$ope = new WorkshopVehiculeOperation($this->db);
 
 		$ope->fk_vehicule               = $this->id;
@@ -950,7 +942,6 @@ class Vehicule extends CommonObject
 	{
 		global $user;
 
-		dol_include_once('/workshop/class/vehiculeOperation.class.php');
 		$ope = new WorkshopVehiculeOperation($this->db);
 		$ope->fetch($ope_id);
 
@@ -972,7 +963,6 @@ class Vehicule extends CommonObject
 	{
 		global $user;
 
-		dol_include_once('/workshop/class/vehiculeOperation.class.php');
 		$ope    = new WorkshopVehiculeOperation($this->db);
 		$result = $ope->fetch($ope_id);
 		if ($result < 0) {
@@ -1001,18 +991,15 @@ class Vehicule extends CommonObject
 	// -----------------------------------------------------------
 
 	/**
-	 * Return a link to the object card (with eventually picto)
+	 * Build the HTML tooltip label for this vehicule (used by getNomUrl/getLinkUrl).
 	 *
-	 * @param  int    $withpicto  Add picto into link
-	 * @param  string $moreparams Add more parameters in the URL
-	 * @return string
+	 * @return string  HTML tooltip content
 	 */
-	public function getNomUrl($withpicto = 0, $moreparams = '')
+	private function buildTooltipLabel(): string
 	{
 		global $langs, $db;
 
-		$result = '';
-		$label  = '<u>'.$langs->trans("ShowVehicule").'</u>';
+		$label = '<u>'.$langs->trans("ShowVehicule").'</u>';
 		if (!empty($this->vin)) {
 			$label .= '<br><b>'.$langs->trans('VIN').':</b> '.$this->vin;
 		}
@@ -1020,95 +1007,58 @@ class Vehicule extends CommonObject
 			$label .= '<br><b>'.$langs->trans('immatriculation').':</b> '.$this->immatriculation;
 		}
 
-		// marque
-		dol_include_once('/workshop/class/vehiculemark.class.php');
-		$dict  = new VehiculeMark($db);
+		$dict   = new VehiculeMark($db);
 		$label .= '<br><b>'.$langs->trans('vehiculeMark').':</b> '.$dict->getValueFromId($this->fk_vehicule_mark);
 
-		// type de véhicule
-		dol_include_once('/workshop/class/vehiculetype.class.php');
-		$dict  = new VehiculeType($db);
+		$dict   = new VehiculeType($db);
 		$label .= '<br><b>'.$langs->trans('vehiculeType').':</b> '.$dict->getValueFromId($this->fk_vehicule_type);
 
-		// client
 		$this->fetch_thirdparty();
 		if (!empty($this->thirdparty)) {
 			$label .= '<br><b>'.$langs->trans('ThirdParty').':</b> '.$this->thirdparty->name;
 		}
 
+		return $label;
+	}
+
+	/**
+	 * Return a link to the object card (with eventually picto)
+	 *
+	 * @param  int    $withpicto  Add picto into link (0=No, 1=With picto, 2=Only picto)
+	 * @param  string $moreparams Add more parameters in the URL
+	 * @return string
+	 */
+	public function getNomUrl($withpicto = 0, $moreparams = '')
+	{
+		$label = $this->buildTooltipLabel();
+
 		$linkclose = '" title="'.dol_escape_htmltag($label, 1).'" class="classfortooltip">';
 		$link      = '<a href="'.dol_buildpath('/workshop/vehicule/vehicule_card.php', 1).'?id='.$this->id.urlencode($moreparams).$linkclose;
+		$linkend   = '</a>';
 
-		$linkend = '</a>';
-
-		$picto = 'fa-truck';
-
+		$result = '';
 		if ($withpicto) {
-			$result .= ($link.img_object($label, $picto, 'class="classfortooltip"').$linkend);
+			$result .= $link.img_object($label, 'fa-truck', 'class="classfortooltip"').$linkend;
 		}
 		if ($withpicto && $withpicto != 2) {
 			$result .= ' ';
 		}
-
 		$result .= $link.$this->immatriculation.' - '.$this->vin.$linkend;
 
 		return $result;
 	}
 
 	/**
-	 * Return a link URL with customizable display fields
+	 * Alias of getNomUrl — kept for backward compatibility.
 	 *
 	 * @param  int    $withpicto       Add picto into link
 	 * @param  string $moreparams      Add more parameters in the URL
-	 * @param  string $fieldtodisplay  Field(s) to display
+	 * @param  string $fieldtodisplay  Unused (kept for signature compat)
 	 * @return string
 	 */
 	public function getLinkUrl($withpicto = 0, $moreparams = '', $fieldtodisplay = 'immatriculation,vin')
 	{
-		global $langs, $db;
-
-		$result = '';
-		$label  = '<u>'.$langs->trans("ShowVehicule").'</u>';
-		if (!empty($this->vin)) {
-			$label .= '<br><b>'.$langs->trans('VIN').':</b> '.$this->vin;
-		}
-		if (!empty($this->immatriculation)) {
-			$label .= '<br><b>'.$langs->trans('immatriculation').':</b> '.$this->immatriculation;
-		}
-
-		// marque
-		dol_include_once('/workshop/class/vehiculemark.class.php');
-		$dict  = new VehiculeMark($db);
-		$label .= '<br><b>'.$langs->trans('vehiculeMark').':</b> '.$dict->getValueFromId($this->fk_vehicule_mark);
-
-		// type de véhicule
-		dol_include_once('/workshop/class/vehiculetype.class.php');
-		$dict  = new VehiculeType($db);
-		$label .= '<br><b>'.$langs->trans('vehiculeType').':</b> '.$dict->getValueFromId($this->fk_vehicule_type);
-
-		// client
-		$this->fetch_thirdparty();
-		if (!empty($this->thirdparty)) {
-			$label .= '<br><b>'.$langs->trans('ThirdParty').':</b> '.$this->thirdparty->name;
-		}
-
-		$linkclose = '" title="'.dol_escape_htmltag($label, 1).'" class="classfortooltip">';
-		$link      = '<a href="'.dol_buildpath('/workshop/vehicule/vehicule_card.php', 1).'?id='.$this->id.urlencode($moreparams).$linkclose;
-
-		$linkend = '</a>';
-
-		if ($withpicto) {
-			$result .= ($link.img_object($label, 'fa-truck', 'class="classfortooltip"').$linkend);
-		}
-		if ($withpicto && $withpicto != 2) {
-			$result .= ' ';
-		}
-		$result .= $link;
-		$result .= $this->immatriculation;
-		$result .= ' - '.$this->vin;
-		$result .= $linkend;
-
-		return $result;
+		return $this->getNomUrl($withpicto, $moreparams);
 	}
 
 	/**
