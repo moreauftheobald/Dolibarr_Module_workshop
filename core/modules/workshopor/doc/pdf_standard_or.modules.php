@@ -281,6 +281,7 @@ class pdf_standard_or extends ModelePDFWorkshop
 		$drawResult  = $this->_drawjobs($pdf, $object, $outputlangs, $body_x, $body_y, $body_w, $body_bottom);
 		$cy_jobs     = $drawResult['cy'];
 		$moredoc     = $drawResult['moredoc'];
+		$moredoc_st  = $drawResult['moredoc_st'];
 
 		// ── Triple cadre bas de page (commentaires + signatures) ────────────
 		// Si le dernier job empiète sur la zone signature, on l'envoie sur une
@@ -297,6 +298,32 @@ class pdf_standard_or extends ModelePDFWorkshop
 		if (!empty($moredoc)) {
 			foreach ($moredoc as $productref => $docinfo) {
 				$this->_addAttachedDoc($pdf, $productref, $docinfo['docname'], (int) $docinfo['type'], (int) $docinfo['entity']);
+			}
+		}
+
+		// ── Annexion des documents obligatoires des types de service ─────────
+		if (!empty($moredoc_st)) {
+			$stDocDir = $conf->workshop->multidir_output[$conf->entity].'/servicetype';
+			foreach ($moredoc_st as $fk_st => $docname) {
+				$infile = $stDocDir.'/'.$docname.'.pdf';
+				if (file_exists($infile) && is_readable($infile)) {
+					$pagecount = $pdf->setSourceFile($infile);
+					for ($i = 1; $i <= $pagecount; $i++) {
+						$tplIdx = $pdf->importPage($i);
+						if ($tplIdx !== false) {
+							$s = $pdf->getTemplatesize($tplIdx);
+							$pdf->AddPage($s['h'] > $s['w'] ? 'P' : 'L');
+							$pdf->useTemplate($tplIdx);
+						} else {
+							dol_syslog('pdf_standard_or::write_file impossible d\'importer la page '.$i.' de '.$infile, LOG_WARNING);
+							setEventMessages('Document obligatoire introuvable ou protégé pour le type de service #'.$fk_st.' : '.$docname.'.pdf', null, 'warnings');
+							break;
+						}
+					}
+				} else {
+					dol_syslog('pdf_standard_or::write_file fichier introuvable : '.$infile, LOG_WARNING);
+					setEventMessages('Document obligatoire introuvable pour le type de service #'.$fk_st.' : '.$docname.'.pdf', null, 'warnings');
+				}
 			}
 		}
 
@@ -745,7 +772,7 @@ class pdf_standard_or extends ModelePDFWorkshop
 	 * @param  float          $body_y       Y du cadre corps (bord haut)
 	 * @param  float          $body_w       Largeur du cadre corps
 	 * @param  float          $body_bottom  Y limite basse (haut du bloc signature)
-	 * @return array          ['cy' => float Y après le dernier bloc, 'moredoc' => array documents obligatoires indexés par ref produit]
+	 * @return array          ['cy' => float, 'moredoc' => array docs produits, 'moredoc_st' => array docs types de service]
 	 */
 	protected function _drawjobs(&$pdf, $object, $outputlangs, $body_x, $body_y, $body_w, $body_bottom)
 	{
@@ -799,6 +826,10 @@ class pdf_standard_or extends ModelePDFWorkshop
 		// Documents obligatoires à annexer au PDF (ref produit => ['docname' => string, 'type' => int, 'entity' => int])
 		$moredoc = array();
 
+		// Documents obligatoires liés aux types de service/job (fk_service_type => docname)
+		$moredoc_st    = array();
+		$st_doc_cache  = array(); // fk_service_type => doc_obl (string|'')
+
 		// ── Chargement Font Awesome Solid pour les pictos pièce/service ────────
 		// On essaie plusieurs chemins candidats ; en cas d'échec on utilise
 		// des formes géométriques distinctes (carré / cercle) — N&B compatible.
@@ -827,9 +858,23 @@ class pdf_standard_or extends ModelePDFWorkshop
 			// ── Données préparées HORS transaction (une seule fois par job) ──────
 			$type_label = '';
 			if (!empty($job->fk_service_type)) {
-				$lbl = $serviceTypeObj->getValueFromId((int) $job->fk_service_type);
+				$fk_st = (int) $job->fk_service_type;
+				$lbl = $serviceTypeObj->getValueFromId($fk_st);
 				if ($lbl) {
 					$type_label = (string) $lbl;
+				}
+
+				// Collecter le document obligatoire du type de service (dédupliqué par fk_service_type)
+				if (!isset($st_doc_cache[$fk_st])) {
+					$stObj = new ServiceType($this->db);
+					if ($stObj->fetch($fk_st) > 0 && !empty($stObj->doc_obl)) {
+						$st_doc_cache[$fk_st] = $stObj->doc_obl;
+					} else {
+						$st_doc_cache[$fk_st] = '';
+					}
+				}
+				if ($st_doc_cache[$fk_st] !== '') {
+					$moredoc_st[$fk_st] = $st_doc_cache[$fk_st];
 				}
 			}
 
@@ -1139,7 +1184,7 @@ class pdf_standard_or extends ModelePDFWorkshop
 		$pdf->SetLineWidth(0.2);
 		$pdf->SetTextColor(0, 0, 0);
 
-		return array('cy' => $cy, 'moredoc' => $moredoc);
+		return array('cy' => $cy, 'moredoc' => $moredoc, 'moredoc_st' => $moredoc_st);
 	}
 
 

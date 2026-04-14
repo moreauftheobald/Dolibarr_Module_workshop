@@ -120,7 +120,8 @@ dol_include_once($objConfig['class_file']);
 $object = new $objConfig['class_name']($db);
 
 // Collect POST values for the registered fields
-$postValues = array();
+$postValues       = array();
+$fileUploadedPaths = array(); // fieldName => temp path for 'file' type fields
 foreach ($objConfig['fields'] as $fieldName => $fieldConfig) {
 	if ($fieldConfig['type'] === 'related_select'
 		|| $fieldConfig['type'] === 'societe'
@@ -136,6 +137,16 @@ foreach ($objConfig['fields'] as $fieldName => $fieldConfig) {
 		$raw = GETPOST($fieldName, 'nohtml');
 		$palette = getWorkshopColorPalette();
 		$postValues[$fieldName] = isset($palette[$raw]) ? $raw : '';
+	} elseif ($fieldConfig['type'] === 'file') {
+		// Le hidden ws_file_uploaded_{fieldName} contient le chemin temp du fichier uploadé via AJAX
+		$tmpPath = GETPOST('ws_file_uploaded_'.$fieldName, 'alphanohtml');
+		if (!empty($tmpPath)) {
+			$fileUploadedPaths[$fieldName] = $tmpPath;
+			$postValues[$fieldName] = basename($tmpPath, '.pdf');
+		} else {
+			// Pas de nouveau fichier uploadé : on ne modifie pas la valeur existante (sera gérée plus bas)
+			$postValues[$fieldName] = null;
+		}
 	} else {
 		$postValues[$fieldName] = GETPOST($fieldName, 'alpha');
 	}
@@ -182,6 +193,10 @@ if (empty($reshook)) {
 		if (!$error) {
 			if ($action === 'confirmnew' || $action === 'confirmedit') {
 				foreach ($objConfig['fields'] as $fieldName => $fieldConfig) {
+					// Pour les champs file : ne pas écraser si pas de nouveau fichier en édition
+					if ($fieldConfig['type'] === 'file' && $postValues[$fieldName] === null && $action === 'confirmedit') {
+						continue;
+					}
 					$object->$fieldName = $postValues[$fieldName];
 				}
 			}
@@ -200,6 +215,21 @@ if (empty($reshook)) {
 				$error++;
 				$errors[] = $object->error;
 				$errors   = array_merge($errors, $object->errors);
+			}
+
+			// Déplacer les fichiers uploadés vers le répertoire du module
+			if (!$error && !empty($fileUploadedPaths)) {
+				require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
+				$destdir = $conf->workshop->multidir_output[$conf->entity].'/servicetype';
+				if (!file_exists($destdir)) {
+					dol_mkdir($destdir);
+				}
+				foreach ($fileUploadedPaths as $fieldName => $tmpPath) {
+					if (file_exists($tmpPath)) {
+						$newname = $destdir.'/'.basename($tmpPath);
+						dol_move($tmpPath, $newname);
+					}
+				}
 			}
 		}
 
@@ -287,7 +317,14 @@ if ($action === 'delete' && !empty($rowid)) {
 	foreach ($objConfig['fields'] as $fieldName => $fieldConfig) {
 		$q = workshopBuildParamFormQuestion($fieldName, $fieldConfig, null, $db, $langs);
 		if (!empty($q)) {
-			$formquestion[] = $q;
+			// Le type 'file' retourne un tableau de 2 éléments (hidden + other)
+			if (isset($q[0]) && is_array($q[0])) {
+				foreach ($q as $qItem) {
+					$formquestion[] = $qItem;
+				}
+			} else {
+				$formquestion[] = $q;
+			}
 		}
 	}
 	$formconfirm = $form->formconfirm(
@@ -314,7 +351,13 @@ if ($action === 'delete' && !empty($rowid)) {
 	foreach ($objConfig['fields'] as $fieldName => $fieldConfig) {
 		$q = workshopBuildParamFormQuestion($fieldName, $fieldConfig, $dataEdit, $db, $langs);
 		if (!empty($q)) {
-			$formquestion[] = $q;
+			if (isset($q[0]) && is_array($q[0])) {
+				foreach ($q as $qItem) {
+					$formquestion[] = $qItem;
+				}
+			} else {
+				$formquestion[] = $q;
+			}
 		}
 	}
 	$formconfirm = $form->formconfirm(

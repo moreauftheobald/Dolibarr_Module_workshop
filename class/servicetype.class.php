@@ -56,6 +56,9 @@ class ServiceType extends dictionary
 	/** @var float|null $tva_tx_st Taux de TVA applicable sur la sous-traitance */
 	public $tva_tx_st;
 
+	/** @var string|null $doc_obl Nom du document obligatoire (sans extension .pdf) */
+	public $doc_obl;
+
 	public $fields = array(
 		'rowid' => array(
 			'type'     => 'integer',
@@ -156,6 +159,15 @@ class ServiceType extends dictionary
 				0 => 'No',
 				1 => 'Yes',
 			),
+		),
+		'doc_obl' => array(
+			'type'     => 'varchar(255)',
+			'label'    => 'WorkshopDocObl',
+			'enabled'  => 1,
+			'visible'  => 1,
+			'notnull'  => 0,
+			'position' => 70,
+			'css'      => 'maxwidth300',
 		),
 		'fk_job_type' => array(
 			'type'     => 'integer:WorkshopJobType:workshop/class/workshopjobtype.class.php',

@@ -307,6 +307,7 @@ function getWorkshopParamObjects(): array
 				'tva_tx_mo' => array('type' => 'tva',    'label' => 'TvaTxMO'),
 				'tva_tx_st' => array('type' => 'tva',    'label' => 'TvaTxST'),
 				'plannable' => array('type' => 'select', 'label' => 'JobTypePlannable',   'values' => array('0' => 'No', '1' => 'Yes'), 'default' => '0'),
+				'doc_obl'   => array('type' => 'file',   'label' => 'WorkshopDocObl',     'file_accept' => 'application/pdf'),
 				'active'    => array('type' => 'select', 'label' => 'active',             'values' => array('0' => 'Non', '1' => 'Oui'), 'default' => '1'),
 			),
 		),
@@ -528,6 +529,54 @@ function workshopBuildParamFormQuestion(string $fieldName, array $fieldConfig, $
 		);
 	}
 
+	if ($fieldConfig['type'] === 'file') {
+		global $conf;
+		$accept = !empty($fieldConfig['file_accept']) ? $fieldConfig['file_accept'] : 'application/pdf';
+		$upload_dir = $conf->user->multidir_temp[$conf->entity];
+
+		$currentDoc = ($dataEdit !== null && !empty($dataEdit->$fieldName)) ? $dataEdit->$fieldName : '';
+
+		$out = '';
+		if ($currentDoc !== '') {
+			$out .= '<div style="margin-bottom:4px"><strong>'.$langs->trans('WorkshopDocOblCurrent').' :</strong> '.dol_escape_htmltag($currentDoc).'.pdf</div>';
+		}
+		$out .= '<input class="flat minwidth300" id="ws_file_'.$fieldName.'" type="file" name="'.$fieldName.'" accept="'.$accept.'"/>';
+		$out .= '<button type="button" id="ws_upload_'.$fieldName.'">'
+			.img_picto('', 'fontawesome_fa-save', 'class="paddingright pictofixedwidth valignmiddle"')
+			.'</button>';
+		$out .= '<script>';
+		$out .= '$(document).on("click", "#ws_upload_'.$fieldName.'", function(e) {'."\n";
+		$out .= '  e.preventDefault();'."\n";
+		$out .= '  let fileInput = document.getElementById("ws_file_'.$fieldName.'");'."\n";
+		$out .= '  if (!fileInput.files || !fileInput.files[0]) return;'."\n";
+		$out .= '  let form_data = new FormData();'."\n";
+		$out .= '  form_data.append("file", fileInput.files[0]);'."\n";
+		$out .= '  form_data.append("upload_dir", "'.dol_escape_js($upload_dir).'");'."\n";
+		$out .= '  form_data.append("token", "'.newToken().'");'."\n";
+		$out .= '  $.ajax({'."\n";
+		$out .= '    url: "'.dol_buildpath('/workshop/scripts/upload_files.php', 3).'",'."\n";
+		$out .= '    cache: false,'."\n";
+		$out .= '    contentType: false,'."\n";
+		$out .= '    processData: false,'."\n";
+		$out .= '    data: form_data,'."\n";
+		$out .= '    type: "POST",'."\n";
+		$out .= '    success: function (data) {'."\n";
+		$out .= '      fileInput.disabled = true;'."\n";
+		$out .= '      document.getElementById("ws_upload_'.$fieldName.'").disabled = true;'."\n";
+		$out .= '      document.getElementById("ws_file_uploaded_'.$fieldName.'").value = data;'."\n";
+		$out .= '    },'."\n";
+		$out .= '    error: function () { alert("Erreur lors de l\'upload du fichier"); }'."\n";
+		$out .= '  });'."\n";
+		$out .= '});'."\n";
+		$out .= '</script>';
+
+		// The hidden field that receives the temp file path after AJAX upload
+		return array(
+			array('type' => 'hidden', 'name' => 'ws_file_uploaded_'.$fieldName, 'value' => ''),
+			array('type' => 'other',  'label' => $langs->trans($fieldConfig['label']), 'value' => $out),
+		);
+	}
+
 	return array();
 }
 
@@ -598,6 +647,13 @@ function workshopRenderParamFieldValue(string $fieldName, array $fieldConfig, $d
 			return '-';
 		}
 		return dol_escape_htmltag(price2num($value)).' %';
+	}
+
+	if ($fieldConfig['type'] === 'file') {
+		if (empty($value)) {
+			return '-';
+		}
+		return dol_escape_htmltag($value).'.pdf';
 	}
 
 	return dol_escape_htmltag($value);
