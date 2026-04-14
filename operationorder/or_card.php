@@ -1658,7 +1658,7 @@ if ($id > 0) {
 		}
 
 		// Sélecteur produit
-		$htmlProdSelect = $form->select_produits($detFkProduct, 'det_fk_product', '', 0, 0, 1, 2, '', 0, array(), 0, '1', 1, 'maxwidth400', 0, '', null, 0);
+		$htmlProdSelect = $form->select_produits($detFkProduct, 'det_fk_product', '', 0, 0, 1, 2, '', 0, array(), 0, '1', 1, 'maxwidth400', 0, '', null, 1);
 
 		$fqDet = array(
 			array('type' => 'hidden', 'name' => 'jobid', 'value' => (string) $detJobId),
