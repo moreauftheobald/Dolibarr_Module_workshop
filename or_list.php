@@ -223,7 +223,7 @@ $reshook    = $hookmanager->executeHooks('printFieldListFrom', $parameters, $obj
 $sql       .= $hookmanager->resPrint;
 
 if ($object->ismultientitymanaged == 1) {
-	$sql .= ' WHERE t.entity IN ('.getEntity($object->element, (GETPOSTINT('search_current_entity') ? 0 : 1)).')';
+	$sql .= ' WHERE t.entity IN ('.getEntity('workshop', (GETPOSTINT('search_current_entity') ? 0 : 1)).')';
 } else {
 	$sql .= ' WHERE 1 = 1';
 }
