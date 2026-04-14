@@ -75,6 +75,32 @@ class WorkshopOperationOrderStatus extends CommonObject
 	 * @var array
 	 */
 	public $fields = array(
+		'entity' => array(
+			'type'     => 'integer',
+			'label'    => 'Entity',
+			'enabled'  => 1,
+			'position' => 1,
+			'notnull'  => 1,
+			'visible'  => 0,
+			'default'  => 0,
+			'index'    => 1,
+		),
+		'date_creation' => array(
+			'type'     => 'datetime',
+			'label'    => 'DateCreation',
+			'enabled'  => 1,
+			'position' => 2,
+			'notnull'  => -1,
+			'visible'  => -2,
+		),
+		'tms' => array(
+			'type'     => 'timestamp',
+			'label'    => 'DateModification',
+			'enabled'  => 1,
+			'position' => 3,
+			'notnull'  => 0,
+			'visible'  => -2,
+		),
 		'code' => array(
 			'type'     => 'varchar(128)',
 			'label'    => 'Code',
@@ -323,44 +349,7 @@ class WorkshopOperationOrderStatus extends CommonObject
 	{
 		$this->entity = 0; // toujours entity 0
 
-		$this->db->begin();
-
-		$sql  = 'INSERT INTO ' . $this->db->prefix() . $this->table_element;
-		$sql .= ' (date_creation, entity, code, label, color, rang, status,';
-		$sql .= '  planable, clean_event, display_on_planning, check_virtual_stock,';
-		$sql .= '  or_pointable, save_date_cloture, require_planned_date, update_vehicule_info, require_conf,';
-		$sql .= '  import_key)';
-		$sql .= ' VALUES (';
-		$sql .= ' \'' . $this->db->idate(dol_now()) . '\'';
-		$sql .= ', 0';
-		$sql .= ', \'' . $this->db->escape($this->code) . '\'';
-		$sql .= ', \'' . $this->db->escape($this->label) . '\'';
-		$sql .= ', \'' . $this->db->escape($this->color) . '\'';
-		$sql .= ', ' . (int) $this->rang;
-		$sql .= ', ' . (int) $this->status;
-		$sql .= ', ' . (empty($this->planable) ? 0 : 1);
-		$sql .= ', ' . (empty($this->clean_event) ? 0 : 1);
-		$sql .= ', ' . (empty($this->display_on_planning) ? 0 : 1);
-		$sql .= ', ' . (empty($this->check_virtual_stock) ? 0 : 1);
-		$sql .= ', ' . (empty($this->or_pointable) ? 0 : 1);
-		$sql .= ', ' . (empty($this->save_date_cloture) ? 0 : 1);
-		$sql .= ', ' . (empty($this->require_planned_date) ? 0 : 1);
-		$sql .= ', ' . (empty($this->update_vehicule_info) ? 0 : 1);
-		$sql .= ', ' . (isset($this->require_conf) ? (empty($this->require_conf) ? 0 : 1) : 1);
-		$sql .= ', ' . ($this->import_key ? '\'' . $this->db->escape($this->import_key) . '\'' : 'NULL');
-		$sql .= ')';
-
-		$resql = $this->db->query($sql);
-		if (!$resql) {
-			$this->error = $this->db->lasterror();
-			$this->db->rollback();
-			return -1;
-		}
-
-		$this->id = $this->db->last_insert_id($this->db->prefix() . $this->table_element);
-
-		$this->db->commit();
-		return $this->id;
+		return $this->createCommon($user, $notrigger);
 	}
 
 	/**
@@ -373,51 +362,14 @@ class WorkshopOperationOrderStatus extends CommonObject
 	 */
 	public function fetch($id, $loadChild = true, $ref = null)
 	{
-		$sql  = 'SELECT rowid, date_creation, tms, entity, code, label, color, rang, status, planable, import_key';
-		$sql .= ' FROM ' . $this->db->prefix() . $this->table_element;
-		if ($ref) {
-			$sql .= ' WHERE code = \'' . $this->db->escape($ref) . '\'';
-		} else {
-			$sql .= ' WHERE rowid = ' . (int) $id;
-		}
+		$result = $this->fetchCommon($id, $ref);
 
-		$resql = $this->db->query($sql);
-		if (!$resql) {
-			$this->error = $this->db->lasterror();
-			return -1;
-		}
-
-		$obj = $this->db->fetch_object($resql);
-		if (!$obj) {
-			return 0;
-		}
-
-		$this->id                   = $obj->rowid;
-		$this->date_creation        = $this->db->jdate($obj->date_creation);
-		$this->tms                  = $this->db->jdate($obj->tms);
-		$this->entity               = $obj->entity;
-		$this->code                 = $obj->code;
-		$this->label                = $obj->label;
-		$this->color                = $obj->color;
-		$this->rang                 = $obj->rang;
-		$this->status               = $obj->status;
-		$this->planable             = $obj->planable;
-		$this->clean_event          = $obj->clean_event;
-		$this->display_on_planning  = $obj->display_on_planning;
-		$this->check_virtual_stock  = $obj->check_virtual_stock;
-		$this->or_pointable         = $obj->or_pointable;
-		$this->save_date_cloture    = $obj->save_date_cloture;
-		$this->require_planned_date = $obj->require_planned_date;
-		$this->update_vehicule_info = $obj->update_vehicule_info;
-		$this->require_conf         = $obj->require_conf;
-		$this->import_key           = $obj->import_key;
-
-		if ($loadChild) {
+		if ($result > 0 && $loadChild) {
 			$this->fetchGroupRights();
 			$this->fetchStatusAllowed();
 		}
 
-		return 1;
+		return $result;
 	}
 
 	/**
@@ -465,38 +417,14 @@ class WorkshopOperationOrderStatus extends CommonObject
 	 */
 	public function update(User $user, $notrigger = false)
 	{
-		$this->db->begin();
-
-		$sql  = 'UPDATE ' . $this->db->prefix() . $this->table_element . ' SET';
-		$sql .= ' code = \'' . $this->db->escape($this->code) . '\'';
-		$sql .= ', label = \'' . $this->db->escape($this->label) . '\'';
-		$sql .= ', color = \'' . $this->db->escape($this->color) . '\'';
-		$sql .= ', rang = ' . (int) $this->rang;
-		$sql .= ', status = ' . (int) $this->status;
-		$sql .= ', planable = ' . (empty($this->planable) ? 0 : 1);
-		$sql .= ', clean_event = ' . (empty($this->clean_event) ? 0 : 1);
-		$sql .= ', display_on_planning = ' . (empty($this->display_on_planning) ? 0 : 1);
-		$sql .= ', check_virtual_stock = ' . (empty($this->check_virtual_stock) ? 0 : 1);
-		$sql .= ', or_pointable = ' . (empty($this->or_pointable) ? 0 : 1);
-		$sql .= ', save_date_cloture = ' . (empty($this->save_date_cloture) ? 0 : 1);
-		$sql .= ', require_planned_date = ' . (empty($this->require_planned_date) ? 0 : 1);
-		$sql .= ', update_vehicule_info = ' . (empty($this->update_vehicule_info) ? 0 : 1);
-		$sql .= ', require_conf = ' . (isset($this->require_conf) ? (empty($this->require_conf) ? 0 : 1) : 1);
-		$sql .= ' WHERE rowid = ' . (int) $this->id;
-
-		$resql = $this->db->query($sql);
-		if (!$resql) {
-			$this->error = $this->db->lasterror();
-			$this->db->rollback();
-			return -1;
-		}
-
-		$this->db->commit();
-		return 1;
+		return $this->updateCommon($user, $notrigger);
 	}
 
 	/**
-	 * Supprimer un statut et ses données liées.
+	 * Supprimer un statut et ses données liées (droits groupes + transitions).
+	 *
+	 * Le cascade est géré manuellement car les tables enfants n'ont pas de
+	 * FK ON DELETE CASCADE et ne sont pas couvertes par deleteCommon.
 	 *
 	 * @param  User $user      Utilisateur
 	 * @param  bool $notrigger Désactiver les triggers
@@ -510,36 +438,41 @@ class WorkshopOperationOrderStatus extends CommonObject
 
 		$this->db->begin();
 
+		$error = 0;
+
 		// Supprimer les droits groupes
 		$sql = 'DELETE FROM ' . $this->db->prefix() . 'workshop_operationorder_status_usergroup_rights';
 		$sql .= ' WHERE fk_workshop_operationorderstatus = ' . (int) $this->id;
 		if (!$this->db->query($sql)) {
 			$this->error = $this->db->lasterror();
-			$this->db->rollback();
-			return -1;
+			$error++;
 		}
 
 		// Supprimer les transitions (comme source ou cible)
-		$sql = 'DELETE FROM ' . $this->db->prefix() . 'workshop_operationorder_status_target';
-		$sql .= ' WHERE fk_workshop_operationorderstatus = ' . (int) $this->id;
-		$sql .= ' OR fk_workshop_operationorderstatus_target = ' . (int) $this->id;
-		if (!$this->db->query($sql)) {
-			$this->error = $this->db->lasterror();
-			$this->db->rollback();
-			return -1;
+		if (!$error) {
+			$sql = 'DELETE FROM ' . $this->db->prefix() . 'workshop_operationorder_status_target';
+			$sql .= ' WHERE fk_workshop_operationorderstatus = ' . (int) $this->id;
+			$sql .= ' OR fk_workshop_operationorderstatus_target = ' . (int) $this->id;
+			if (!$this->db->query($sql)) {
+				$this->error = $this->db->lasterror();
+				$error++;
+			}
 		}
 
-		// Supprimer le statut lui-même
-		$sql = 'DELETE FROM ' . $this->db->prefix() . $this->table_element;
-		$sql .= ' WHERE rowid = ' . (int) $this->id;
-		if (!$this->db->query($sql)) {
-			$this->error = $this->db->lasterror();
+		// Supprimer le statut lui-même (+ extrafields via deleteCommon)
+		if (!$error) {
+			$result = $this->deleteCommon($user, $notrigger);
+			if ($result <= 0) {
+				$error++;
+			}
+		}
+
+		if ($error) {
 			$this->db->rollback();
 			return -1;
 		}
 
 		$this->db->commit();
-		$this->id = 0;
 		return 1;
 	}
 
