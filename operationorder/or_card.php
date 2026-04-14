@@ -1646,8 +1646,8 @@ if ($id > 0) {
 			$fqProd,
 			'yes',
 			1,
-			450,
 			0,
+			600,
 			0,
 			$langs->trans('Next'),
 			$langs->trans('Cancel')
@@ -1719,7 +1719,7 @@ if ($id > 0) {
 				// Pour l'ajout : pré-remplir depuis le produit si pas encore de valeurs
 				if (!$isEditDet) {
 					if ($detDescription === '' || $detDescription === null) {
-						$detDescription = dol_string_nohtmltag($prodTmp->description ?? '', 1);
+						$detDescription = dol_string_nohtmltag($prodTmp->description ?? '', 0);
 					}
 					if ($detPrice === '' || $detPrice === null) {
 						$detPrice = price2num($prodTmp->price, 'MU');
