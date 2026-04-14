@@ -75,6 +75,14 @@ class WorkshopOperationOrderStatus extends CommonObject
 	 * @var array
 	 */
 	public $fields = array(
+		'rowid' => array(
+			'type'     => 'integer',
+			'label'    => 'TechnicalID',
+			'enabled'  => 1,
+			'position' => 0,
+			'notnull'  => 1,
+			'visible'  => 0,
+		),
 		'entity' => array(
 			'type'     => 'integer',
 			'label'    => 'Entity',
@@ -252,6 +260,8 @@ class WorkshopOperationOrderStatus extends CommonObject
 		),
 	);
 
+	/** @var int Rowid */
+	public $rowid;
 	/** @var string Code du statut */
 	public $code;
 	/** @var string Libellé du statut */
