@@ -110,7 +110,6 @@ if ($id > 0) {
 }
 
 // Fonctions helpers orCardState* → voir lib/workshop_or_card.lib.php
-// Handler AJAX get_warehouses_for_product → voir ajax/or_card_ajax.php
 
 
 /*
@@ -677,8 +676,9 @@ if (empty($reshook)) {
 		$jobid        = GETPOSTINT('jobid');
 		$scFkSoc      = GETPOSTINT('sc_fk_soc');
 		$scAmount     = (float) price2num(str_replace(',', '.', GETPOST('sc_amount', 'alpha')), 'MT');
-		$scOpsRaw     = GETPOST('sc_maintenance_ops', 'array:int');
-		$scOpsIds     = is_array($scOpsRaw) ? array_values(array_filter(array_map('intval', $scOpsRaw))) : array();
+		// formconfirm soumet en GET : le multi-select arrive en comma-separated (ex: "1,2,3")
+		$scOpsRaw     = GETPOST('sc_maintenance_ops', 'alpha');
+		$scOpsIds     = !empty($scOpsRaw) ? array_values(array_filter(array_map('intval', explode(',', $scOpsRaw)))) : array();
 		$scDescription = GETPOST('sc_description', 'restricthtml');
 
 		if ($jobid <= 0) {
@@ -1842,6 +1842,101 @@ if ($id > 0) {
 		}
 	}
 
+	// ── Dialog : Sous-traitance d'un Job ─────────────────────────────────
+	if (($action === 'subcontracting_job' || $action === 'confirm_subcontracting') && $id > 0 && $canEditAtStatus) {
+		$scJobId = GETPOSTINT('jobid');
+
+		// Sélecteur fournisseur (type 'other' : le select_company génère un <select id="sc_fk_soc">)
+		$htmlSupplier = $form->select_company(GETPOSTINT('sc_fk_soc'), 'sc_fk_soc', 's.fournisseur = 1', 1, 1, 0, array(), '', false, 'maxwidth400');
+
+		// Opérations de maintenance du véhicule
+		$scVoOptions = array();
+		if (!empty($object->fk_vehicule)) {
+			$sqlVo  = 'SELECT vo.rowid, cmo.code, cmo.label AS op_label, vo.date_next';
+			$sqlVo .= ' FROM '.MAIN_DB_PREFIX.'workshop_vehicule_operation vo';
+			$sqlVo .= ' LEFT JOIN '.MAIN_DB_PREFIX.'workshop_vehicule_c_maintenance_operation cmo';
+			$sqlVo .= '   ON cmo.rowid = vo.fk_maintenance_operation';
+			$sqlVo .= ' WHERE vo.fk_vehicule = '.(int) $object->fk_vehicule;
+			$sqlVo .= ' AND vo.status != '.WorkshopVehiculeOperation::STATUS_DONE;
+			$sqlVo .= ' ORDER BY cmo.code ASC';
+			$resVo = $db->query($sqlVo);
+			if ($resVo) {
+				while ($oVo = $db->fetch_object($resVo)) {
+					$optLabel = $oVo->code.' — '.$oVo->op_label;
+					if (!empty($oVo->date_next)) {
+						$optLabel .= ' ('.dol_print_date($db->jdate($oVo->date_next), 'day').')';
+					}
+					$scVoOptions[(string)(int) $oVo->rowid] = dol_escape_htmltag($optLabel);
+				}
+				$db->free($resVo);
+			}
+		}
+
+		// Pré-sélection : opérations déjà liées à ce job
+		$preSelectedOps = array();
+		if ($scJobId > 0) {
+			$tmpJob = new Operationorder_jobs($db);
+			if ($tmpJob->fetch($scJobId) > 0) {
+				$linkedIds = $tmpJob->fetchLinkedMaintenanceOperationIds();
+				$preSelectedOps = is_array($linkedIds) ? array_map('strval', $linkedIds) : array();
+			}
+		}
+
+		// Construire le HTML du multiselect (ou message si vide)
+		$htmlOpsSelect = '';
+		if (!empty($scVoOptions)) {
+			$htmlOpsSelect = $form->multiselectarray('sc_maintenance_ops', $scVoOptions, $preSelectedOps, 0, 0, 'flat', 0, '100%', '', '', $langs->trans('SelectMaintenanceOps'));
+			$htmlOpsSelect .= '<br><span class="opacitymedium small">'.$langs->trans('SubcontractingOpsHint').'</span>';
+		} else {
+			$htmlOpsSelect = '<span class="opacitymedium small">'.$langs->trans('NoMaintenanceOpsForVehicle').'</span>';
+		}
+
+		$fqSc = array(
+			array('type' => 'hidden', 'name' => 'jobid', 'value' => (string) $scJobId),
+			array(
+				'type'  => 'other',
+				'label' => $langs->trans('Supplier').' <span class="fieldrequired">*</span>',
+				'name'  => 'sc_fk_soc',
+				'value' => $htmlSupplier,
+			),
+			array(
+				'type'  => 'text',
+				'label' => $langs->trans('SubcontractingAmount').' <span class="fieldrequired">*</span>',
+				'name'  => 'sc_amount',
+				'value' => GETPOST('sc_amount', 'alpha') ?: '0',
+				'size'  => 15,
+			),
+			array(
+				'type'  => 'other',
+				'label' => $langs->trans('MaintenanceOperationsLinked'),
+				'name'  => 'sc_maintenance_ops',
+				'value' => $htmlOpsSelect,
+			),
+			array(
+				'type'     => 'textarea',
+				'label'    => $langs->trans('Description'),
+				'name'     => 'sc_description',
+				'value'    => GETPOST('sc_description', 'restricthtml'),
+				'moreattr' => 'rows="4" style="width:99%"',
+			),
+		);
+
+		print $form->formconfirm(
+			$_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&jobid='.(int) $scJobId.'&token='.newToken(),
+			$langs->trans('SubcontractingJob'),
+			'',
+			'confirm_subcontracting',
+			$fqSc,
+			'yes',
+			1,
+			0,
+			640,
+			0,
+			$langs->trans('Save'),
+			$langs->trans('Cancel')
+		);
+	}
+
 	// ═══════════════════════════════════════════════════════════════════════
 	// SECTION JOBS
 	// ═══════════════════════════════════════════════════════════════════════
@@ -1951,83 +2046,7 @@ if ($id > 0) {
 	print '</div></div>'."\n";
 
 
-	// ═══════════════════════════════════════════════════════════════════════
-	// DIALOG : Sous-traitance d'un Job
-	// ═══════════════════════════════════════════════════════════════════════
-
-	// Toutes les opérations de maintenance actives du véhicule (options du multi-select)
-	$scVoOptions = array();
-	if (!empty($object->fk_vehicule)) {
-		$sqlVo  = 'SELECT vo.rowid, cmo.code, cmo.label AS op_label, vo.date_next';
-		$sqlVo .= ' FROM '.MAIN_DB_PREFIX.'workshop_vehicule_operation vo';
-		$sqlVo .= ' LEFT JOIN '.MAIN_DB_PREFIX.'workshop_vehicule_c_maintenance_operation cmo';
-		$sqlVo .= '   ON cmo.rowid = vo.fk_maintenance_operation';
-		$sqlVo .= ' WHERE vo.fk_vehicule = '.(int) $object->fk_vehicule;
-		$sqlVo .= ' AND vo.status != '.WorkshopVehiculeOperation::STATUS_DONE;
-		$sqlVo .= ' ORDER BY cmo.code ASC';
-		$resVo = $db->query($sqlVo);
-		if ($resVo) {
-			while ($oVo = $db->fetch_object($resVo)) {
-				$optLabel = $oVo->code.' — '.$oVo->op_label;
-				if (!empty($oVo->date_next)) {
-					$optLabel .= ' ('.dol_print_date($db->jdate($oVo->date_next), 'day').')';
-				}
-				$scVoOptions[(string)(int) $oVo->rowid] = dol_escape_htmltag($optLabel);
-			}
-			$db->free($resVo);
-		}
-	}
-
-	// Map jobId → [rowids en string] des opérations déjà liées, pour la pré-sélection JS
-	$jobLinkedOpsMap = array();
-	foreach ($jobsList as $jItem) {
-		$linkedIds = $jItem->fetchLinkedMaintenanceOperationIds();
-		$jobLinkedOpsMap[(int) $jItem->id] = is_array($linkedIds) ? array_map('strval', $linkedIds) : array();
-	}
-
-	print '<div id="dlg-subcontracting" style="display:none;" title="'.dol_escape_htmltag($langs->trans('SubcontractingJob')).'">'."\n";
-	print '<form id="frm-subcontracting" method="POST" action="'.dol_escape_htmltag($_SERVER['PHP_SELF'].'?id='.$id).'">'."\n";
-	print '<input type="hidden" name="token" value="'.newToken().'">'."\n";
-	print '<input type="hidden" name="action" value="confirm_subcontracting">'."\n";
-	print '<input type="hidden" name="jobid" id="dlg_sc_jobid" value="">'."\n";
-
-	print '<table class="border centpercent">'."\n";
-
-	// Fournisseur (filtré sur fournisseur=1, forcecombo pour éviter Select2)
-	print '<tr><td class="titlefield fieldrequired">'.$langs->trans('Supplier').'</td><td>';
-	print $form->select_company(0, 'sc_fk_soc', 's.fournisseur = 1', 1, 1, array(), '', '', false, 'maxwidth400');
-	print '</td></tr>'."\n";
-
-	// Montant HT de la prestation
-	print '<tr><td class="fieldrequired">'.$langs->trans('SubcontractingAmount').'</td><td>';
-	print '<input type="text" name="sc_amount" id="sc_amount" class="flat width150" value="0"> '.$langs->getCurrencySymbol($conf->currency);
-	print '</td></tr>'."\n";
-
-	// Opérations de maintenance du véhicule — contrôle standard Dolibarr multiselectarray
-	// La pré-sélection des ops liées au job est appliquée par JS à l'ouverture du dialog
-	print '<tr><td>'.$langs->trans('MaintenanceOperationsLinked').'</td><td>';
-	if (!empty($scVoOptions)) {
-		print $form->multiselectarray('sc_maintenance_ops', $scVoOptions, array(), 0, 0, 'flat', 0, '100%', '', '', $langs->trans('SelectMaintenanceOps'));
-		print '<br><span class="opacitymedium small">'.$langs->trans('SubcontractingOpsHint').'</span>';
-	} else {
-		print '<span class="opacitymedium small">'.$langs->trans('NoMaintenanceOpsForVehicle').'</span>';
-	}
-	print '</td></tr>'."\n";
-
-	// Description
-	print '<tr><td>'.$langs->trans('Description').'</td><td>';
-	print '<textarea name="sc_description" id="sc_description" class="flat" rows="3" style="width:99%;"></textarea>';
-	print '</td></tr>'."\n";
-
-	print '</table>'."\n";
-	print '</form>'."\n";
-	print '</div>'."\n";
-
-	// JS
-	// Variables JS injectées pour or_card.js (mode vue)
-	print '<script>'."\n";
-	print 'window.workshopJobLinkedOps  = '.json_encode($jobLinkedOpsMap).';'."\n";
-	print '</script>'."\n";
+	// JS — fichier externe (mode création helpers, dialog resize, color swatches)
 	print '<script src="'.dol_escape_htmltag(dol_buildpath('/workshop/js/or_card.js', 1)).'"></script>'."\n";
 
 

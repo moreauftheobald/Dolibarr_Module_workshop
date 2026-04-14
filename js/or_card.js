@@ -3,69 +3,9 @@
  *
  * Ce fichier dépend des variables globales injectées en ligne par or_card.php :
  *
- *   Mode vue (id > 0) :
- *     window.workshopJobLinkedOps {Object} Map jobId → [voIds] pour la pré-sélection sous-traitance
- *
  *   Mode création (id == 0) :
  *     window.workshopOrCardSelf   {string}  valeur de PHP_SELF (pour les redirections)
  */
-
-
-/* ============================================================================
- * MODE VUE — Dialog "Sous-traitance d'un Job"
- * ========================================================================== */
-
-jQuery(function ($) {
-	var $dlgSc = $('#dlg-subcontracting');
-
-	/**
-	 * Ouvre le dialog de sous-traitance pour le job donné.
-	 * Pré-sélectionne les opérations de maintenance déjà liées au job.
-	 * @param {number} jobid
-	 */
-	window.workshopOpenSubcontracting = function (jobid) {
-		$('#dlg_sc_jobid').val(jobid);
-		$('#sc_fk_soc').val('');
-		$('#sc_amount').val('0');
-		$('#sc_description').val('');
-
-		// Pré-sélectionner les opérations de maintenance déjà liées à ce job
-		var linkedIds = ((window.workshopJobLinkedOps || {})[jobid] || []).map(String);
-		$('#sc_maintenance_ops').val(linkedIds).trigger('change');
-
-		if ($dlgSc.hasClass('ui-dialog-content')) {
-			$dlgSc.dialog('open');
-		} else {
-			$dlgSc.dialog({
-				modal:     true,
-				width:     640,
-				height:    'auto',
-				maxHeight: Math.floor($(window).height() * 0.92),
-				resizable: true,
-				buttons: [
-					{
-						text: document.documentElement.lang === 'fr' ? 'Enregistrer' : 'Save',
-						click: function () {
-							var socId = $('#sc_fk_soc').val();
-							if (!socId || socId === '0' || socId === '') {
-								alert(document.documentElement.lang === 'fr'
-									? 'Veuillez sélectionner un fournisseur.'
-									: 'Please select a supplier.');
-								return;
-							}
-							$('#frm-subcontracting').submit();
-						}
-					},
-					{
-						text: document.documentElement.lang === 'fr' ? 'Annuler' : 'Cancel',
-						click: function () { $(this).dialog('close'); }
-					}
-				]
-			});
-		}
-	};
-});
-
 
 
 /* ============================================================================

@@ -122,8 +122,8 @@ $timeHtml  = '<span title="'.dol_escape_htmltag($langs->trans('TimeSpent')).'">'
 			$editUrl = $_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&action=edit_job&jobid='.(int) $job->id;
 			$delUrl  = $_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&action=delete_job&jobid='.(int) $job->id.'&token='.newToken();
 			?>
-			<a class="reposition marginrightonly" href="#"
-				onclick="workshopOpenSubcontracting(<?php echo (int) $job->id; ?>);return false;"
+			<?php $scUrl = $_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&action=subcontracting_job&jobid='.(int) $job->id.'&token='.newToken(); ?>
+			<a class="reposition marginrightonly" href="<?php echo dol_escape_htmltag($scUrl); ?>"
 				title="<?php echo dol_escape_htmltag($langs->trans('SubcontractingJob')); ?>">
 				<?php echo img_picto($langs->trans('SubcontractingJob'), 'fa-handshake'); ?>
 			</a>
