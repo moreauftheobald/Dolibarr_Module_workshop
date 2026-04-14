@@ -4,7 +4,7 @@
  * Ce fichier dépend des variables globales injectées en ligne par or_card.php :
  *
  *   Mode vue (id > 0) :
- *     window.workshopOrCardAjaxUrl {string} URL de base vers ajax/or_card_ajax.php?id=X
+ *     window.workshopJobLinkedOps {Object} Map jobId → [voIds] pour la pré-sélection sous-traitance
  *
  *   Mode création (id == 0) :
  *     window.workshopOrCardSelf   {string}  valeur de PHP_SELF (pour les redirections)
@@ -66,93 +66,6 @@ jQuery(function ($) {
 	};
 });
 
-
-/* ============================================================================
- * MODE VUE — Dialog "Modifier une ligne produit/service (det)"
- * ========================================================================== */
-
-jQuery(function ($) {
-	var $dlgEdit = $('#dlg-edit-det');
-
-	/**
-	 * Ouvre le dialog d'édition d'une ligne de détail pré-remplie.
-	 * @param {number} detid        rowid de la ligne
-	 * @param {string} label        libellé produit/service (affiché en lecture seule)
-	 * @param {string} description  description existante
-	 * @param {string} qty          quantité
-	 * @param {string} price        prix unitaire HT
-	 * @param {string} remise       remise en %
-	 * @param {number} fkProduct    rowid du produit (0 si non lié)
-	 * @param {number} fkWarehouse  rowid de l'emplacement de stock courant (0 si aucun)
-	 * @param {number} productType  0=produit physique, 1=service
-	 */
-	window.workshopOpenEditDet = function (detid, label, description, qty, price, remise, fkProduct, fkWarehouse, productType) {
-		$('#det_edit_id').val(detid);
-		$('#det_edit_fk_product').val(fkProduct || 0);
-		$('#det_edit_product_label').text(label);
-		$('#det_edit_description').val(description);
-		$('#det_edit_qty').val(qty);
-		$('#det_edit_price').val(price);
-		$('#det_edit_remise_percent').val(remise);
-
-		// Création unique du dialog (autoOpen désactivé pour maîtriser le cycle)
-		if (!$dlgEdit.hasClass('ui-dialog-content')) {
-			$dlgEdit.dialog({
-				autoOpen:  false,
-				modal:     true,
-				width:     560,
-				height:    'auto',
-				maxHeight: Math.floor($(window).height() * 0.92),
-				resizable: true,
-				buttons: [
-					{
-						text: document.documentElement.lang === 'fr' ? 'Enregistrer' : 'Save',
-						click: function () {
-							var qty = $('#det_edit_qty').val();
-							if (!qty || parseFloat(qty) <= 0) {
-								alert(document.documentElement.lang === 'fr'
-									? 'La quantité doit être supérieure à 0.'
-									: 'Quantity must be greater than 0.');
-								return;
-							}
-							$('#frm-edit-det').submit();
-						}
-					},
-					{
-						text: document.documentElement.lang === 'fr' ? 'Annuler' : 'Cancel',
-						click: function () { $(this).dialog('close'); }
-					}
-				]
-			});
-		}
-
-		// Ouverture du dialog, puis affichage conditionnel de l'emplacement de stock.
-		// On utilise css('display','') / css('display','none') au lieu de .show()/.hide()
-		// car jQuery .show() sur un <tr> dans un dialog caché peut calculer un mauvais
-		// display (block au lieu de table-row).
-		$dlgEdit.dialog('open');
-
-		var $whRow = $('#det_edit_warehouse_row');
-		var $whSel = $('#det_edit_fk_warehouse');
-		$whSel.html('<option value=""></option>');
-		if (productType === 0) {
-			$whRow.css('display', '');
-			if (fkProduct) {
-				$.getJSON(window.workshopOrCardAjaxUrl + '&action=get_warehouses_for_product', { product_id: fkProduct })
-					.done(function (warehouses) {
-						$.each(warehouses, function (i, wh) {
-							var whLabel = wh.ref;
-							if (wh.qty > 0) { whLabel += ' (' + wh.qty + ')'; }
-							$whSel.append($('<option>').val(wh.rowid).text(whLabel));
-						});
-						if (fkWarehouse) { $whSel.val(fkWarehouse); }
-					});
-			}
-		} else {
-			$whRow.css('display', 'none');
-		}
-	};
-});
 
 
 /* ============================================================================

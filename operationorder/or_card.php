@@ -532,17 +532,17 @@ if (empty($reshook)) {
 				setEventMessages($det->error, $det->errors, 'errors');
 			}
 		}
-		$action = 'add_det'; // réouvre le dialog en cas d'erreur
+		$action = 'add_det_details'; // réouvre le dialog détails en cas d'erreur
 	}
 
 	// ── Modification d'une ligne produit/service ─────────────────────────
 	if ($action == 'confirm_edit_det' && $id > 0 && $permissiontoadd) {
-		$detid          = GETPOSTINT('det_edit_id');
-		$qty            = (float) price2num(str_replace(',', '.', GETPOST('det_edit_qty', 'alpha')), 'MU');
-		$price          = (float) price2num(str_replace(',', '.', GETPOST('det_edit_price', 'alpha')), 'MU');
-		$remise_percent = (float) price2num(str_replace(',', '.', GETPOST('det_edit_remise_percent', 'alpha')), 'MU');
-		$description    = GETPOST('det_edit_description', 'restricthtml');
-		$fk_warehouse   = GETPOSTINT('det_edit_fk_warehouse');
+		$detid          = GETPOSTINT('detid');
+		$qty            = (float) price2num(str_replace(',', '.', GETPOST('det_qty', 'alpha')), 'MU');
+		$price          = (float) price2num(str_replace(',', '.', GETPOST('det_price', 'alpha')), 'MU');
+		$remise_percent = (float) price2num(str_replace(',', '.', GETPOST('det_remise_percent', 'alpha')), 'MU');
+		$description    = GETPOST('det_description', 'restricthtml');
+		$fk_warehouse   = GETPOSTINT('det_fk_warehouse');
 
 		$det = new Operationorderdet($db);
 		if ($det->fetch($detid) > 0) {
@@ -568,8 +568,7 @@ if (empty($reshook)) {
 		} else {
 			setEventMessages($langs->trans('ErrorRecordNotFound'), null, 'errors');
 		}
-		header('Location: '.$_SERVER['PHP_SELF'].'?id='.$id);
-		exit;
+		$action = 'edit_det'; // réouvre le dialog en cas d'erreur
 	}
 
 	// ── Suppression d'une ligne produit/service ───────────────────────────
@@ -1624,153 +1623,224 @@ if ($id > 0) {
 		}
 	}
 
-	// ── Dialog : Ajouter une ligne produit/service dans un Job ─────────────
-	if (($action === 'add_det' || $action === 'confirm_add_det') && $id > 0 && $canEditAtStatus) {
-		$detJobId       = GETPOSTINT('jobid');
-		$detFkProduct   = GETPOSTINT('det_fk_product');
-		$isProductReload = GETPOSTINT('_reload_product') > 0;
+	// ── Dialog étape 1 : Sélection du produit/service (ajout) ────────────
+	if ($action === 'add_det' && $id > 0 && $canEditAtStatus) {
+		$detJobId = GETPOSTINT('jobid');
+		$htmlProdSelect = $form->select_produits(GETPOSTINT('det_fk_product'), 'det_fk_product', '', 0, 0, 1, 2, '', 0, array(), 0, '1', 1, 'maxwidth400', 0, '', null, 1);
 
-		// Valeurs par défaut depuis GETPOST (préservées sur erreur)
-		$detDescription = GETPOST('det_description', 'restricthtml');
-		$detPrice       = GETPOST('det_price', 'alpha');
-		$detQty         = GETPOST('det_qty', 'alpha') ?: '1';
-		$detRemise      = GETPOST('det_remise_percent', 'alpha');
-		if ($detRemise === '' || $detRemise === null) {
-			$detRemise = '0';
-		}
-		$detProductType = -1;
-
-		// Chargement du produit sélectionné (auto-remplissage sur changement de produit)
-		if ($detFkProduct > 0) {
-			require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
-			$prodTmp = new Product($db);
-			if ($prodTmp->fetch($detFkProduct) > 0) {
-				$detProductType = (int) $prodTmp->type;
-				if ($isProductReload) {
-					// Changement de produit : remonter description + prix depuis la fiche produit
-					$detDescription = dol_string_nohtmltag($prodTmp->description ?? '', 1);
-					$detPrice       = price2num($prodTmp->price, 'MU');
-				}
-			}
-		}
-		if ($detPrice === '' || $detPrice === null) {
-			$detPrice = '0';
-		}
-
-		// Sélecteur produit
-		$htmlProdSelect = $form->select_produits($detFkProduct, 'det_fk_product', '', 0, 0, 1, 2, '', 0, array(), 0, '1', 1, 'maxwidth400', 0, '', null, 1);
-
-		$fqDet = array(
+		$fqProd = array(
 			array('type' => 'hidden', 'name' => 'jobid', 'value' => (string) $detJobId),
 			array(
 				'type'  => 'other',
 				'label' => $langs->trans('Product').' <span class="fieldrequired">*</span>',
-				'name'  => 'det_fk_product_wrap',
+				'name'  => 'det_fk_product',
 				'value' => $htmlProdSelect,
 			),
-			array(
+		);
+
+		print $form->formconfirm(
+			$_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&token='.newToken(),
+			$langs->trans('AddDetLine').' — '.$langs->trans('SelectProduct'),
+			'',
+			'add_det_details',
+			$fqProd,
+			'yes',
+			1,
+			450,
+			0,
+			0,
+			$langs->trans('Next'),
+			$langs->trans('Cancel')
+		);
+	}
+
+	// ── Dialog étape 2 : Détails d'une ligne (ajout après sélection / modification) ──
+	if (in_array($action, array('add_det_details', 'edit_det', 'confirm_add_det', 'confirm_edit_det')) && $id > 0 && $canEditAtStatus) {
+		$isEditDet = in_array($action, array('edit_det', 'confirm_edit_det'));
+
+		// ── Charger les données selon le contexte ──
+		$detFkProduct   = 0;
+		$detJobId       = 0;
+		$detId          = 0;
+		$detDescription = '';
+		$detQty         = '1';
+		$detPrice       = '0';
+		$detRemise      = '0';
+		$detFkWarehouse = 0;
+		$_showDialog    = true;
+
+		if ($isEditDet) {
+			$detId  = GETPOSTINT('detid');
+			$detObj = new Operationorderdet($db);
+			if ($detObj->fetch($detId) > 0) {
+				$detFkProduct = (int) $detObj->fk_product;
+				$detJobId     = (int) $detObj->fk_operationorder_jobs;
+				// Sur erreur (confirm=yes dans l'URL) : reprendre les saisies utilisateur
+				$isRetry = (GETPOST('confirm', 'alpha') === 'yes');
+				if ($isRetry) {
+					$detDescription = GETPOST('det_description', 'restricthtml');
+					$detQty         = GETPOST('det_qty', 'alpha');
+					$detPrice       = GETPOST('det_price', 'alpha');
+					$detRemise      = GETPOST('det_remise_percent', 'alpha');
+					$detFkWarehouse = GETPOSTINT('det_fk_warehouse');
+				} else {
+					$detDescription = (string) $detObj->description;
+					$detQty         = price2num($detObj->qty, 2);
+					$detPrice       = price2num($detObj->price, 'MU');
+					$detRemise      = price2num($detObj->remise_percent, 2);
+					$detFkWarehouse = (int) $detObj->fk_warehouse;
+				}
+			} else {
+				setEventMessages($langs->trans('ErrorRecordNotFound'), null, 'errors');
+				$_showDialog = false;
+			}
+		} else {
+			$detFkProduct   = GETPOSTINT('det_fk_product');
+			$detJobId       = GETPOSTINT('jobid');
+			$detDescription = GETPOST('det_description', 'restricthtml');
+			$detQty         = GETPOST('det_qty', 'alpha') ?: '1';
+			$detPrice       = GETPOST('det_price', 'alpha');
+			$detRemise      = GETPOST('det_remise_percent', 'alpha');
+			if ($detRemise === '' || $detRemise === null) {
+				$detRemise = '0';
+			}
+			$detFkWarehouse = GETPOSTINT('det_fk_warehouse');
+		}
+
+		if ($_showDialog) {
+			// Charger le produit pour label, type et pré-remplissage (ajout)
+			require_once DOL_DOCUMENT_ROOT.'/product/class/product.class.php';
+			$prodTmp        = new Product($db);
+			$detProductType = -1;
+			$prodLabel      = '';
+			if ($detFkProduct > 0 && $prodTmp->fetch($detFkProduct) > 0) {
+				$detProductType = (int) $prodTmp->type;
+				$prodLabel = $prodTmp->getNomUrl(1).' '.dol_escape_htmltag($prodTmp->label);
+				// Pour l'ajout : pré-remplir depuis le produit si pas encore de valeurs
+				if (!$isEditDet) {
+					if ($detDescription === '' || $detDescription === null) {
+						$detDescription = dol_string_nohtmltag($prodTmp->description ?? '', 1);
+					}
+					if ($detPrice === '' || $detPrice === null) {
+						$detPrice = price2num($prodTmp->price, 'MU');
+					}
+				}
+			}
+			if ($detPrice === '' || $detPrice === null) {
+				$detPrice = '0';
+			}
+
+			// ── Construction des formquestions ──
+			$fqDet = array();
+			if ($isEditDet) {
+				$fqDet[] = array('type' => 'hidden', 'name' => 'detid', 'value' => (string) $detId);
+			} else {
+				$fqDet[] = array('type' => 'hidden', 'name' => 'jobid', 'value' => (string) $detJobId);
+				$fqDet[] = array('type' => 'hidden', 'name' => 'det_fk_product', 'value' => (string) $detFkProduct);
+			}
+
+			// Produit (lecture seule)
+			$fqDet[] = array(
+				'type'  => 'other',
+				'label' => $langs->trans('Product'),
+				'name'  => '',
+				'value' => $prodLabel ?: '<span class="opacitymedium">—</span>',
+			);
+
+			$fqDet[] = array(
 				'type'     => 'textarea',
 				'label'    => $langs->trans('Description'),
 				'name'     => 'det_description',
 				'value'    => $detDescription,
 				'moreattr' => 'style=width:99%',
-			),
-			array(
+			);
+			$fqDet[] = array(
 				'type'  => 'text',
 				'label' => $langs->trans('Qty').' <span class="fieldrequired">*</span>',
 				'name'  => 'det_qty',
 				'value' => $detQty,
 				'size'  => 10,
-			),
-			array(
+			);
+			$fqDet[] = array(
 				'type'  => 'text',
 				'label' => $langs->trans('UnitPriceHT'),
 				'name'  => 'det_price',
 				'value' => $detPrice,
 				'size'  => 10,
-			),
-			array(
+			);
+			$fqDet[] = array(
 				'type'  => 'text',
 				'label' => $langs->trans('Discount').' (%)',
 				'name'  => 'det_remise_percent',
 				'value' => $detRemise,
 				'size'  => 8,
-			),
-		);
+			);
 
-		// Sélecteur entrepôt (produits physiques uniquement, après sélection d'un produit)
-		if ($detFkProduct > 0 && $detProductType === 0) {
-			$selectedWh = GETPOSTINT('det_fk_warehouse');
-			$sqlWh  = "SELECT e.rowid, e.ref, COALESCE(ps.reel, 0) as qty, p.fk_default_warehouse";
-			$sqlWh .= " FROM ".MAIN_DB_PREFIX."entrepot e";
-			$sqlWh .= " LEFT JOIN ".MAIN_DB_PREFIX."product_stock ps ON (ps.fk_entrepot = e.rowid AND ps.fk_product = ".(int) $detFkProduct.")";
-			$sqlWh .= " LEFT JOIN ".MAIN_DB_PREFIX."product p ON (p.rowid = ".(int) $detFkProduct.")";
-			$sqlWh .= " WHERE e.entity IN (".getEntity('stock').")";
-			$sqlWh .= " AND e.statut >= 0";
-			$sqlWh .= " ORDER BY CASE WHEN e.rowid = p.fk_default_warehouse THEN 0 ELSE 1 END ASC,";
-			$sqlWh .= " CASE WHEN COALESCE(ps.reel, 0) > 0 THEN 0 ELSE 1 END ASC, e.ref ASC";
-			$resWh = $db->query($sqlWh);
+			// Sélecteur entrepôt (produits physiques uniquement)
+			if ($detFkProduct > 0 && $detProductType === 0) {
+				$sqlWh  = "SELECT e.rowid, e.ref, COALESCE(ps.reel, 0) as qty, p.fk_default_warehouse";
+				$sqlWh .= " FROM ".MAIN_DB_PREFIX."entrepot e";
+				$sqlWh .= " LEFT JOIN ".MAIN_DB_PREFIX."product_stock ps ON (ps.fk_entrepot = e.rowid AND ps.fk_product = ".(int) $detFkProduct.")";
+				$sqlWh .= " LEFT JOIN ".MAIN_DB_PREFIX."product p ON (p.rowid = ".(int) $detFkProduct.")";
+				$sqlWh .= " WHERE e.entity IN (".getEntity('stock').")";
+				$sqlWh .= " AND e.statut >= 0";
+				$sqlWh .= " ORDER BY CASE WHEN e.rowid = p.fk_default_warehouse THEN 0 ELSE 1 END ASC,";
+				$sqlWh .= " CASE WHEN COALESCE(ps.reel, 0) > 0 THEN 0 ELSE 1 END ASC, e.ref ASC";
+				$resWh = $db->query($sqlWh);
 
-			$htmlWhSelect = '<select name="det_fk_warehouse" class="flat maxwidth400">';
-			$htmlWhSelect .= '<option value="">&nbsp;</option>';
-			if ($resWh) {
-				while ($objWh = $db->fetch_object($resWh)) {
-					$whLabel = dol_escape_htmltag($objWh->ref);
-					if ((float) $objWh->qty > 0) {
-						$whLabel .= ' ('.price2num($objWh->qty, 2).')';
+				$htmlWhSelect = '<select name="det_fk_warehouse" id="det_fk_warehouse" class="flat maxwidth400">';
+				$htmlWhSelect .= '<option value="">&nbsp;</option>';
+				if ($resWh) {
+					while ($objWh = $db->fetch_object($resWh)) {
+						$whLabel = dol_escape_htmltag($objWh->ref);
+						if ((float) $objWh->qty > 0) {
+							$whLabel .= ' ('.price2num($objWh->qty, 2).')';
+						}
+						$sel = '';
+						if ($detFkWarehouse > 0 && (int) $objWh->rowid === $detFkWarehouse) {
+							$sel = ' selected';
+						} elseif ($detFkWarehouse <= 0 && (int) $objWh->fk_default_warehouse > 0 && (int) $objWh->rowid === (int) $objWh->fk_default_warehouse) {
+							$sel = ' selected';
+						}
+						$htmlWhSelect .= '<option value="'.(int) $objWh->rowid.'"'.$sel.'>'.$whLabel.'</option>';
 					}
-					$sel = '';
-					if ($selectedWh > 0 && (int) $objWh->rowid === $selectedWh) {
-						$sel = ' selected';
-					} elseif ($selectedWh <= 0 && (int) $objWh->fk_default_warehouse > 0 && (int) $objWh->rowid === (int) $objWh->fk_default_warehouse) {
-						$sel = ' selected';
-					}
-					$htmlWhSelect .= '<option value="'.(int) $objWh->rowid.'"'.$sel.'>'.$whLabel.'</option>';
+					$db->free($resWh);
 				}
-				$db->free($resWh);
-			}
-			$htmlWhSelect .= '</select>';
+				$htmlWhSelect .= '</select>';
 
-			$fqDet[] = array(
-				'type'  => 'other',
-				'label' => $langs->trans('StockLocation'),
-				'name'  => 'det_fk_warehouse',
-				'value' => $htmlWhSelect,
+				$fqDet[] = array(
+					'type'  => 'other',
+					'label' => $langs->trans('StockLocation'),
+					'name'  => 'det_fk_warehouse',
+					'value' => $htmlWhSelect,
+				);
+			}
+
+			// ── Paramètres du formconfirm ──
+			$confirmAction = $isEditDet ? 'confirm_edit_det' : 'confirm_add_det';
+			$confirmTitle  = $isEditDet ? $langs->trans('ModifyDetLine') : $langs->trans('AddDetLine');
+			$confirmPageUrl = $_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&token='.newToken();
+			if ($isEditDet) {
+				$confirmPageUrl .= '&detid='.(int) $detId;
+			} else {
+				$confirmPageUrl .= '&jobid='.(int) $detJobId.'&det_fk_product='.(int) $detFkProduct;
+			}
+
+			print $form->formconfirm(
+				$confirmPageUrl,
+				$confirmTitle,
+				'',
+				$confirmAction,
+				$fqDet,
+				'yes',
+				1,
+				550,
+				700,
+				0,
+				$langs->trans('Save'),
+				$langs->trans('Cancel')
 			);
 		}
-
-		print $form->formconfirm(
-			$_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&jobid='.(int) $detJobId,
-			$langs->trans('AddDetLine'),
-			'',
-			'confirm_add_det',
-			$fqDet,
-			'yes',
-			1,
-			550,
-			700,
-			0,
-			$langs->trans('Add'),
-			$langs->trans('Cancel')
-		);
-
-		// JS minimal : rechargement du formconfirm au changement de produit (Option B)
-		// Note : formconfirm en mode dialog n'utilise pas de <form>, il faut construire l'URL manuellement
-		print '<script>'."\n";
-		print 'jQuery(document).on("change", "[name=\'det_fk_product\']", function() {'."\n";
-		print '    var productId = jQuery(this).val();'."\n";
-		print '    if (!productId) return;'."\n";
-		print '    var url = '.json_encode($_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&token='.newToken()).';'."\n";
-		print '    url += "&action=add_det";'."\n";
-		print '    url += "&jobid=" + encodeURIComponent(jQuery("#jobid").val() || "");'."\n";
-		print '    url += "&det_fk_product=" + encodeURIComponent(productId);'."\n";
-		print '    url += "&_reload_product=1";'."\n";
-		print '    url += "&det_description=" + encodeURIComponent(jQuery("#det_description").val() || "");'."\n";
-		print '    url += "&det_qty=" + encodeURIComponent(jQuery("#det_qty").val() || "1");'."\n";
-		print '    url += "&det_remise_percent=" + encodeURIComponent(jQuery("#det_remise_percent").val() || "0");'."\n";
-		print '    location.href = url;'."\n";
-		print '});'."\n";
-		print '</script>'."\n";
 	}
 
 	// ═══════════════════════════════════════════════════════════════════════
@@ -1954,57 +2024,9 @@ if ($id > 0) {
 	print '</form>'."\n";
 	print '</div>'."\n";
 
-	// ═══════════════════════════════════════════════════════════════════════
-	// DIALOG : Modifier une ligne produit/service (det)
-	// ═══════════════════════════════════════════════════════════════════════
-
-	print '<div id="dlg-edit-det" style="display:none;" title="'.dol_escape_htmltag($langs->trans('ModifyDetLine')).'">'."\n";
-	print '<form id="frm-edit-det" method="POST" action="'.dol_escape_htmltag($_SERVER['PHP_SELF'].'?id='.$id).'">'."\n";
-	print '<input type="hidden" name="token" value="'.newToken().'">'."\n";
-	print '<input type="hidden" name="action" value="confirm_edit_det">'."\n";
-	print '<input type="hidden" name="det_edit_id" id="det_edit_id" value="">'."\n";
-	print '<input type="hidden" id="det_edit_fk_product" value="">'."\n";
-
-	print '<table class="border centpercent">'."\n";
-
-	// Produit — lecture seule
-	print '<tr><td class="titlefield">'.$langs->trans('Product').'</td><td>';
-	print '<span id="det_edit_product_label" class="opacitymedium"></span>';
-	print '</td></tr>'."\n";
-
-	// Description
-	print '<tr><td>'.$langs->trans('Description').'</td><td>';
-	print '<textarea name="det_edit_description" id="det_edit_description" class="flat" rows="2" style="width:99%;"></textarea>';
-	print '</td></tr>'."\n";
-
-	// Quantité
-	print '<tr><td class="fieldrequired">'.$langs->trans('Qty').'</td><td>';
-	print '<input type="text" name="det_edit_qty" id="det_edit_qty" class="flat width75" value="1">';
-	print '</td></tr>'."\n";
-
-	// Prix unitaire HT
-	print '<tr><td>'.$langs->trans('UnitPriceHT').'</td><td>';
-	print '<input type="text" name="det_edit_price" id="det_edit_price" class="flat width100" value="0">';
-	print '</td></tr>'."\n";
-
-	// Remise %
-	print '<tr><td>'.$langs->trans('Discount').'</td><td>';
-	print '<input type="text" name="det_edit_remise_percent" id="det_edit_remise_percent" class="flat width75" value="0"> %';
-	print '</td></tr>'."\n";
-
-	// Emplacement stock (masqué pour les services, chargé par AJAX)
-	print '<tr id="det_edit_warehouse_row" style="display:none;"><td>'.$langs->trans('StockLocation').'</td><td>';
-	print '<select name="det_edit_fk_warehouse" id="det_edit_fk_warehouse" class="flat maxwidth400"><option value=""></option></select>';
-	print '</td></tr>'."\n";
-
-	print '</table>'."\n";
-	print '</form>'."\n";
-	print '</div>'."\n";
-
 	// JS
 	// Variables JS injectées pour or_card.js (mode vue)
 	print '<script>'."\n";
-	print 'window.workshopOrCardAjaxUrl = '.json_encode(dol_buildpath('/workshop/ajax/or_card_ajax.php', 1).'?id='.$id).';'."\n";
 	print 'window.workshopJobLinkedOps  = '.json_encode($jobLinkedOpsMap).';'."\n";
 	print '</script>'."\n";
 	print '<script src="'.dol_escape_htmltag(dol_buildpath('/workshop/js/or_card.js', 1)).'"></script>'."\n";

@@ -125,19 +125,10 @@ if ((float) $det->remise_percent > 0) {
 	<!-- 8 : boutons d'action -->
 	<td class="right workshop-jobs-col-subcontracting nowraponall">
 		<?php if ($canEditAtStatus) {
-			$delDetUrl = $_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&action=delete_det&detid='.(int) $det->id.'&token='.newToken();
-			// Données pour pré-remplir le dialog d'édition
-			$editLabel       = dol_escape_js(!empty($det->label) ? $det->label : '—');
-			$editDescription = dol_escape_js((string) $det->description);
-			$editQty         = price2num($det->qty, 2);
-			$editPrice       = price2num($det->price, 'MU');
-			$editRemise      = price2num($det->remise_percent, 2);
-			$editFkProduct   = (int) $det->fk_product;
-			$editFkWarehouse = (int) $det->fk_warehouse;
-			$editProductType = (int) $det->product_type;
+			$editDetUrl = $_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&action=edit_det&detid='.(int) $det->id.'&token='.newToken();
+			$delDetUrl  = $_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&action=delete_det&detid='.(int) $det->id.'&token='.newToken();
 			?>
-			<a class="reposition marginrightonly" href="#"
-				onclick="workshopOpenEditDet(<?php echo (int) $det->id; ?>, '<?php echo $editLabel; ?>', '<?php echo $editDescription; ?>', '<?php echo $editQty; ?>', '<?php echo $editPrice; ?>', '<?php echo $editRemise; ?>', <?php echo $editFkProduct; ?>, <?php echo $editFkWarehouse; ?>, <?php echo $editProductType; ?>); return false;"
+			<a class="reposition marginrightonly" href="<?php echo dol_escape_htmltag($editDetUrl); ?>"
 				title="<?php echo dol_escape_htmltag($langs->trans('Modify')); ?>">
 				<?php echo img_picto($langs->trans('Modify'), 'edit'); ?>
 			</a>
