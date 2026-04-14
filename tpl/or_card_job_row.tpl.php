@@ -150,7 +150,7 @@ if (is_array($detList) && !empty($detList)) {
 ?>
 
 <?php if ($canEditAtStatus) {
-	$addDetUrl = $_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&action=add_det&jobid='.(int) $job->id;
+	$addDetUrl = $_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&action=add_det&jobid='.(int) $job->id.'&token='.newToken();
 ?>
 <!-- Bouton ajout d'une ligne -->
 <tr class="<?php echo $trClass; ?> workshop-det-add-row">
