@@ -1198,9 +1198,6 @@ if ($id > 0) {
 	} else {
 		$conducteurDisplay = '<span class="opacitymedium">'.$langs->trans('None').'</span>';
 	}
-	if ($permissiontoadd) {
-		$conducteurDisplay .= ' <a class="editfielda" href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'&action=editfk_conducteur">'.img_edit().'</a>';
-	}
 	print orCardInlineEditTd(
 		$action, 'fk_conducteur', 'save_fk_conducteur', $object->id,
 		$object->showInputField($object->fields['fk_conducteur'], 'fk_conducteur', $object->fk_conducteur, '', '', '', 'maxwidth300'),
@@ -1214,9 +1211,6 @@ if ($id > 0) {
 	print $form->editfieldkey($langs->trans('KmCreationOR'), 'km', $object->km, $object, $permissiontoadd);
 	print '</td><td>';
 	$kmDisplay = (!empty($object->km) ? dol_escape_htmltag(number_format((float) $object->km, 0, ',', ' ')).' km' : '<span class="opacitymedium">'.$langs->trans('NA').'</span>');
-	if ($permissiontoadd) {
-		$kmDisplay .= ' <a class="editfielda" href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'&action=editkm">'.img_edit().'</a>';
-	}
 	print orCardInlineEditTd(
 		$action, 'km', 'save_km', $object->id,
 		'<input type="text" name="km" class="maxwidth100" value="'.dol_escape_htmltag((string) $object->km).'">',
