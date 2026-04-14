@@ -278,7 +278,9 @@ class pdf_standard_or extends ModelePDFWorkshop
 		// page uniquement. Si les jobs de la dernière page dépassent footer_y,
 		// _signatureboxes() est renvoyée sur une nouvelle page.
 		$body_bottom = $this->page_hauteur - $this->marge_basse - 3;
-		$cy_jobs     = $this->_drawjobs($pdf, $object, $outputlangs, $body_x, $body_y, $body_w, $body_bottom);
+		$drawResult  = $this->_drawjobs($pdf, $object, $outputlangs, $body_x, $body_y, $body_w, $body_bottom);
+		$cy_jobs     = $drawResult['cy'];
+		$moredoc     = $drawResult['moredoc'];
 
 		// ── Triple cadre bas de page (commentaires + signatures) ────────────
 		// Si le dernier job empiète sur la zone signature, on l'envoie sur une
@@ -288,6 +290,15 @@ class pdf_standard_or extends ModelePDFWorkshop
 			$this->_pagehead($pdf, $object, 0, $outputlangs);
 		}
 		$this->_signatureboxes($pdf, $object, $outputlangs);
+
+		// ── Annexion des documents obligatoires des produits ─────────────────
+		// Chaque produit avec un extrafield doc_oblig non vide a son PDF annexé
+		// (une seule fois par ref produit, même si le produit apparaît plusieurs fois)
+		if (!empty($moredoc)) {
+			foreach ($moredoc as $productref => $docinfo) {
+				$this->_addAttachedDoc($pdf, $productref, $docinfo['docname'], (int) $docinfo['type'], (int) $docinfo['entity']);
+			}
+		}
 
 		// ── Save ─────────────────────────────────────────────────────────────
 		$pdf->Close();
@@ -734,7 +745,7 @@ class pdf_standard_or extends ModelePDFWorkshop
 	 * @param  float          $body_y       Y du cadre corps (bord haut)
 	 * @param  float          $body_w       Largeur du cadre corps
 	 * @param  float          $body_bottom  Y limite basse (haut du bloc signature)
-	 * @return float          Y après le dernier bloc dessiné
+	 * @return array          ['cy' => float Y après le dernier bloc, 'moredoc' => array documents obligatoires indexés par ref produit]
 	 */
 	protected function _drawjobs(&$pdf, $object, $outputlangs, $body_x, $body_y, $body_w, $body_bottom)
 	{
@@ -782,8 +793,11 @@ class pdf_standard_or extends ModelePDFWorkshop
 		$serviceTypeObj = new ServiceType($this->db);
 
 		// Caches pour éviter les requêtes dupliquées sur produits / entrepôts
-		$product_cache   = array();
+		$product_cache   = array();  // fk_product => ['ref' => string, 'type' => int, 'entity' => int, 'doc_oblig' => string|'']
 		$warehouse_cache = array();
+
+		// Documents obligatoires à annexer au PDF (ref produit => ['docname' => string, 'type' => int, 'entity' => int])
+		$moredoc = array();
 
 		// ── Chargement Font Awesome Solid pour les pictos pièce/service ────────
 		// On essaie plusieurs chemins candidats ; en cas d'échec on utilise
@@ -839,7 +853,7 @@ class pdf_standard_or extends ModelePDFWorkshop
 			// $product_cache / $warehouse_cache (caches DB persistants entre jobs).
 			// Toutes les autres variables sont read-only → capture par valeur.
 			$drawFullJob = function () use (
-				&$pdf, &$cy, &$product_cache, &$warehouse_cache,
+				&$pdf, &$cy, &$product_cache, &$warehouse_cache, &$moredoc,
 				$outputlangs, $default_font_size, $fa_font,
 				$cx, $cw, $jpad, $row_h, $line_h, $mo_h, $det_row_h,
 				$pic_w, $ref_w, $qty_det_w, $stk_w, $det_x, $qty_col_x,
@@ -1000,9 +1014,28 @@ class pdf_standard_or extends ModelePDFWorkshop
 							$fk_prod = (int) $detline->fk_product;
 							if (!isset($product_cache[$fk_prod])) {
 								$prodObj = new Product($this->db);
-								$product_cache[$fk_prod] = ($prodObj->fetch($fk_prod) > 0) ? $prodObj->ref : '';
+								if ($prodObj->fetch($fk_prod) > 0) {
+									$prodObj->fetch_optionals();
+									$product_cache[$fk_prod] = array(
+										'ref' => $prodObj->ref,
+										'type' => (int) $prodObj->type,
+										'entity' => (int) $prodObj->entity,
+										'doc_oblig' => !empty($prodObj->array_options['options_doc_obl']) ? $prodObj->array_options['options_doc_obl'] : '',
+									);
+								} else {
+									$product_cache[$fk_prod] = array('ref' => '', 'type' => 0, 'entity' => 0, 'doc_oblig' => '');
+								}
 							}
-							$product_ref = $product_cache[$fk_prod];
+							$product_ref = $product_cache[$fk_prod]['ref'];
+
+							// Collecter le document obligatoire (dédupliqué par ref produit)
+							if ($product_ref !== '' && $product_cache[$fk_prod]['doc_oblig'] !== '') {
+								$moredoc[$product_ref] = array(
+									'docname' => $product_cache[$fk_prod]['doc_oblig'],
+									'type'    => $product_cache[$fk_prod]['type'],
+									'entity'  => $product_cache[$fk_prod]['entity'],
+								);
+							}
 						}
 
 						$warehouse_name = '';
@@ -1106,7 +1139,7 @@ class pdf_standard_or extends ModelePDFWorkshop
 		$pdf->SetLineWidth(0.2);
 		$pdf->SetTextColor(0, 0, 0);
 
-		return $cy;
+		return array('cy' => $cy, 'moredoc' => $moredoc);
 	}
 
 
@@ -1213,5 +1246,72 @@ class pdf_standard_or extends ModelePDFWorkshop
 		$pdf->SetDrawColor(0, 0, 0);
 		$pdf->SetLineWidth(0.2);
 		$pdf->SetTextColor(0, 0, 0);
+	}
+
+
+	/**
+	 * Annexe un document PDF (pièce jointe produit/service) à la fin du PDF courant
+	 *
+	 * Utilise FPDI (intégré à TCPDF dans Dolibarr) pour importer chaque page
+	 * du fichier source et l'ajouter au document en cours de génération.
+	 * Le chemin est résolu via $conf->product->multidir_output (type 0) ou
+	 * $conf->service->multidir_output (type 1) pour compatibilité multi-entité.
+	 *
+	 * @param  TCPDF  $pdf           PDF object en cours de génération
+	 * @param  string $productref    Référence du produit/service
+	 * @param  string $docname       Nom du document sans extension .pdf
+	 * @param  int    $producttype   Type du produit (0=produit, 1=service)
+	 * @param  int    $productentity Entité du produit (pour résoudre le bon répertoire)
+	 * @return int                   1 = OK, 0 = fichier introuvable ou erreur d'import
+	 */
+	protected function _addAttachedDoc(&$pdf, $productref, $docname, $producttype, $productentity)
+	{
+		global $conf;
+
+		// Construire la liste des répertoires candidats (service et produit)
+		// En fonction de la configuration Dolibarr, un service peut être stocké
+		// dans le répertoire "service/" ou "produit/" — on teste les deux.
+		$candidates = array();
+		if (!empty($conf->service->multidir_output[$productentity])) {
+			$candidates[] = $conf->service->multidir_output[$productentity];
+		}
+		if (!empty($conf->product->multidir_output[$productentity])) {
+			$candidates[] = $conf->product->multidir_output[$productentity];
+		}
+		if (empty($candidates) && !empty($conf->product->multidir_output[$conf->entity])) {
+			$candidates[] = $conf->product->multidir_output[$conf->entity];
+		}
+
+		$infile = '';
+		$subpath = dol_sanitizeFileName($productref).'/'.$docname.'.pdf';
+		foreach ($candidates as $basedir) {
+			$testpath = $basedir.'/'.$subpath;
+			if (file_exists($testpath) && is_readable($testpath)) {
+				$infile = $testpath;
+				break;
+			}
+		}
+
+		if ($infile === '') {
+			dol_syslog(__METHOD__.' fichier introuvable dans les répertoires candidats pour '.$subpath, LOG_WARNING);
+			setEventMessages('Document obligatoire introuvable pour le produit '.$productref.' : '.$docname.'.pdf', null, 'warnings');
+			return 0;
+		}
+
+		$pagecount = $pdf->setSourceFile($infile);
+		for ($i = 1; $i <= $pagecount; $i++) {
+			$tplIdx = $pdf->importPage($i);
+			if ($tplIdx !== false) {
+				$s = $pdf->getTemplatesize($tplIdx);
+				$pdf->AddPage($s['h'] > $s['w'] ? 'P' : 'L');
+				$pdf->useTemplate($tplIdx);
+			} else {
+				dol_syslog(__METHOD__.' impossible d\'importer la page '.$i.' de '.$infile.' (PDF protégé ?)', LOG_WARNING);
+				setEventMessages(null, array($infile.' cannot be added, probably protected PDF'), 'warnings');
+				return 0;
+			}
+		}
+
+		return 1;
 	}
 }
