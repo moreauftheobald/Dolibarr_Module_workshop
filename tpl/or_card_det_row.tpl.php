@@ -108,7 +108,7 @@ if ((float) $det->remise_percent > 0) {
 		if (!empty($det->description)) {
 			$_descFull  = dol_string_nohtmltag($det->description, 0);
 			$_descFirst = strtok($_descFull, "\n");
-			echo textwithtooltip(dol_escape_htmltag($_descFirst), dol_htmlentitiesbr($_descFull), 1, 0, '', '', 3, '', 1);
+			echo '<span title="'.dol_escape_htmltag($_descFull).'">'.dol_escape_htmltag($_descFirst).'</span>';
 			unset($_descFull, $_descFirst);
 		} else {
 			echo '<span class="opacitymedium">—</span>';
