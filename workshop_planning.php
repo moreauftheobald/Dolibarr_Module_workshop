@@ -546,14 +546,14 @@ if ($mode === 'journee') {
 	print '  g.setDayMajorDateDisplayFormat(\'dd mon\');' . "\n";
 	print "\n";
 
-	// Display options
-	print '  g.setShowRes(1);' . "\n";           // Show resource (customer)
-	print '  g.setShowDur(1);' . "\n";           // Show duration
-	print '  g.setShowComp(1);' . "\n";          // Show completion %
-	print '  g.setShowStartDate(1);' . "\n";
-	print '  g.setShowEndDate(1);' . "\n";
-	print '  g.setShowTaskInfoLink(1);' . "\n";
-	print '  g.setFormatArr("day", "week");' . "\n";
+	// Display options – keep only task name column, hide all others
+	print '  g.setShowRes(0);' . "\n";
+	print '  g.setShowDur(0);' . "\n";
+	print '  g.setShowComp(0);' . "\n";
+	print '  g.setShowStartDate(0);' . "\n";
+	print '  g.setShowEndDate(0);' . "\n";
+	print '  g.setShowTaskInfoLink(0);' . "\n";
+	print '  g.setFormatArr("day");' . "\n";
 	print '  g.setCaptionType(\'Caption\');' . "\n";
 	print '  g.setUseFade(0);' . "\n";
 	print '  g.setDayColWidth(40);' . "\n";
