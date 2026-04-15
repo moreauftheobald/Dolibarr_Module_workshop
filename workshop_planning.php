@@ -329,8 +329,9 @@ if ($mode === 'journee') {
 
 // Period end dates for display labels
 $week_end = date('Y-m-d', strtotime($week_start) + 6 * 86400);
-// Atelier mode: 4 weeks (28 days), last day = Sunday of week 4
-$period_end = date('Y-m-d', strtotime($week_start) + 27 * 86400);
+// Atelier mode: request 2 weeks (S, S+1) — JSGantt adds ~1 week padding
+// on each side, giving a natural 4-week display (S-1, S, S+1, S+2)
+$period_end = date('Y-m-d', strtotime($week_start) + 13 * 86400);
 
 // Time slots only needed for the day view
 $time_slots = array();
@@ -532,17 +533,14 @@ if ($mode === 'journee') {
 	// Date format for JSGantt input (matches Dolibarr date output)
 	$dateformatinput = 'yyyy-mm-dd';
 
-	// CSS: narrow task name column, force chart to fill 100% width
+	// CSS: narrow task name column, ellipsis on long names
 	print '<style type="text/css">' . "\n";
-	print '  #GanttChartDIV { width: 100% !important; }' . "\n";
-	print '  #GanttChartDIV .gchartcontainer { width: 100% !important; }' . "\n";
 	print '  #GanttChartDIV .gmainleft  { width: 150px !important; min-width: 120px; max-width: 180px; }' . "\n";
-	print '  #GanttChartDIV .gmainright { width: calc(100% - 155px) !important; }' . "\n";
 	print '  #GanttChartDIV .gname      { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' . "\n";
 	print '</style>' . "\n";
 
-	print '<div style="margin-top:4px;width:100%;">' . "\n";
-	print '<div style="position:relative;width:100%;" class="gantt" id="GanttChartDIV"></div>' . "\n";
+	print '<div style="margin-top:4px;">' . "\n";
+	print '<div style="position:relative;" class="gantt" id="GanttChartDIV"></div>' . "\n";
 	print '</div>' . "\n";
 
 	print '<script type="text/javascript">' . "\n";
@@ -572,9 +570,15 @@ if ($mode === 'journee') {
 	print '  g.setFormatArr("day");' . "\n";
 	print '  g.setCaptionType(\'Caption\');' . "\n";
 	print '  g.setUseFade(0);' . "\n";
-	print '  g.setDayColWidth(18);' . "\n";
 	print "\n";
-	// Visible range: 4 weeks starting from the current Monday
+	// Calculate dayColWidth so 28 displayed days fill the available width
+	// (JSGantt adds ~1 week padding on each side: 2 requested weeks → 4 displayed)
+	print '  var availW = (jQuery(".fiche").width() || document.body.clientWidth) - 150 - 20;' . "\n";
+	print '  var nbDays = 28;' . "\n";
+	print '  var dayW = Math.max(Math.floor(availW / nbDays), 18);' . "\n";
+	print '  g.setDayColWidth(dayW);' . "\n";
+	print "\n";
+	// Visible range: 2 weeks (S, S+1) — JSGantt pads ±1 week → displays S-1..S+2
 	print '  g.setMinDate(\'' . dol_escape_js($week_start) . '\');' . "\n";
 	print '  g.setMaxDate(\'' . dol_escape_js($period_end) . '\');' . "\n";
 	print '  g.setScrollTo(\'' . dol_escape_js($week_start) . '\');' . "\n";
@@ -619,9 +623,8 @@ if ($mode === 'journee') {
 	print '  ));' . "\n";
 	print "\n";
 
-	// Draw the chart – use full width of the parent container
-	print '  var drawW = jQuery("#GanttChartDIV").parent().width() || jQuery(".fiche").width() || (document.body.clientWidth - 50);' . "\n";
-	print '  g.Draw(drawW);' . "\n";
+	// Draw the chart – width = left panel + (nbDays * dayColWidth)
+	print '  g.Draw(150 + (nbDays * dayW) + 20);' . "\n";
 	print '});' . "\n";
 	print '</script>' . "\n";
 
