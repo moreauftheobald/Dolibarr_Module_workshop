@@ -525,6 +525,13 @@ if ($mode === 'journee') {
 	// Date format for JSGantt input (matches Dolibarr date output)
 	$dateformatinput = 'yyyy-mm-dd';
 
+	// CSS: narrow task name column, wide timeline
+	print '<style type="text/css">' . "\n";
+	print '  #GanttChartDIV .gmainleft  { width: 15% !important; min-width: 120px; }' . "\n";
+	print '  #GanttChartDIV .gmainright { width: 85% !important; }' . "\n";
+	print '  #GanttChartDIV .gname      { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' . "\n";
+	print '</style>' . "\n";
+
 	print '<div style="overflow-x:auto;margin-top:4px;">' . "\n";
 	print '<div style="position:relative;" class="gantt" id="GanttChartDIV"></div>' . "\n";
 	print '</div>' . "\n";
@@ -557,6 +564,11 @@ if ($mode === 'journee') {
 	print '  g.setCaptionType(\'Caption\');' . "\n";
 	print '  g.setUseFade(0);' . "\n";
 	print '  g.setDayColWidth(40);' . "\n";
+	print "\n";
+	// Limit visible range to exactly the selected week (Mon→Sun)
+	print '  g.setMinDate(\'' . dol_escape_js($week_start) . '\');' . "\n";
+	print '  g.setMaxDate(\'' . dol_escape_js($week_end) . '\');' . "\n";
+	print '  g.setScrollTo(\'' . dol_escape_js($week_start) . '\');' . "\n";
 
 	// Language – uses the jsgantt_language.js.php bridge from Dolibarr core
 	print '  if (typeof vLangs !== \'undefined\') {' . "\n";
