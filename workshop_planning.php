@@ -525,14 +525,15 @@ if ($mode === 'journee') {
 	// Date format for JSGantt input (matches Dolibarr date output)
 	$dateformatinput = 'yyyy-mm-dd';
 
-	// CSS: narrow task name column, wide timeline
+	// CSS: narrow task name column, wide timeline, full width
 	print '<style type="text/css">' . "\n";
-	print '  #GanttChartDIV .gmainleft  { width: 15% !important; min-width: 120px; }' . "\n";
-	print '  #GanttChartDIV .gmainright { width: 85% !important; }' . "\n";
-	print '  #GanttChartDIV .gname      { max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' . "\n";
+	print '  #GanttChartDIV .gmainleft  { width: 150px !important; min-width: 120px; max-width: 180px; }' . "\n";
+	print '  #GanttChartDIV .gmainright { width: calc(100% - 150px) !important; overflow-x: auto; }' . "\n";
+	print '  #GanttChartDIV .gname      { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' . "\n";
+	print '  #GanttChartDIV .gchartcontainer { width: 100% !important; }' . "\n";
 	print '</style>' . "\n";
 
-	print '<div style="overflow-x:auto;margin-top:4px;">' . "\n";
+	print '<div style="margin-top:4px;">' . "\n";
 	print '<div style="position:relative;" class="gantt" id="GanttChartDIV"></div>' . "\n";
 	print '</div>' . "\n";
 
@@ -563,7 +564,13 @@ if ($mode === 'journee') {
 	print '  g.setFormatArr("day");' . "\n";
 	print '  g.setCaptionType(\'Caption\');' . "\n";
 	print '  g.setUseFade(0);' . "\n";
-	print '  g.setDayColWidth(40);' . "\n";
+	print "\n";
+	// Calculate day column width dynamically to fill available space (7 days)
+	// Container width minus the left panel (~150px), divided by 7 days
+	print '  var containerW = jQuery(".fiche").width() || document.body.clientWidth;' . "\n";
+	print '  var dayW = Math.floor((containerW - 180) / 7);' . "\n";
+	print '  if (dayW < 60) dayW = 60;' . "\n";
+	print '  g.setDayColWidth(dayW);' . "\n";
 	print "\n";
 	// Limit visible range to exactly the selected week (Mon→Sun)
 	print '  g.setMinDate(\'' . dol_escape_js($week_start) . '\');' . "\n";
