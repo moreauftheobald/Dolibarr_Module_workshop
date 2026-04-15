@@ -19,7 +19,8 @@
  * \file    workshop/workshop_planning.php
  * \ingroup workshop
  * \brief   Workshop planning view - three display modes:
- *            - atelier:   FullCalendar timeGrid showing planned repair orders.
+ *            - atelier:   JSGantt Gantt chart showing planned repair orders
+ *                         on a weekly timeline (Mon–Sun).
  *            - pointages: FullCalendar timeGrid showing user time entries,
  *                         filterable by user.
  *            - journee:   Custom day table with one column per user showing
@@ -313,13 +314,24 @@ $date_ts    = strtotime($date_str);
 $dow        = (int) date('N', $date_ts); // 1=Mon … 7=Sun (ISO-8601)
 $week_start = date('Y-m-d', $date_ts - ($dow - 1) * 86400);
 
-// Prev / Next targets differ between week modes and the day mode
-$prev_date = ($mode === 'journee')
-	? date('Y-m-d', $date_ts - 86400)
-	: date('Y-m-d', strtotime($week_start) - 7 * 86400);
-$next_date = ($mode === 'journee')
-	? date('Y-m-d', $date_ts + 86400)
-	: date('Y-m-d', strtotime($week_start) + 7 * 86400);
+// Prev / Next targets differ per mode
+if ($mode === 'journee') {
+	$prev_date = date('Y-m-d', $date_ts - 86400);
+	$next_date = date('Y-m-d', $date_ts + 86400);
+} elseif ($mode === 'atelier') {
+	// Atelier: navigate week by week (4-week view slides by 1 week)
+	$prev_date = date('Y-m-d', strtotime($week_start) - 7 * 86400);
+	$next_date = date('Y-m-d', strtotime($week_start) + 7 * 86400);
+} else {
+	$prev_date = date('Y-m-d', strtotime($week_start) - 7 * 86400);
+	$next_date = date('Y-m-d', strtotime($week_start) + 7 * 86400);
+}
+
+// Period end dates for display labels
+$week_end = date('Y-m-d', strtotime($week_start) + 6 * 86400);
+// Atelier mode: request 2 weeks (S, S+1) — JSGantt adds ~1 week padding
+// on each side, giving a natural 4-week display (S-1, S, S+1, S+2)
+$period_end = date('Y-m-d', strtotime($week_start) + 13 * 86400);
 
 // Time slots only needed for the day view
 $time_slots = array();
@@ -332,15 +344,20 @@ if ($mode === 'journee') {
  */
 $title = $langs->trans('WorkshopPlanningView');
 
-// FullCalendar 5 from CDN – vendor files can be bundled locally in a later
-// iteration; CDN URLs are skipped when running in offline environments.
-$TIncludeCSS = array(
-	'https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css',
-);
-$TIncludeJS = array(
-	'https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js',
-	'https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales-all.min.js',
-);
+$TIncludeCSS = array();
+$TIncludeJS  = array();
+
+if ($mode === 'atelier') {
+	// JSGantt – included in Dolibarr core
+	$TIncludeCSS[] = '/includes/jsgantt/jsgantt.css';
+	$TIncludeJS[]  = '/includes/jsgantt/jsgantt.js';
+	$TIncludeJS[]  = '/projet/jsgantt_language.js.php?lang=' . $langs->defaultlang;
+} else {
+	// FullCalendar 5 for pointages/journee modes
+	$TIncludeCSS[] = 'https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css';
+	$TIncludeJS[]  = 'https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js';
+	$TIncludeJS[]  = 'https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales-all.min.js';
+}
 
 llxHeader('', $title, '', '', 0, 0, $TIncludeJS, $TIncludeCSS, '', 'mod-workshop page-planning');
 
@@ -378,7 +395,7 @@ if (empty($planning_groups)) {
 }
 
 // ---------------------------------------------------------------------------
-// Navigation bar: Prev | Date picker | Next | [Period label] | [User filter]
+// Navigation bar
 // ---------------------------------------------------------------------------
 // Base URL fragment shared by Prev and Next links
 $nav_base = $baseUrl . '?mode=' . urlencode($mode);
@@ -393,8 +410,37 @@ print '<a class="butAction" style="padding:4px 12px;min-width:auto;" href="' . d
 print img_picto($langs->trans('Previous'), 'fa-chevron-left');
 print '</a>';
 
+// Period label (different format per mode)
+if ($mode === 'atelier') {
+	// "Semaine du xx/xx/xxxx au xx/xx/xxxx" (4-week period)
+	$period_start_label = dol_print_date(strtotime($week_start), 'day');
+	$period_end_label   = dol_print_date(strtotime($period_end), 'day');
+	print '<span style="font-weight:bold;margin:0 4px;">';
+	print $langs->trans('WorkshopPlanningWeekFromTo', $period_start_label, $period_end_label);
+	print '</span>';
+} elseif ($mode === 'journee') {
+	print '<span style="font-weight:bold;margin:0 4px;">';
+	print $langs->trans('WorkshopPlanningDayOf') . ' ' . dol_print_date($date_ts, 'day');
+	print '</span>';
+} else {
+	print '<span style="font-weight:bold;margin:0 4px;">';
+	print $langs->trans('WorkshopPlanningWeekOf') . ' ' . dol_print_date(strtotime($week_start), 'day');
+	print '</span>';
+}
+
+// Next button
+print '<a class="butAction" style="padding:4px 12px;min-width:auto;" href="' . dol_escape_htmltag($nav_base . '&date=' . $next_date) . '">';
+print img_picto($langs->trans('Next'), 'fa-chevron-right');
+print '</a>';
+
+// "Now" button (all modes)
+$today_str = date('Y-m-d');
+print '<a class="butAction" style="padding:4px 12px;min-width:auto;margin-left:4px;" href="' . dol_escape_htmltag($nav_base . '&date=' . $today_str) . '">';
+print $langs->trans('WorkshopPlanningNow');
+print '</a>';
+
 // Date picker (submits form on change)
-print '<form method="GET" action="' . dol_escape_htmltag($baseUrl) . '" style="margin:0;">';
+print '<form method="GET" action="' . dol_escape_htmltag($baseUrl) . '" style="margin:0;margin-left:8px;">';
 print '<input type="hidden" name="mode" value="' . dol_escape_htmltag($mode) . '">';
 if ($fk_user_filter > 0 && $mode === 'pointages') {
 	print '<input type="hidden" name="fk_user" value="' . (int) $fk_user_filter . '">';
@@ -402,23 +448,8 @@ if ($fk_user_filter > 0 && $mode === 'pointages') {
 print '<input type="date" name="date" value="' . dol_escape_htmltag($date_str) . '" class="flat" style="padding:3px 6px;" onchange="this.form.submit();">';
 print '</form>';
 
-// Next button
-print '<a class="butAction" style="padding:4px 12px;min-width:auto;" href="' . dol_escape_htmltag($nav_base . '&date=' . $next_date) . '">';
-print img_picto($langs->trans('Next'), 'fa-chevron-right');
-print '</a>';
-
-// Period label
-print '<span style="font-weight:bold;margin-left:4px;">';
-if ($mode === 'journee') {
-	print $langs->trans('WorkshopPlanningDayOf') . ' ' . dol_print_date($date_ts, 'day');
-} else {
-	print $langs->trans('WorkshopPlanningWeekOf') . ' ' . dol_print_date(strtotime($week_start), 'day');
-}
-print '</span>';
-
 // User filter (Mode Pointages only)
 if ($mode === 'pointages' && !empty($all_users)) {
-	// Build the base JS redirect URL – fk_user value appended by the onchange
 	$js_redirect_base = dol_escape_js($baseUrl . '?mode=pointages&date=' . $date_str . '&fk_user=');
 	print '<span style="margin-left:16px;display:flex;align-items:center;gap:6px;">';
 	print '<label for="ws_user_filter" style="margin:0;">' . $langs->trans('WorkshopPlanningFilterUser') . '</label>';
@@ -494,25 +525,124 @@ if ($mode === 'journee') {
 		print '</div>';
 	}
 
+} elseif ($mode === 'atelier') {
+	// -----------------------------------------------------------------------
+	// Mode Atelier – JSGantt Gantt chart showing planned repair orders
+	// -----------------------------------------------------------------------
+
+	// Date format for JSGantt input (matches Dolibarr date output)
+	$dateformatinput = 'yyyy-mm-dd';
+
+	// CSS: narrow task name column, ellipsis on long names
+	print '<style type="text/css">' . "\n";
+	print '  #GanttChartDIV .gmainleft  { width: 250px !important; min-width: 200px; max-width: 300px; }' . "\n";
+	print '  #GanttChartDIV .gname      { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' . "\n";
+	print '</style>' . "\n";
+
+	print '<div style="margin-top:4px;">' . "\n";
+	print '<div style="position:relative;" class="gantt" id="GanttChartDIV"></div>' . "\n";
+	print '</div>' . "\n";
+
+	print '<script type="text/javascript">' . "\n";
+	print 'document.addEventListener(\'DOMContentLoaded\', function () {' . "\n";
+	print '  var ganttEl = document.getElementById(\'GanttChartDIV\');' . "\n";
+	print '  if (!ganttEl) { return; }' . "\n";
+	print "\n";
+
+	// Initialize JSGantt chart
+	print '  var g = new JSGantt.GanttChart(ganttEl, \'day\');' . "\n";
+	print "\n";
+
+	// Date format configuration
+	print '  g.setDateInputFormat(\'' . dol_escape_js($dateformatinput) . '\');' . "\n";
+	print '  g.setDateTaskTableDisplayFormat(\'dd/mm/yyyy\');' . "\n";
+	print '  g.setDateTaskDisplayFormat(\'dd mon yyyy\');' . "\n";
+	print '  g.setDayMajorDateDisplayFormat(\'dd mon\');' . "\n";
+	print "\n";
+
+	// Display options – keep only task name column, hide all others
+	print '  g.setShowRes(0);' . "\n";
+	print '  g.setShowDur(0);' . "\n";
+	print '  g.setShowComp(0);' . "\n";
+	print '  g.setShowStartDate(0);' . "\n";
+	print '  g.setShowEndDate(0);' . "\n";
+	print '  g.setShowTaskInfoLink(0);' . "\n";
+	print '  g.setFormatArr("day");' . "\n";
+	print '  g.setCaptionType(\'Caption\');' . "\n";
+	print '  g.setUseFade(0);' . "\n";
+	print "\n";
+	// Calculate dayColWidth so 28 displayed days fill the available width
+	// (JSGantt adds ~1 week padding on each side: 2 requested weeks → 4 displayed)
+	print '  var availW = (jQuery(".fiche").width() || document.body.clientWidth) - 250 -80;' . "\n";
+	print '  var nbDays = 28;' . "\n";
+	print '  var dayW = Math.max(Math.floor(availW / nbDays), 18);' . "\n";
+	print '  g.setDayColWidth(dayW);' . "\n";
+	print "\n";
+	// Visible range: 2 weeks (S, S+1) — JSGantt pads ±1 week → displays S-1..S+2
+	print '  g.setMinDate(\'' . dol_escape_js($week_start) . '\');' . "\n";
+	print '  g.setMaxDate(\'' . dol_escape_js($period_end) . '\');' . "\n";
+	print '  g.setScrollTo(\'' . dol_escape_js($week_start) . '\');' . "\n";
+
+	// Language – uses the jsgantt_language.js.php bridge from Dolibarr core
+	print '  if (typeof vLangs !== \'undefined\') {' . "\n";
+	print '    g.addLang(vLang, vLangs);' . "\n";
+	print '    g.setLang(vLang);' . "\n";
+	print '  }' . "\n";
+	print "\n";
+
+	// -----------------------------------------------------------------------
+	// Load OR data for the displayed week
+	// -----------------------------------------------------------------------
+	// TODO: Load real OR data via AJAX or PHP query. For now, show an empty
+	// Gantt with a placeholder message when no data is available.
+	//
+	// Future data loading pattern:
+	// - Query llx_workshop_operationorder WHERE date_planned BETWEEN week_start AND week_end
+	// - For each OR: g.AddTaskItem(new JSGantt.TaskItem(id, name, start, end, ...))
+	// -----------------------------------------------------------------------
+
+	// Add a placeholder task so the Gantt renders its timeline structure
+	// even when no real OR data is loaded yet
+	print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
+	print '    0,' . "\n";                                                          // ID
+	print '    \'' . dol_escape_js($langs->trans('WorkshopPlanningNoOR')) . '\',' . "\n"; // Name
+	print '    \'' . dol_escape_js($week_start) . '\',' . "\n";                     // Start
+	print '    \'' . dol_escape_js($period_end) . '\',' . "\n";                    // End
+	print '    \'ggroupblack\',' . "\n";                                            // CSS class
+	print '    \'\',' . "\n";                                                       // Link
+	print '    0,' . "\n";                                                          // Milestone
+	print '    \'\',' . "\n";                                                       // Resource
+	print '    0,' . "\n";                                                          // Percent complete
+	print '    0,' . "\n";                                                          // Group
+	print '    0,' . "\n";                                                          // Parent
+	print '    1,' . "\n";                                                          // Open
+	print '    \'\',' . "\n";                                                       // Dependencies
+	print '    \'\',' . "\n";                                                       // Caption
+	print '    \'\',' . "\n";                                                       // Notes
+	print '    g' . "\n";                                                           // Chart reference
+	print '  ));' . "\n";
+	print "\n";
+
+	// Draw the chart – width = left panel + (nbDays * dayColWidth)
+	print '  g.Draw(150 + (nbDays * dayW) + 20);' . "\n";
+	print '});' . "\n";
+	print '</script>' . "\n";
+
 } else {
 	// -----------------------------------------------------------------------
-	// Mode Atelier / Mode Pointages – FullCalendar timeGridWeek
+	// Mode Pointages – FullCalendar timeGridWeek
 	// -----------------------------------------------------------------------
 	$fc_locale = strtolower(substr($langs->defaultlang, 0, 2));
-	// FullCalendar ships 'en-gb' as its English locale file
 	if ($fc_locale === 'en') {
 		$fc_locale = 'en-gb';
 	}
 
-	// Placeholder message shown when planning groups are not configured
 	if (empty($planning_groups)) {
 		print '<p class="opacitymedium">' . $langs->trans('WorkshopNoGroupDefined') . '</p>';
 	}
 
 	print '<div id="workshop-calendar" style="margin-top:4px;"></div>' . "\n";
 
-	// FullCalendar initialisation – event sources left empty; data loading
-	// via AJAX will be wired up in a subsequent development iteration.
 	print '<script type="text/javascript">' . "\n";
 	print '/* global FullCalendar */' . "\n";
 	print 'document.addEventListener(\'DOMContentLoaded\', function () {' . "\n";
@@ -520,24 +650,22 @@ if ($mode === 'journee') {
 	print '  if (!calendarEl) { return; }' . "\n";
 	print "\n";
 	print '  var businessHours = ' . json_encode($business_hours, JSON_UNESCAPED_UNICODE) . ';' . "\n";
-	print '  var planningMode  = \'' . dol_escape_js($mode) . '\';' . "\n";
 	print "\n";
 	print '  var calendar = new FullCalendar.Calendar(calendarEl, {' . "\n";
 	print '    locale:           \'' . dol_escape_js($fc_locale) . '\',' . "\n";
 	print '    initialView:      \'timeGridWeek\',' . "\n";
 	print '    initialDate:      \'' . dol_escape_js($week_start) . '\',' . "\n";
-	print '    firstDay:         1,' . "\n"; // Week starts on Monday
+	print '    firstDay:         1,' . "\n";
 	print '    hiddenDays:       ' . json_encode($hidden_days) . ',' . "\n";
 	print '    businessHours:    ' . (empty($business_hours) ? 'false' : 'businessHours') . ',' . "\n";
 	print '    slotMinTime:      \'' . dol_escape_js($slot_min) . '\',' . "\n";
 	print '    slotMaxTime:      \'' . dol_escape_js($slot_max) . '\',' . "\n";
 	print '    allDaySlot:       false,' . "\n";
-	print '    headerToolbar:    false,' . "\n"; // Custom navigation toolbar above
+	print '    headerToolbar:    false,' . "\n";
 	print '    height:           \'auto\',' . "\n";
 	print '    nowIndicator:     true,' . "\n";
 	print '    slotDuration:     \'00:15:00\',' . "\n";
 	print '    slotLabelInterval:\'01:00\',' . "\n";
-	print '    // Event sources will be added in the data-loading iteration.' . "\n";
 	print '    events:           []' . "\n";
 	print '  });' . "\n";
 	print "\n";
