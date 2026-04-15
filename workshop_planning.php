@@ -314,16 +314,23 @@ $date_ts    = strtotime($date_str);
 $dow        = (int) date('N', $date_ts); // 1=Mon … 7=Sun (ISO-8601)
 $week_start = date('Y-m-d', $date_ts - ($dow - 1) * 86400);
 
-// Prev / Next targets differ between week modes and the day mode
-$prev_date = ($mode === 'journee')
-	? date('Y-m-d', $date_ts - 86400)
-	: date('Y-m-d', strtotime($week_start) - 7 * 86400);
-$next_date = ($mode === 'journee')
-	? date('Y-m-d', $date_ts + 86400)
-	: date('Y-m-d', strtotime($week_start) + 7 * 86400);
+// Prev / Next targets differ per mode
+if ($mode === 'journee') {
+	$prev_date = date('Y-m-d', $date_ts - 86400);
+	$next_date = date('Y-m-d', $date_ts + 86400);
+} elseif ($mode === 'atelier') {
+	// Atelier: navigate by 4-week periods
+	$prev_date = date('Y-m-d', strtotime($week_start) - 28 * 86400);
+	$next_date = date('Y-m-d', strtotime($week_start) + 28 * 86400);
+} else {
+	$prev_date = date('Y-m-d', strtotime($week_start) - 7 * 86400);
+	$next_date = date('Y-m-d', strtotime($week_start) + 7 * 86400);
+}
 
-// Week end date (Sunday) for display labels
+// Period end dates for display labels
 $week_end = date('Y-m-d', strtotime($week_start) + 6 * 86400);
+// Atelier mode: 4 weeks (28 days), last day = Sunday of week 4
+$period_end = date('Y-m-d', strtotime($week_start) + 27 * 86400);
 
 // Time slots only needed for the day view
 $time_slots = array();
@@ -404,11 +411,11 @@ print '</a>';
 
 // Period label (different format per mode)
 if ($mode === 'atelier') {
-	// "Semaine du xx/xx/xxxx au xx/xx/xxxx"
-	$week_start_label = dol_print_date(strtotime($week_start), 'day');
-	$week_end_label   = dol_print_date(strtotime($week_end), 'day');
+	// "Semaine du xx/xx/xxxx au xx/xx/xxxx" (4-week period)
+	$period_start_label = dol_print_date(strtotime($week_start), 'day');
+	$period_end_label   = dol_print_date(strtotime($period_end), 'day');
 	print '<span style="font-weight:bold;margin:0 4px;">';
-	print $langs->trans('WorkshopPlanningWeekFromTo', $week_start_label, $week_end_label);
+	print $langs->trans('WorkshopPlanningWeekFromTo', $period_start_label, $period_end_label);
 	print '</span>';
 } elseif ($mode === 'journee') {
 	print '<span style="font-weight:bold;margin:0 4px;">';
@@ -525,12 +532,10 @@ if ($mode === 'journee') {
 	// Date format for JSGantt input (matches Dolibarr date output)
 	$dateformatinput = 'yyyy-mm-dd';
 
-	// CSS: narrow task name column, wide timeline, full width
+	// CSS: narrow task name column
 	print '<style type="text/css">' . "\n";
 	print '  #GanttChartDIV .gmainleft  { width: 150px !important; min-width: 120px; max-width: 180px; }' . "\n";
-	print '  #GanttChartDIV .gmainright { width: calc(100% - 150px) !important; overflow-x: auto; }' . "\n";
 	print '  #GanttChartDIV .gname      { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' . "\n";
-	print '  #GanttChartDIV .gchartcontainer { width: 100% !important; }' . "\n";
 	print '</style>' . "\n";
 
 	print '<div style="margin-top:4px;">' . "\n";
@@ -564,17 +569,11 @@ if ($mode === 'journee') {
 	print '  g.setFormatArr("day");' . "\n";
 	print '  g.setCaptionType(\'Caption\');' . "\n";
 	print '  g.setUseFade(0);' . "\n";
+	print '  g.setDayColWidth(18);' . "\n";
 	print "\n";
-	// Calculate day column width dynamically to fill available space (7 days)
-	// Container width minus the left panel (~150px), divided by 7 days
-	print '  var containerW = jQuery(".fiche").width() || document.body.clientWidth;' . "\n";
-	print '  var dayW = Math.floor((containerW - 180) / 7);' . "\n";
-	print '  if (dayW < 60) dayW = 60;' . "\n";
-	print '  g.setDayColWidth(dayW);' . "\n";
-	print "\n";
-	// Limit visible range to exactly the selected week (Mon→Sun)
+	// Visible range: 4 weeks starting from the current Monday
 	print '  g.setMinDate(\'' . dol_escape_js($week_start) . '\');' . "\n";
-	print '  g.setMaxDate(\'' . dol_escape_js($week_end) . '\');' . "\n";
+	print '  g.setMaxDate(\'' . dol_escape_js($period_end) . '\');' . "\n";
 	print '  g.setScrollTo(\'' . dol_escape_js($week_start) . '\');' . "\n";
 
 	// Language – uses the jsgantt_language.js.php bridge from Dolibarr core
@@ -601,7 +600,7 @@ if ($mode === 'journee') {
 	print '    0,' . "\n";                                                          // ID
 	print '    \'' . dol_escape_js($langs->trans('WorkshopPlanningNoOR')) . '\',' . "\n"; // Name
 	print '    \'' . dol_escape_js($week_start) . '\',' . "\n";                     // Start
-	print '    \'' . dol_escape_js($week_end) . '\',' . "\n";                       // End
+	print '    \'' . dol_escape_js($period_end) . '\',' . "\n";                    // End
 	print '    \'ggroupblack\',' . "\n";                                            // CSS class
 	print '    \'\',' . "\n";                                                       // Link
 	print '    0,' . "\n";                                                          // Milestone
