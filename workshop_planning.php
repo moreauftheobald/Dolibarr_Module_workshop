@@ -319,9 +319,9 @@ if ($mode === 'journee') {
 	$prev_date = date('Y-m-d', $date_ts - 86400);
 	$next_date = date('Y-m-d', $date_ts + 86400);
 } elseif ($mode === 'atelier') {
-	// Atelier: navigate by 4-week periods
-	$prev_date = date('Y-m-d', strtotime($week_start) - 28 * 86400);
-	$next_date = date('Y-m-d', strtotime($week_start) + 28 * 86400);
+	// Atelier: navigate week by week (4-week view slides by 1 week)
+	$prev_date = date('Y-m-d', strtotime($week_start) - 7 * 86400);
+	$next_date = date('Y-m-d', strtotime($week_start) + 7 * 86400);
 } else {
 	$prev_date = date('Y-m-d', strtotime($week_start) - 7 * 86400);
 	$next_date = date('Y-m-d', strtotime($week_start) + 7 * 86400);
@@ -532,14 +532,17 @@ if ($mode === 'journee') {
 	// Date format for JSGantt input (matches Dolibarr date output)
 	$dateformatinput = 'yyyy-mm-dd';
 
-	// CSS: narrow task name column
+	// CSS: narrow task name column, force chart to fill 100% width
 	print '<style type="text/css">' . "\n";
+	print '  #GanttChartDIV { width: 100% !important; }' . "\n";
+	print '  #GanttChartDIV .gchartcontainer { width: 100% !important; }' . "\n";
 	print '  #GanttChartDIV .gmainleft  { width: 150px !important; min-width: 120px; max-width: 180px; }' . "\n";
+	print '  #GanttChartDIV .gmainright { width: calc(100% - 155px) !important; }' . "\n";
 	print '  #GanttChartDIV .gname      { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' . "\n";
 	print '</style>' . "\n";
 
-	print '<div style="margin-top:4px;">' . "\n";
-	print '<div style="position:relative;" class="gantt" id="GanttChartDIV"></div>' . "\n";
+	print '<div style="margin-top:4px;width:100%;">' . "\n";
+	print '<div style="position:relative;width:100%;" class="gantt" id="GanttChartDIV"></div>' . "\n";
 	print '</div>' . "\n";
 
 	print '<script type="text/javascript">' . "\n";
@@ -616,8 +619,9 @@ if ($mode === 'journee') {
 	print '  ));' . "\n";
 	print "\n";
 
-	// Draw the chart
-	print '  g.Draw(jQuery("#tabs").width() > 0 ? jQuery("#tabs").width() - 40 : jQuery(".fiche").width() - 40);' . "\n";
+	// Draw the chart – use full width of the parent container
+	print '  var drawW = jQuery("#GanttChartDIV").parent().width() || jQuery(".fiche").width() || (document.body.clientWidth - 50);' . "\n";
+	print '  g.Draw(drawW);' . "\n";
 	print '});' . "\n";
 	print '</script>' . "\n";
 
