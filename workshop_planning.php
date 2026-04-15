@@ -573,7 +573,7 @@ if ($mode === 'journee') {
 	print "\n";
 	// Calculate dayColWidth so 28 displayed days fill the available width
 	// (JSGantt adds ~1 week padding on each side: 2 requested weeks → 4 displayed)
-	print '  var availW = (jQuery(".fiche").width() || document.body.clientWidth) - 150 - 20;' . "\n";
+	print '  var availW = (jQuery(".fiche").width() || document.body.clientWidth) - 150 - 60;' . "\n";
 	print '  var nbDays = 28;' . "\n";
 	print '  var dayW = Math.max(Math.floor(availW / nbDays), 18);' . "\n";
 	print '  g.setDayColWidth(dayW);' . "\n";
