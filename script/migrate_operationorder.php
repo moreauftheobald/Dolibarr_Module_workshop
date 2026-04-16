@@ -680,6 +680,7 @@ print "----------------------------------------------------------\n\n";
 $countMigrated = 0;
 $countSkipped  = 0;
 $countErrors   = 0;
+$errorDetails  = array(); // Tableau des OR en erreur : array('old_id' => ..., 'ref' => ..., 'reason' => ...)
 $i = 0;
 
 while ($oldOR = $db->fetch_object($resql)) {
@@ -736,20 +737,101 @@ while ($oldOR = $db->fetch_object($resql)) {
 	// Le tag est optionnel, pas bloquant si absent
 
 	if ($satError) {
-		out("       → OR ".$oldOR->ref." IGNORÉ (valeur satellite manquante)", 'err');
+		$reason = "Valeur satellite manquante (statut=".$oldOR->status.", vehicule=".$oldOR->fk_vehicule.")";
+		out("       → OR ".$oldOR->ref." IGNORÉ : ".$reason, 'err');
+		$errorDetails[] = array('old_id' => $oldOR->rowid, 'ref' => $oldOR->ref, 'reason' => $reason);
 		$countErrors++;
 		continue;
 	}
 
-	// =====================================================
-	// TODO : Phase 1 — Créer l'OR Workshop + jobs + lignes
-	// =====================================================
-	// $newStatusId, $newConducteurId, $newVehiculeId, $newTagId
-	// sont prêts à être utilisés pour la création de l'OR
-
 	out("       → satellites OK (statut=".$newStatusId.", conducteur=".$newConducteurId.", vehicule=".$newVehiculeId.", tag=".$newTagId.")", 'debug', $verbose);
-	out("       → migration entête/lignes non encore implémentée", 'warn');
-	$countErrors++;
+
+	// =====================================================
+	// Phase 1a — Créer l'entête de l'OR Workshop
+	// =====================================================
+
+	$db->begin();
+
+	$or = new Operationorder($db);
+	$or->ref                 = $oldOR->ref;
+	$or->ref_client          = $oldOR->ref_client;
+	$or->entity              = (int) $oldOR->entity;
+	$or->fk_soc              = (int) $oldOR->fk_soc;
+	$or->fk_vehicule         = $newVehiculeId;
+	$or->fk_conducteur       = !empty($newConducteurId) ? $newConducteurId : null;
+	$or->status              = $newStatusId;
+	$or->date_planned        = $oldOR->planned_date;
+	$or->date_valid          = $oldOR->date_valid;
+	$or->date_start          = null;
+	$or->date_end            = null;
+	$or->km                  = !empty($oldOR->km_on_creation) ? (float) $oldOR->km_on_creation : 0;
+	$or->fk_user_assign      = !empty($oldOR->fk_user_meca) ? (int) $oldOR->fk_user_meca : null;
+	$or->temps_immobilisation = !empty($oldOR->time_planned_f) ? (float) $oldOR->time_planned_f : null;
+	$or->check_or            = isset($oldOR->orcheck) ? (int) $oldOR->orcheck : 0;
+	$or->note_public         = $oldOR->note_public;
+	$or->note_private        = $oldOR->note_private;
+	$or->model_pdf           = $oldOR->model_pdf;
+	$or->last_main_doc       = $oldOR->last_main_doc;
+	$or->fk_user_creat       = !empty($oldOR->fk_user_creat) ? (int) $oldOR->fk_user_creat : $user->id;
+	$or->fk_user_modif       = !empty($oldOR->fk_user_modif) ? (int) $oldOR->fk_user_modif : null;
+	$or->fk_user_valid       = !empty($oldOR->fk_user_valid) ? (int) $oldOR->fk_user_valid : null;
+	$or->import_key          = $importKey;
+
+	// Totaux à 0 — seront recalculés après migration des jobs/lignes
+	$or->total_ht            = 0;
+	$or->total_ht_part       = 0;
+	$or->total_ht_mo         = 0;
+	$or->total_ht_service    = 0;
+	$or->total_ht_external   = 0;
+	$or->total_ht_refund     = 0;
+
+	$newORId = $or->create($user, 1); // notrigger=1
+
+	if ($newORId <= 0) {
+		$db->rollback();
+		$reason = "Erreur createCommon : ".$or->error.' '.implode(', ', $or->errors);
+		out("       → ERREUR création OR : ".$reason, 'err');
+		$errorDetails[] = array('old_id' => $oldOR->rowid, 'ref' => $oldOR->ref, 'reason' => $reason);
+		$countErrors++;
+		continue;
+	}
+
+	// --- Corrections post-création ---
+	// createCommon force entity=$conf->entity et date_creation=dol_now()
+	// On rétablit les valeurs d'origine
+	$sqlFix = "UPDATE ".MAIN_DB_PREFIX."workshop_operationorder SET";
+	$sqlFix .= " entity = ".(int) $oldOR->entity;
+	$sqlFix .= ", date_creation = ".($oldOR->date_creation ? "'".$db->escape($oldOR->date_creation)."'" : "NULL");
+	$sqlFix .= " WHERE rowid = ".(int) $newORId;
+	$resFix = $db->query($sqlFix);
+	if (!$resFix) {
+		$db->rollback();
+		$reason = "Erreur correction entity/date_creation : ".$db->lasterror();
+		out("       → ERREUR post-correction OR : ".$reason, 'err');
+		$errorDetails[] = array('old_id' => $oldOR->rowid, 'ref' => $oldOR->ref, 'reason' => $reason);
+		$countErrors++;
+		continue;
+	}
+
+	// --- Lien tag (catégorie) ---
+	if (!empty($newTagId)) {
+		$orTag = new OperationorderTag($db);
+		$tagResult = $orTag->addTag($newORId, $newTagId, $user);
+		if ($tagResult < 0) {
+			out("       → WARN lien tag : ".$orTag->error, 'warn');
+		} else {
+			out("       Tag lié à l'OR (tag_id=".$newTagId.")", 'debug', $verbose);
+		}
+	}
+
+	// =====================================================
+	// TODO : Phase 1b — Créer les jobs + lignes de l'OR
+	// =====================================================
+
+	$db->commit();
+
+	out("       → OR créé (new id=".$newORId.")", 'ok');
+	$countMigrated++;
 }
 
 $db->free($resql);
@@ -767,6 +849,21 @@ print "  Migrés :    ".$countMigrated."\n";
 print "  Skippés :   ".$countSkipped." (déjà migrés)\n";
 print "  Erreurs :   ".$countErrors."\n";
 print "==========================================================\n";
+
+if (!empty($errorDetails)) {
+	print "\n";
+	print "  OR EN ERREUR (ancien rowid → ref → raison) :\n";
+	print "  ----------------------------------------------------------\n";
+	foreach ($errorDetails as $err) {
+		print "  id=".$err['old_id']." | ref=".$err['ref']." | ".$err['reason']."\n";
+	}
+	print "  ----------------------------------------------------------\n";
+	// Liste condensée des rowid pour requête SQL facile
+	$errorIds = array_column($errorDetails, 'old_id');
+	print "\n  Ancien rowid en erreur (copier-coller SQL) :\n";
+	print "  ".implode(', ', $errorIds)."\n";
+}
+
 print "\n";
 
 if ($dryRun) {
