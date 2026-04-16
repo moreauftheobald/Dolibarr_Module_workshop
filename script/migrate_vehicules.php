@@ -118,94 +118,138 @@ if (!$resCheck || $db->num_rows($resCheck) == 0) {
 }
 
 // ============================================================
-// Étape 1 : Migration des dictionnaires (type, marque, contrat)
-// On construit des tables de correspondance code → new_rowid
+// Étape 1 : Migration en masse des dictionnaires satellites
+//
+// On conserve les rowid d'origine pour simplifier les migrations
+// suivantes (pas besoin de table de mapping).
+//
+// Tables migrées :
+//   llx_c_dolifleet_vehicule_type         → llx_workshop_vehicule_c_vehicule_type
+//   llx_c_dolifleet_vehicule_mark         → llx_workshop_vehicule_c_vehicule_mark
+//   llx_c_dolifleet_contract_type         → llx_workshop_vehicule_c_contract_type
+//   llx_c_dolifleet_vehicule_activity_type→ llx_workshop_vehicule_c_vehicule_activity_type
+//   llx_c_dolifleet_vehicule_dimpneu      → llx_workshop_vehicule_c_vehicule_dimpneu
 // ============================================================
-mig_log("--- Étape 1 : Migration des dictionnaires ---");
+mig_log("--- Étape 1 : Migration des dictionnaires satellites (en masse, conservation des rowid) ---");
 
 /**
- * Migre un dictionnaire dolifleet vers workshop.
- * Les deux tables ont la même structure (code, entity, active, label).
- * On insère dans la cible si le code n'existe pas déjà (pour la même entity).
+ * Migre un dictionnaire dolifleet vers workshop en conservant les rowid.
+ * Les deux tables ont la même structure de base (rowid, code, entity, active, label, date_creation, tms).
+ * On insère avec le rowid d'origine. Les entrées déjà présentes (même rowid) sont ignorées (idempotence).
  *
  * @param  DoliDB $db            Connexion DB
- * @param  string $sourceTable   Nom complet table source (sans préfixe llx_)
- * @param  string $targetTable   Nom complet table cible (sans préfixe llx_)
+ * @param  string $sourceTable   Nom table source sans préfixe llx_ (ex: 'c_dolifleet_vehicule_type')
+ * @param  string $targetTable   Nom table cible sans préfixe llx_ (ex: 'workshop_vehicule_c_vehicule_type')
  * @param  bool   $dryRun        Mode simulation
- * @return array                 Mapping [code][entity] => new_rowid
+ * @param  array  $extraColumns  Colonnes supplémentaires à copier (ex: ['fk_vehicule_mark'] pour contract_type)
+ * @return void
  */
-function migrateDictionary(DoliDB $db, string $sourceTable, string $targetTable, bool $dryRun): array
+function migrateDictionary(DoliDB $db, string $sourceTable, string $targetTable, bool $dryRun, array $extraColumns = array()): void
 {
-	$mapping = array();
-
-	// Charger les entrées cibles existantes pour éviter les doublons
-	$sqlExisting = "SELECT rowid, code, entity FROM ".$db->prefix().$targetTable;
+	// Charger les rowid déjà présents dans la cible
+	$existingIds = array();
+	$sqlExisting = "SELECT rowid FROM ".$db->prefix().$targetTable;
 	$resExisting = $db->query($sqlExisting);
-	$existing = array();
 	if ($resExisting) {
 		while ($obj = $db->fetch_object($resExisting)) {
-			$existing[$obj->code][$obj->entity] = (int) $obj->rowid;
+			$existingIds[(int) $obj->rowid] = true;
 		}
 		$db->free($resExisting);
 	}
 
-	// Lire les entrées sources
-	$sqlSrc = "SELECT rowid, code, entity, active, label, date_creation FROM ".$db->prefix().$sourceTable;
+	// Lire toutes les entrées sources
+	$sqlSrc = "SELECT * FROM ".$db->prefix().$sourceTable." ORDER BY rowid ASC";
 	$resSrc = $db->query($sqlSrc);
 	if (!$resSrc) {
-		mig_log("Erreur lecture $sourceTable : ".$db->lasterror(), "ERROR");
-		return $mapping;
+		mig_log("  ERREUR lecture $sourceTable : ".$db->lasterror(), "ERROR");
+		return;
 	}
 
 	$nbInserted = 0;
 	$nbSkipped  = 0;
 
 	while ($obj = $db->fetch_object($resSrc)) {
-		$code   = $obj->code;
-		$entity = (int) $obj->entity;
+		$oldId = (int) $obj->rowid;
 
-		// Déjà présent dans la cible ?
-		if (isset($existing[$code][$entity])) {
-			$mapping[$code][$entity] = $existing[$code][$entity];
+		// Déjà présent dans la cible (même rowid) → skip
+		if (isset($existingIds[$oldId])) {
 			$nbSkipped++;
 			continue;
 		}
 
 		if (!$dryRun) {
-			$sqlIns = "INSERT INTO ".$db->prefix().$targetTable;
-			$sqlIns .= " (code, entity, active, label, date_creation)";
-			$sqlIns .= " VALUES (";
-			$sqlIns .= "'".$db->escape($code)."'";
-			$sqlIns .= ", ".$entity;
-			$sqlIns .= ", ".(int) $obj->active;
-			$sqlIns .= ", '".$db->escape($obj->label)."'";
-			$sqlIns .= ", '".$db->idate($db->jdate($obj->date_creation))."'";
-			$sqlIns .= ")";
+			// Colonnes de base communes à tous les dictionnaires
+			$cols = "rowid, code, entity, active, label, date_creation";
+			$vals = $oldId;
+			$vals .= ", ".($obj->code !== null ? "'".$db->escape($obj->code)."'" : "NULL");
+			$vals .= ", ".(int) $obj->entity;
+			$vals .= ", ".(int) $obj->active;
+			$vals .= ", ".($obj->label !== null ? "'".$db->escape($obj->label)."'" : "NULL");
+			$vals .= ", ".($obj->date_creation !== null ? "'".$db->escape($obj->date_creation)."'" : "NULL");
 
+			// Colonnes supplémentaires (ex: fk_vehicule_mark pour contract_type)
+			foreach ($extraColumns as $col) {
+				$cols .= ", ".$col;
+				$colVal = isset($obj->$col) ? $obj->$col : null;
+				$vals .= ", ".($colVal !== null ? "'".$db->escape($colVal)."'" : "NULL");
+			}
+
+			$sqlIns = "INSERT INTO ".$db->prefix().$targetTable." (".$cols.") VALUES (".$vals.")";
 			$resIns = $db->query($sqlIns);
 			if ($resIns) {
-				$newId = $db->last_insert_id($db->prefix() . $targetTable);
-				$mapping[$code][$entity] = (int) $newId;
 				$nbInserted++;
 			} else {
-				mig_log("Erreur INSERT $targetTable code=$code : ".$db->lasterror(), "ERROR");
+				mig_log("  ERREUR INSERT $targetTable rowid=$oldId : ".$db->lasterror(), "ERROR");
 			}
 		} else {
-			// En dry-run, on simule un ID
-			$mapping[$code][$entity] = -1;
 			$nbInserted++;
 		}
 	}
 	$db->free($resSrc);
 
-	mig_log("  $targetTable : $nbInserted insérés, $nbSkipped déjà présents");
-
-	return $mapping;
+	mig_log("  $sourceTable → $targetTable : $nbInserted insérés, $nbSkipped déjà présents");
 }
 
-$mapType     = migrateDictionary($db, 'c_dolifleet_vehicule_type', 'workshop_vehicule_c_vehicule_type', $dryRun);
-$mapMark     = migrateDictionary($db, 'c_dolifleet_vehicule_mark', 'workshop_vehicule_c_vehicule_mark', $dryRun);
-$mapContract = migrateDictionary($db, 'c_dolifleet_contract_type', 'workshop_vehicule_c_contract_type', $dryRun);
+// --- Migration des 5 dictionnaires ---
+migrateDictionary($db, 'c_dolifleet_vehicule_type', 'workshop_vehicule_c_vehicule_type', $dryRun);
+migrateDictionary($db, 'c_dolifleet_vehicule_mark', 'workshop_vehicule_c_vehicule_mark', $dryRun);
+migrateDictionary($db, 'c_dolifleet_contract_type', 'workshop_vehicule_c_contract_type', $dryRun, array('fk_vehicule_mark'));
+migrateDictionary($db, 'c_dolifleet_vehicule_activity_type', 'workshop_vehicule_c_vehicule_activity_type', $dryRun);
+migrateDictionary($db, 'c_dolifleet_vehicule_dimpneu', 'workshop_vehicule_c_vehicule_dimpneu', $dryRun);
+
+// ============================================================
+// Étape 1bis : Construire les caches de résolution code → rowid
+// pour les dictionnaires cibles (utile pour la boucle véhicules)
+// ============================================================
+
+/**
+ * Charge un cache de résolution code → rowid depuis une table dictionnaire workshop.
+ *
+ * @param  DoliDB $db         Connexion DB
+ * @param  string $table      Nom table sans préfixe llx_ (ex: 'workshop_vehicule_c_vehicule_type')
+ * @return array              Mapping [code] => rowid (premier trouvé si doublons)
+ */
+function loadDictCache(DoliDB $db, string $table): array
+{
+	$cache = array();
+	$sql = "SELECT rowid, code FROM ".$db->prefix().$table." WHERE code IS NOT NULL AND code != ''";
+	$res = $db->query($sql);
+	if ($res) {
+		while ($obj = $db->fetch_object($res)) {
+			if (!isset($cache[$obj->code])) {
+				$cache[$obj->code] = (int) $obj->rowid;
+			}
+		}
+		$db->free($res);
+	}
+	return $cache;
+}
+
+$cacheType     = loadDictCache($db, 'workshop_vehicule_c_vehicule_type');
+$cacheMark     = loadDictCache($db, 'workshop_vehicule_c_vehicule_mark');
+$cacheContract = loadDictCache($db, 'workshop_vehicule_c_contract_type');
+
+mig_log("  Caches chargés : ".count($cacheType)." types, ".count($cacheMark)." marques, ".count($cacheContract)." contrats");
 
 // ============================================================
 // Étape 2 : Parcours et migration des véhicules ligne par ligne
@@ -246,29 +290,20 @@ while ($veh = $db->fetch_object($resVeh)) {
 		continue;
 	}
 
-	// --- Résolution des FK dictionnaires (varchar code → integer rowid) ---
-	$entity = (int) $veh->entity;
-
+	// --- Résolution des FK dictionnaires (varchar code → integer rowid via caches) ---
 	$newFkType = 0;
-	if (!empty($veh->fk_vehicule_type) && isset($mapType[$veh->fk_vehicule_type][$entity])) {
-		$newFkType = $mapType[$veh->fk_vehicule_type][$entity];
-	} elseif (!empty($veh->fk_vehicule_type) && isset($mapType[$veh->fk_vehicule_type])) {
-		// Fallback : prendre le premier entity disponible
-		$newFkType = reset($mapType[$veh->fk_vehicule_type]);
+	if (!empty($veh->fk_vehicule_type) && isset($cacheType[$veh->fk_vehicule_type])) {
+		$newFkType = $cacheType[$veh->fk_vehicule_type];
 	}
 
 	$newFkMark = 0;
-	if (!empty($veh->fk_vehicule_mark) && isset($mapMark[$veh->fk_vehicule_mark][$entity])) {
-		$newFkMark = $mapMark[$veh->fk_vehicule_mark][$entity];
-	} elseif (!empty($veh->fk_vehicule_mark) && isset($mapMark[$veh->fk_vehicule_mark])) {
-		$newFkMark = reset($mapMark[$veh->fk_vehicule_mark]);
+	if (!empty($veh->fk_vehicule_mark) && isset($cacheMark[$veh->fk_vehicule_mark])) {
+		$newFkMark = $cacheMark[$veh->fk_vehicule_mark];
 	}
 
 	$newFkContract = null;
-	if (!empty($veh->fk_contract_type) && isset($mapContract[$veh->fk_contract_type][$entity])) {
-		$newFkContract = $mapContract[$veh->fk_contract_type][$entity];
-	} elseif (!empty($veh->fk_contract_type) && isset($mapContract[$veh->fk_contract_type])) {
-		$newFkContract = reset($mapContract[$veh->fk_contract_type]);
+	if (!empty($veh->fk_contract_type) && isset($cacheContract[$veh->fk_contract_type])) {
+		$newFkContract = $cacheContract[$veh->fk_contract_type];
 	}
 
 	// --- Troncature immatriculation (255 → 20 caractères) ---
@@ -303,13 +338,13 @@ while ($veh = $db->fetch_object($resVeh)) {
 		$sqlIns .= ", ".(int) $newFkMark;
 		$sqlIns .= ", ".($veh->modele !== null ? "'".$db->escape($veh->modele)."'" : "NULL");
 		$sqlIns .= ", '".$db->escape($immat)."'";
-		$sqlIns .= ", ".($veh->date_immat !== null ? "'".$db->idate($db->jdate($veh->date_immat))."'" : "NULL");
+		$sqlIns .= ", ".($veh->date_immat !== null ? "'".$db->escape($veh->date_immat)."'" : "NULL");
 		$sqlIns .= ", ".(int) $veh->fk_soc;
-		$sqlIns .= ", ".($veh->date_customer_exploit !== null ? "'".$db->idate($db->jdate($veh->date_customer_exploit))."'" : "NULL");
+		$sqlIns .= ", ".($veh->date_customer_exploit !== null ? "'".$db->escape($veh->date_customer_exploit)."'" : "NULL");
 		$sqlIns .= ", ".(float) $veh->km;
-		$sqlIns .= ", ".($veh->km_date !== null ? "'".$db->idate($db->jdate($veh->km_date))."'" : "NULL");
+		$sqlIns .= ", ".($veh->km_date !== null ? "'".$db->escape($veh->km_date)."'" : "NULL");
 		$sqlIns .= ", ".($newFkContract !== null ? (int) $newFkContract : "NULL");
-		$sqlIns .= ", ".($veh->date_end_contract !== null ? "'".$db->idate($db->jdate($veh->date_end_contract))."'" : "NULL");
+		$sqlIns .= ", ".($veh->date_end_contract !== null ? "'".$db->escape($veh->date_end_contract)."'" : "NULL");
 		$sqlIns .= ", ".($veh->atelier !== null ? (int) $veh->atelier : "NULL");
 		$sqlIns .= ", ".($veh->carrosserie !== null ? "'".$db->escape($veh->carrosserie)."'" : "NULL");
 		$sqlIns .= ", ".(int) $veh->dfol;
@@ -318,13 +353,13 @@ while ($veh = $db->fetch_object($resVeh)) {
 		$sqlIns .= ", ".($veh->essieu !== null ? "'".$db->escape($veh->essieu)."'" : "NULL");
 		$sqlIns .= ", ".($veh->type_custom !== null ? (int) $veh->type_custom : "NULL");
 		$sqlIns .= ", ".($veh->coutm !== null ? (float) $veh->coutm : "NULL");
-		$sqlIns .= ", ".($veh->date_fin_fin !== null ? "'".$db->idate($db->jdate($veh->date_fin_fin))."'" : "NULL");
+		$sqlIns .= ", ".($veh->date_fin_fin !== null ? "'".$db->escape($veh->date_fin_fin)."'" : "NULL");
 		$sqlIns .= ", ".($veh->type_fin !== null ? "'".$db->escape($veh->type_fin)."'" : "NULL");
-		$sqlIns .= ", ".($veh->date_fin_loc !== null ? "'".$db->idate($db->jdate($veh->date_fin_loc))."'" : "NULL");
+		$sqlIns .= ", ".($veh->date_fin_loc !== null ? "'".$db->escape($veh->date_fin_loc)."'" : "NULL");
 		$sqlIns .= ", ".(int) $veh->exit_data;
 		$sqlIns .= ", ".(int) $veh->age_veh;
 		$sqlIns .= ", '".$db->escape($importKey)."'";
-		$sqlIns .= ", ".($veh->date_creation !== null ? "'".$db->idate($db->jdate($veh->date_creation))."'" : "'".$db->idate(dol_now())."'");
+		$sqlIns .= ", ".($veh->date_creation !== null ? "'".$db->escape($veh->date_creation)."'" : "'".$db->idate(dol_now())."'");
 		$sqlIns .= ")";
 
 		$resIns = $db->query($sqlIns);
