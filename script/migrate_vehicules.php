@@ -420,15 +420,100 @@ if (!$resLinks) {
 }
 
 // ============================================================
+// Étape 4 : Migration des activités véhicules
+//
+// Structure identique entre source et cible.
+// fk_vehicule → remappé via $mapVehiculeIds (construit à l'étape 3)
+// fk_type     → varchar qui stocke le rowid du dictionnaire activity_type,
+//               conservé tel quel (rowid préservés à l'étape 1)
+// fk_soc      → copié tel quel (FK vers llx_societe)
+// ============================================================
+mig_log("--- Étape 4 : Migration des activités véhicules (vehicule_activity) ---");
+
+$sqlAct = "SELECT * FROM ".$db->prefix()."dolifleet_vehicule_activity ORDER BY rowid ASC";
+$resAct = $db->query($sqlAct);
+if (!$resAct) {
+	mig_log("  Table dolifleet_vehicule_activity introuvable ou erreur : ".$db->lasterror(), "ERROR");
+} else {
+	$nbActTotal    = $db->num_rows($resAct);
+	$nbActMigrated = 0;
+	$nbActSkipped  = 0;
+	$nbActErrors   = 0;
+
+	mig_log("  $nbActTotal activité(s) à traiter");
+
+	while ($act = $db->fetch_object($resAct)) {
+		$oldActId  = (int) $act->rowid;
+		$oldVehId  = (int) $act->fk_vehicule;
+
+		// Résoudre le nouveau fk_vehicule
+		$newVehId = isset($mapVehiculeIds[$oldVehId]) ? $mapVehiculeIds[$oldVehId] : 0;
+		if ($newVehId == 0) {
+			mig_log("  [WARN] Activité #$oldActId : fk_vehicule=$oldVehId non trouvé dans les véhicules migrés", "ERROR");
+			$nbActErrors++;
+			continue;
+		}
+
+		// Idempotence : vérifier si cette activité existe déjà (même véhicule + type + date_start)
+		$sqlExist = "SELECT rowid FROM ".$db->prefix()."workshop_vehicule_activity";
+		$sqlExist .= " WHERE fk_vehicule = ".$newVehId;
+		$sqlExist .= " AND fk_type ".($act->fk_type !== null ? "= '".$db->escape($act->fk_type)."'" : "IS NULL");
+		$sqlExist .= " AND date_start ".($act->date_start !== null ? "= '".$db->escape($act->date_start)."'" : "IS NULL");
+		$resExist = $db->query($sqlExist);
+		if ($resExist && $db->num_rows($resExist) > 0) {
+			$nbActSkipped++;
+			continue;
+		}
+
+		if (!$dryRun) {
+			$sqlIns = "INSERT INTO ".$db->prefix()."workshop_vehicule_activity";
+			$sqlIns .= " (date_creation, fk_vehicule, fk_type, date_start, date_end, fk_soc)";
+			$sqlIns .= " VALUES (";
+			$sqlIns .= ($act->date_creation !== null ? "'".$db->escape($act->date_creation)."'" : "NULL");
+			$sqlIns .= ", ".$newVehId;
+			$sqlIns .= ", ".($act->fk_type !== null ? "'".$db->escape($act->fk_type)."'" : "NULL");
+			$sqlIns .= ", ".($act->date_start !== null ? "'".$db->escape($act->date_start)."'" : "NULL");
+			$sqlIns .= ", ".($act->date_end !== null ? "'".$db->escape($act->date_end)."'" : "NULL");
+			$sqlIns .= ", ".(int) $act->fk_soc;
+			$sqlIns .= ")";
+
+			$resIns = $db->query($sqlIns);
+			if (!$resIns) {
+				mig_log("  [ERREUR] Activité #$oldActId : ".$db->lasterror(), "ERROR");
+				$nbActErrors++;
+				continue;
+			}
+
+			$newActId = $db->last_insert_id($db->prefix()."workshop_vehicule_activity");
+			mig_log("  [OK] Activité #$oldActId → #$newActId (veh=$oldVehId→$newVehId, type=".$act->fk_type.")");
+			$nbActMigrated++;
+		} else {
+			mig_log("  [DRY-RUN] Activité #$oldActId (veh=$oldVehId→$newVehId, type=".$act->fk_type.") serait migrée");
+			$nbActMigrated++;
+		}
+	}
+	$db->free($resAct);
+
+	mig_log("  Activités : $nbActMigrated migrées, $nbActSkipped déjà présentes, $nbActErrors erreurs");
+}
+
+// ============================================================
 // Résumé
 // ============================================================
 mig_log("=== Migration terminée ===");
-mig_log("  Véhicules — Total : $nbTotal, Migrés : $nbMigrated, Déjà présents : $nbSkipped, Erreurs : $nbErrors");
+mig_log("  Véhicules  — Total : $nbTotal, Migrés : $nbMigrated, Déjà présents : $nbSkipped, Erreurs : $nbErrors");
 if (isset($nbLinksTotal)) {
-	mig_log("  Links     — Total : $nbLinksTotal, Migrés : $nbLinksMigrated, Déjà présents : $nbLinksSkipped, Erreurs : $nbLinksErrors");
+	mig_log("  Links      — Total : $nbLinksTotal, Migrés : $nbLinksMigrated, Déjà présents : $nbLinksSkipped, Erreurs : $nbLinksErrors");
+}
+if (isset($nbActTotal)) {
+	mig_log("  Activités  — Total : $nbActTotal, Migrés : $nbActMigrated, Déjà présentes : $nbActSkipped, Erreurs : $nbActErrors");
 }
 
-if ($nbErrors > 0 || (isset($nbLinksErrors) && $nbLinksErrors > 0)) {
+$hasErrors = $nbErrors > 0
+	|| (isset($nbLinksErrors) && $nbLinksErrors > 0)
+	|| (isset($nbActErrors) && $nbActErrors > 0);
+
+if ($hasErrors) {
 	exit(1);
 }
 
