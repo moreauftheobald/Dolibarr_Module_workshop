@@ -233,7 +233,8 @@ if (empty($reshook)) {
 			if ($date_end < $date_start) {
 				$date_end = dol_mktime(23, 59, 59, GETPOST('activityDate_startmonth'), GETPOST('activityDate_startday'), GETPOST('activityDate_startyear'));
 			}
-			$ret = $object->addActivity(0, $date_start, $date_end);
+			$activityType = GETPOSTINT('activity_type');
+			$ret = $object->addActivity($activityType, $date_start, $date_end);
 			if ($ret < 0) {
 				setEventMessages($langs->trans($object->error), null, 'errors');
 				break;
@@ -263,7 +264,8 @@ if (empty($reshook)) {
 				GETPOSTINT('activityDate_endday'),
 				GETPOSTINT('activityDate_endyear'));
 			$soc_id = GETPOSTINT('socid');
-			$ret = $object->updateActivity($act_id, 0, $date_start, $date_end, $soc_id);
+			$activityType = GETPOSTINT('activity_type');
+			$ret = $object->updateActivity($act_id, $activityType, $date_start, $date_end, $soc_id);
 			if ($ret < 0) {
 				setEventMessages('', $object->errors, "errors");
 				break;

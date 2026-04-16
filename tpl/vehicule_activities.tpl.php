@@ -48,8 +48,20 @@ if (!empty($editActId)) {
 	print '<input type="hidden" name="act_id" value="'.$editActId.'">';
 }
 
+// Charger les types d'activité depuis le dictionnaire
+$activityTypes = array();
+$sqlTypes = "SELECT rowid, label FROM ".$db->prefix()."workshop_vehicule_c_vehicule_activity_type WHERE active = 1 ORDER BY label ASC";
+$resTypes = $db->query($sqlTypes);
+if ($resTypes) {
+	while ($objType = $db->fetch_object($resTypes)) {
+		$activityTypes[$objType->rowid] = $objType->label;
+	}
+	$db->free($resTypes);
+}
+
 print '<table class="border" width="100%">'."\n";
 print '<tr class="liste_titre">';
+print '<td align="center">'.$langs->trans('ActivityType').'</td>';
 print '<td align="center">'.$langs->trans('DateStart').'</td>';
 print '<td align="center">'.$langs->trans('DateEnd').'</td>';
 print '<td align="center">'.$langs->trans('soc').'</td>';
@@ -58,11 +70,12 @@ print '</tr>';
 
 $ret = $object->getActivities('', '');
 if ($ret == 0) {
-	print '<tr><td align="center" colspan="4">'.$langs->trans('NoActivity').'</td></tr>';
+	print '<tr><td align="center" colspan="5">'.$langs->trans('NoActivity').'</td></tr>';
 } elseif ($ret > 0) {
 	foreach ($object->activities as $activity) {
 		if ($currentAction == 'editActivity' && $activity->id == $editActId) {
 			print '<tr>';
+			print '<td align="center">'.$form->selectarray('activity_type', $activityTypes, $activity->fk_type, 1).'</td>';
 			print '<td align="center">'.$form->selectDate($activity->date_start, 'activityDate_start').'</td>';
 			print '<td align="center">'.$form->selectDate($activity->date_end, 'activityDate_end').'</td>';
 			print '<td align="center">'.$form->select_thirdparty_list($activity->fk_soc, 'socid', 's.client = 1', '', 0, 0, array(), '', 0, 0, '', 'style="width: 80%"').'</td>';
@@ -70,6 +83,7 @@ if ($ret == 0) {
 			print '</tr>';
 		} else {
 			print '<tr>';
+			print '<td align="center">'.($activity->fk_type > 0 ? dol_escape_htmltag($activity->getType()) : '').'</td>';
 			print '<td align="center">'.dol_print_date($activity->date_start, "%d/%m/%Y").'</td>';
 			print '<td align="center">'.(!empty($activity->date_end) ? dol_print_date($activity->date_end, "%d/%m/%Y") : '').'</td>';
 			print '<td align="center">'.$activity->showOutputField($activity->fields['fk_soc'], 'fk_soc', $activity->fk_soc).'</td>';
@@ -84,6 +98,7 @@ if ($ret == 0) {
 
 if ($currentAction !== 'editActivity' && $currentAction !== 'delActivity') {
 	print '<tr id="newActivity">';
+	print '<td align="center">'.$form->selectarray('activity_type', $activityTypes, GETPOSTINT('activity_type'), 1).'</td>';
 	print '<td align="center">'.$form->selectDate('', 'activityDate_start').'</td>';
 	print '<td align="center">'.$form->selectDate('', 'activityDate_end').'</td>';
 	print '<td align="center">'.$object->showOutputField($object->fields['fk_soc'], 'fk_soc', $object->fk_soc).'</td>';
