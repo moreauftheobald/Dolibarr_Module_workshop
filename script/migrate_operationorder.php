@@ -144,6 +144,8 @@ $requiredOldTables = array(
 	'operationorder',
 	'operationorderdet',
 	'operationorder_status',
+	'c_operationorder_type',
+	'product_extrafields',
 );
 
 foreach ($requiredOldTables as $t) {
@@ -158,6 +160,7 @@ $requiredNewTables = array(
 	'workshop_operationorder_jobs',
 	'workshop_operationorderdet',
 	'workshop_operationorder_status',
+	'workshop_c_servicetype',
 );
 
 foreach ($requiredNewTables as $t) {
@@ -206,7 +209,8 @@ function out($msg, $level = 'info', $verbose = false)
 $cacheStatus      = array(); // code (string)                    => new status rowid
 $cacheConducteurs = array(); // UPPER(nom.prenom) (string)       => new conducteur rowid
 $cacheVehicules   = array(); // vin (string)                     => new vehicule rowid
-$cacheTags        = array(); // code (string)                    => new tag rowid
+$cacheTags         = array(); // code (string)                    => new tag rowid
+$cacheServiceTypes = array(); // code (string)                    => new servicetype rowid
 
 /**
  * Pré-charge le cache des statuts Workshop existants (par code).
@@ -276,6 +280,25 @@ function preloadCacheVehicules($db, &$cache)
 function preloadCacheTags($db, &$cache)
 {
 	$sql = "SELECT rowid, code FROM ".MAIN_DB_PREFIX."workshop_tag WHERE code IS NOT NULL AND code != ''";
+	$res = $db->query($sql);
+	if ($res) {
+		while ($obj = $db->fetch_object($res)) {
+			$cache[$obj->code] = (int) $obj->rowid;
+		}
+		$db->free($res);
+	}
+}
+
+/**
+ * Pré-charge le cache des ServiceType Workshop existants (par code).
+ *
+ * @param  DoliDB $db    Connexion base
+ * @param  array  $cache Référence vers $cacheServiceTypes
+ * @return void
+ */
+function preloadCacheServiceTypes($db, &$cache)
+{
+	$sql = "SELECT rowid, code FROM ".MAIN_DB_PREFIX."workshop_c_servicetype WHERE code IS NOT NULL AND code != ''";
 	$res = $db->query($sql);
 	if ($res) {
 		while ($obj = $db->fetch_object($res)) {
@@ -594,6 +617,97 @@ function ensureTag($db, $user, $oldCategVal, &$cache, $verbose)
 }
 
 
+/**
+ * Vérifie/crée le ServiceType Workshop correspondant à un ancien type d'opération.
+ * Clé de comparaison : code du type.
+ *
+ * Si $oldTypeId est vide/0, retourne le ServiceType "MECA_GEN" (créé si nécessaire).
+ *
+ * @param  DoliDB $db          Connexion base
+ * @param  User   $user        Utilisateur système
+ * @param  int    $oldTypeId   Rowid dans llx_c_operationorder_type (ou 0/NULL pour MECA_GEN)
+ * @param  array  $cache       Référence vers $cacheServiceTypes
+ * @param  bool   $verbose     Mode verbeux
+ * @return int                 Rowid du ServiceType Workshop, ou 0 si erreur
+ */
+function ensureServiceType($db, $user, $oldTypeId, &$cache, $verbose)
+{
+	// --- Cas par défaut : Mécanique Générale ---
+	if (empty($oldTypeId)) {
+		$code = 'MECA_GEN';
+		if (isset($cache[$code])) {
+			out("       ServiceType : code=".$code." → existant (id=".$cache[$code].")", 'debug', $verbose);
+			return $cache[$code];
+		}
+
+		$st = new ServiceType($db);
+		$st->code      = 'MECA_GEN';
+		$st->label     = 'Mécanique Générale';
+		$st->prix_mo   = 0;
+		$st->tva_tx_mo = 20;
+		$st->tva_tx_st = 20;
+		$st->plannable = 0;
+		$st->active    = 1;
+
+		$newId = $st->create($user, 1);
+		if ($newId > 0) {
+			$cache[$code] = $newId;
+			out("       ServiceType : code=MECA_GEN → CRÉÉ (id=".$newId.")", 'ok');
+			return $newId;
+		}
+		out("       ServiceType : MECA_GEN → ERREUR création : ".$st->error.' '.implode(', ', $st->errors), 'err');
+		return 0;
+	}
+
+	// --- Lecture de l'ancien type ---
+	$sql = "SELECT * FROM ".MAIN_DB_PREFIX."c_operationorder_type WHERE rowid = ".(int) $oldTypeId;
+	$res = $db->query($sql);
+	if (!$res || $db->num_rows($res) == 0) {
+		out("       ServiceType : ancien id=".$oldTypeId." introuvable → fallback MECA_GEN", 'warn');
+		return ensureServiceType($db, $user, 0, $cache, $verbose);
+	}
+	$oldType = $db->fetch_object($res);
+	$db->free($res);
+
+	$code = trim($oldType->code);
+	if (empty($code)) {
+		// Fabriquer un code à partir du label
+		$code = strtoupper(preg_replace('/[^A-Za-z0-9_]/', '_', substr(trim($oldType->label), 0, 20)));
+	}
+	if (empty($code)) {
+		out("       ServiceType : ancien id=".$oldTypeId." a un code ET label vides → fallback MECA_GEN", 'warn');
+		return ensureServiceType($db, $user, 0, $cache, $verbose);
+	}
+
+	// Déjà en cache ?
+	if (isset($cache[$code])) {
+		out("       ServiceType : code=".$code." → existant (id=".$cache[$code].")", 'debug', $verbose);
+		return $cache[$code];
+	}
+
+	// Créer le ServiceType Workshop
+	$st = new ServiceType($db);
+	$st->code      = $code;
+	$st->label     = !empty($oldType->label) ? $oldType->label : $code;
+	$st->fk_soc    = !empty($oldType->fk_soc) ? (int) $oldType->fk_soc : null;
+	$st->prix_mo   = 0;
+	$st->tva_tx_mo = 20;
+	$st->tva_tx_st = 20;
+	$st->plannable = 0;
+	$st->active    = 1;
+
+	$newId = $st->create($user, 1);
+	if ($newId > 0) {
+		$cache[$code] = $newId;
+		out("       ServiceType : code=".$code." (".$st->label.") → CRÉÉ (id=".$newId.")", 'ok');
+		return $newId;
+	}
+
+	out("       ServiceType : code=".$code." → ERREUR création : ".$st->error.' '.implode(', ', $st->errors), 'err');
+	return 0;
+}
+
+
 // ============================================================================
 // 9. Comptage et lecture des anciens OR
 // ============================================================================
@@ -641,6 +755,8 @@ preloadCacheVehicules($db, $cacheVehicules);
 out("  Véhicules Workshop en cache : ".count($cacheVehicules), 'debug', $verbose);
 preloadCacheTags($db, $cacheTags);
 out("  Tags Workshop en cache : ".count($cacheTags), 'debug', $verbose);
+preloadCacheServiceTypes($db, $cacheServiceTypes);
+out("  ServiceTypes Workshop en cache : ".count($cacheServiceTypes), 'debug', $verbose);
 print "\n";
 
 // ============================================================================
@@ -825,12 +941,406 @@ while ($oldOR = $db->fetch_object($resql)) {
 	}
 
 	// =====================================================
-	// TODO : Phase 1b — Créer les jobs + lignes de l'OR
+	// Phase 1b — Créer les jobs + lignes de l'OR
 	// =====================================================
+
+	// 1b.1 : Lire toutes les anciennes lignes de cet OR avec extrafields produit
+	$sqlDet  = "SELECT od.*,";
+	$sqlDet .= " COALESCE(pex.or_is_job, 0) AS ex_or_is_job,";
+	$sqlDet .= " COALESCE(pex.or_scan, 0) AS ex_or_scan,";
+	$sqlDet .= " COALESCE(pex.oorder_available_for_supplier_order, 0) AS ex_or_st";
+	$sqlDet .= " FROM ".MAIN_DB_PREFIX."operationorderdet od";
+	$sqlDet .= " LEFT JOIN ".MAIN_DB_PREFIX."product p ON p.rowid = od.fk_product";
+	$sqlDet .= " LEFT JOIN ".MAIN_DB_PREFIX."product_extrafields pex ON pex.fk_object = p.rowid";
+	$sqlDet .= " WHERE od.fk_operation_order = ".(int) $oldOR->rowid;
+	$sqlDet .= " ORDER BY od.rang ASC, od.rowid ASC";
+
+	$resDet = $db->query($sqlDet);
+	if (!$resDet) {
+		$db->rollback();
+		$reason = "Erreur lecture anciennes lignes : ".$db->lasterror();
+		out("       → ".$reason, 'err');
+		$errorDetails[] = array('old_id' => $oldOR->rowid, 'ref' => $oldOR->ref, 'reason' => $reason);
+		$countErrors++;
+		continue;
+	}
+
+	$allLines = array();
+	while ($line = $db->fetch_object($resDet)) {
+		$allLines[] = $line;
+	}
+	$db->free($resDet);
+
+	// 1b.2 : Classifier les lignes
+	$jobLines     = array(); // Lignes qui SONT des jobs (or_is_job=1, pas enfant)
+	$moLines      = array(); // Main d'œuvre (or_scan=1)
+	$stLines      = array(); // Sous-traitance (oorder_available_for_supplier_order=1)
+	$regularLines = array(); // Produits/services normaux
+
+	foreach ($allLines as $line) {
+		$isJob = ((int) $line->ex_or_is_job === 1) && (empty($line->fk_parent_line) || (int) $line->fk_parent_line === 0);
+		$isMO  = ((int) $line->ex_or_scan === 1) && !$isJob;
+		$isST  = ((int) $line->ex_or_st === 1) && !$isJob && !$isMO;
+
+		if ($isJob) {
+			$jobLines[] = $line;
+		} elseif ($isMO) {
+			$moLines[] = $line;
+		} elseif ($isST) {
+			$stLines[] = $line;
+		} else {
+			$regularLines[] = $line;
+		}
+	}
+
+	out("       Lignes : ".count($allLines)." total (".count($jobLines)." jobs, ".count($moLines)." MO, ".count($stLines)." ST, ".count($regularLines)." régulières)", 'debug', $verbose);
+
+	// 1b.3 : Ensemble des rowid des anciennes lignes-jobs (pour résolution des parents)
+	$jobRowids = array();
+	foreach ($jobLines as $jl) {
+		$jobRowids[] = (int) $jl->rowid;
+	}
+
+	// 1b.4 : Agrégation MO par job parent
+	$moAgg = array();       // old_parent_rowid => array('qty' => float, 'total_ht' => float, 'descriptions' => array())
+	$orphanMoAgg = array('qty' => 0, 'total_ht' => 0, 'descriptions' => array());
+
+	foreach ($moLines as $ml) {
+		$parentId = (int) $ml->fk_parent_line;
+		if ($parentId > 0 && in_array($parentId, $jobRowids)) {
+			if (!isset($moAgg[$parentId])) {
+				$moAgg[$parentId] = array('qty' => 0, 'total_ht' => 0, 'descriptions' => array());
+			}
+			$moAgg[$parentId]['qty']      += (float) $ml->qty;
+			$moAgg[$parentId]['total_ht'] += (float) $ml->total_ht;
+			if (!empty(trim($ml->description))) {
+				$moAgg[$parentId]['descriptions'][] = $ml->description;
+			}
+		} else {
+			$orphanMoAgg['qty']      += (float) $ml->qty;
+			$orphanMoAgg['total_ht'] += (float) $ml->total_ht;
+			if (!empty(trim($ml->description))) {
+				$orphanMoAgg['descriptions'][] = $ml->description;
+			}
+		}
+	}
+
+	// 1b.5 : Agrégation ST par job parent
+	$stAgg = array();       // old_parent_rowid => array('total_ht' => float, 'descriptions' => array())
+	$orphanStAgg = array('total_ht' => 0, 'descriptions' => array());
+
+	foreach ($stLines as $sl) {
+		$parentId = (int) $sl->fk_parent_line;
+		if ($parentId > 0 && in_array($parentId, $jobRowids)) {
+			if (!isset($stAgg[$parentId])) {
+				$stAgg[$parentId] = array('total_ht' => 0, 'descriptions' => array());
+			}
+			$stAgg[$parentId]['total_ht'] += (float) $sl->total_ht;
+			if (!empty(trim($sl->description))) {
+				$stAgg[$parentId]['descriptions'][] = $sl->description;
+			}
+		} else {
+			$orphanStAgg['total_ht'] += (float) $sl->total_ht;
+			if (!empty(trim($sl->description))) {
+				$orphanStAgg['descriptions'][] = $sl->description;
+			}
+		}
+	}
+
+	// 1b.6 : Identifier les lignes régulières orphelines vs rattachées
+	$orphanRegularLines   = array();
+	$parentedRegularLines = array(); // old_parent_rowid => array(lines)
+	foreach ($regularLines as $rl) {
+		$parentId = (int) $rl->fk_parent_line;
+		if ($parentId > 0 && in_array($parentId, $jobRowids)) {
+			if (!isset($parentedRegularLines[$parentId])) {
+				$parentedRegularLines[$parentId] = array();
+			}
+			$parentedRegularLines[$parentId][] = $rl;
+		} else {
+			$orphanRegularLines[] = $rl;
+		}
+	}
+
+	// 1b.7 : Déterminer si un job catch-all est nécessaire
+	$needCatchAll = !empty($allLines) && (
+		empty($jobLines)
+		|| !empty($orphanRegularLines)
+		|| $orphanMoAgg['qty'] > 0
+		|| $orphanMoAgg['total_ht'] != 0
+		|| $orphanStAgg['total_ht'] != 0
+	);
+
+	// 1b.8 : Créer les jobs issus des lignes or_is_job=1
+	$jobMapping = array(); // old_det_rowid => Operationorder_jobs object (avec ->id renseigné)
+	$allNewJobs = array(); // tous les nouveaux jobs créés
+	$phaseError = false;
+
+	foreach ($jobLines as $jl) {
+		// Résolution du ServiceType
+		$newServiceTypeId = ensureServiceType($db, $user, $jl->fk_c_operationorder_type, $cacheServiceTypes, $verbose);
+
+		// Construction de la description : originale + MO + ST concaténées
+		$descParts = array();
+		if (!empty(trim($jl->description))) {
+			$descParts[] = $jl->description;
+		}
+		if (isset($moAgg[(int) $jl->rowid]) && !empty($moAgg[(int) $jl->rowid]['descriptions'])) {
+			$descParts = array_merge($descParts, $moAgg[(int) $jl->rowid]['descriptions']);
+		}
+		if (isset($stAgg[(int) $jl->rowid]) && !empty($stAgg[(int) $jl->rowid]['descriptions'])) {
+			$descParts = array_merge($descParts, $stAgg[(int) $jl->rowid]['descriptions']);
+		}
+
+		// Résolution du fk_soc depuis le ServiceType
+		$jobFkSoc = null;
+		if ($newServiceTypeId > 0) {
+			$sqlST = "SELECT fk_soc FROM ".MAIN_DB_PREFIX."workshop_c_servicetype WHERE rowid = ".(int) $newServiceTypeId;
+			$resST = $db->query($sqlST);
+			if ($resST && $db->num_rows($resST) > 0) {
+				$objST = $db->fetch_object($resST);
+				$jobFkSoc = !empty($objST->fk_soc) ? (int) $objST->fk_soc : null;
+			}
+		}
+
+		// MO agrégée pour ce job
+		$jobQtyMo    = isset($moAgg[(int) $jl->rowid]) ? $moAgg[(int) $jl->rowid]['qty'] : 0;
+		$jobTotalMo  = isset($moAgg[(int) $jl->rowid]) ? $moAgg[(int) $jl->rowid]['total_ht'] : 0;
+		$jobPrixMo   = ($jobQtyMo > 0) ? $jobTotalMo / $jobQtyMo : 0;
+
+		// ST agrégée pour ce job
+		$jobTotalExt = isset($stAgg[(int) $jl->rowid]) ? $stAgg[(int) $jl->rowid]['total_ht'] : 0;
+
+		$job = new Operationorder_jobs($db);
+		$job->fk_operationorder = $newORId;
+		$job->label             = !empty($jl->label) ? $jl->label : 'Job';
+		$job->description       = !empty($descParts) ? implode("\n", $descParts) : null;
+		$job->fk_service_type   = $newServiceTypeId > 0 ? $newServiceTypeId : null;
+		$job->fk_job_type       = null;
+		$job->fk_soc            = $jobFkSoc;
+		$job->fk_user_assign    = null;
+		$job->qty_mo            = $jobQtyMo;
+		$job->prix_mo           = $jobPrixMo;
+		$job->remise_percent    = 0;
+		$job->tva_tx_mo         = 20;
+		$job->tva_tx_st         = 20;
+		$job->rang              = (int) $jl->rang;
+		$job->time_planned      = (int) $jl->time_planned;
+		$job->time_spent        = (int) $jl->time_spent;
+		$job->total_ht          = 0;
+		$job->total_ht_part     = 0;
+		$job->total_ht_mo       = 0;
+		$job->total_ht_service  = 0;
+		$job->total_ht_external = $jobTotalExt;
+		$job->total_ht_refund   = 0;
+		$job->fk_user_creat     = !empty($jl->fk_user_creat) ? (int) $jl->fk_user_creat : $user->id;
+		$job->fk_user_modif     = !empty($jl->fk_user_modif) ? (int) $jl->fk_user_modif : null;
+		$job->import_key        = 'mig-job-'.(int) $jl->rowid;
+
+		$newJobId = $job->create($user, 1);
+		if ($newJobId <= 0) {
+			$reason = "Erreur création job (ancien det rowid=".$jl->rowid.") : ".$job->error.' '.implode(', ', $job->errors);
+			out("       → ".$reason, 'err');
+			$phaseError = true;
+			break;
+		}
+
+		$jobMapping[(int) $jl->rowid] = $job;
+		$allNewJobs[] = $job;
+		out("       Job créé : \"".$job->label."\" (new id=".$newJobId.", ancien det=".$jl->rowid.")", 'debug', $verbose);
+	}
+
+	if ($phaseError) {
+		$db->rollback();
+		$errorDetails[] = array('old_id' => $oldOR->rowid, 'ref' => $oldOR->ref, 'reason' => 'Erreur création des jobs');
+		$countErrors++;
+		continue;
+	}
+
+	// 1b.9 : Créer le job catch-all "Mécanique Générale" si nécessaire
+	$catchAllJob = null;
+	if ($needCatchAll) {
+		$mecaGenSTId = ensureServiceType($db, $user, 0, $cacheServiceTypes, $verbose);
+
+		// Description depuis MO/ST orphelines
+		$catchDescParts = array();
+		if (!empty($orphanMoAgg['descriptions'])) {
+			$catchDescParts = array_merge($catchDescParts, $orphanMoAgg['descriptions']);
+		}
+		if (!empty($orphanStAgg['descriptions'])) {
+			$catchDescParts = array_merge($catchDescParts, $orphanStAgg['descriptions']);
+		}
+
+		$catchAllJob = new Operationorder_jobs($db);
+		$catchAllJob->fk_operationorder = $newORId;
+		$catchAllJob->label             = 'Mécanique Générale';
+		$catchAllJob->description       = !empty($catchDescParts) ? implode("\n", $catchDescParts) : null;
+		$catchAllJob->fk_service_type   = $mecaGenSTId > 0 ? $mecaGenSTId : null;
+		$catchAllJob->fk_job_type       = null;
+		$catchAllJob->fk_soc            = null;
+		$catchAllJob->fk_user_assign    = null;
+		$catchAllJob->qty_mo            = $orphanMoAgg['qty'];
+		$catchAllJob->prix_mo           = ($orphanMoAgg['qty'] > 0) ? $orphanMoAgg['total_ht'] / $orphanMoAgg['qty'] : 0;
+		$catchAllJob->remise_percent    = 0;
+		$catchAllJob->tva_tx_mo         = 20;
+		$catchAllJob->tva_tx_st         = 20;
+		$catchAllJob->rang              = 999;
+		$catchAllJob->time_planned      = 0;
+		$catchAllJob->time_spent        = 0;
+		$catchAllJob->total_ht          = 0;
+		$catchAllJob->total_ht_part     = 0;
+		$catchAllJob->total_ht_mo       = 0;
+		$catchAllJob->total_ht_service  = 0;
+		$catchAllJob->total_ht_external = $orphanStAgg['total_ht'];
+		$catchAllJob->total_ht_refund   = 0;
+		$catchAllJob->fk_user_creat     = !empty($oldOR->fk_user_creat) ? (int) $oldOR->fk_user_creat : $user->id;
+		$catchAllJob->import_key        = 'mig-catchall-'.$newORId;
+
+		$newCatchAllId = $catchAllJob->create($user, 1);
+		if ($newCatchAllId <= 0) {
+			$reason = "Erreur création job catch-all : ".$catchAllJob->error.' '.implode(', ', $catchAllJob->errors);
+			out("       → ".$reason, 'err');
+			$db->rollback();
+			$errorDetails[] = array('old_id' => $oldOR->rowid, 'ref' => $oldOR->ref, 'reason' => $reason);
+			$countErrors++;
+			continue;
+		}
+
+		$allNewJobs[] = $catchAllJob;
+		out("       Job catch-all \"Mécanique Générale\" créé (new id=".$newCatchAllId.")", 'debug', $verbose);
+	}
+
+	// 1b.10 : Créer les lignes de détail (Operationorderdet) pour les lignes régulières
+	foreach ($regularLines as $rl) {
+		// Déterminer le job parent
+		$parentId = (int) $rl->fk_parent_line;
+		$targetJob = null;
+		if ($parentId > 0 && isset($jobMapping[$parentId])) {
+			$targetJob = $jobMapping[$parentId];
+		} elseif ($catchAllJob) {
+			$targetJob = $catchAllJob;
+		}
+
+		if (!$targetJob) {
+			out("       → WARN : ligne orpheline sans catch-all (det rowid=".$rl->rowid."), ignorée", 'warn');
+			continue;
+		}
+
+		$det = new Operationorderdet($db);
+		$det->fk_operationorder_jobs = $targetJob->id;
+		$det->fk_product       = !empty($rl->fk_product) ? (int) $rl->fk_product : null;
+		$det->label            = $rl->label;
+		$det->description      = $rl->description;
+		$det->product_type     = (int) $rl->product_type;
+		$det->qty              = (float) $rl->qty;
+		$det->price            = (float) $rl->price;
+		$det->remise_percent   = (float) $rl->remise_percent;
+		$det->pc               = $rl->pc;
+		$det->pr               = !empty($rl->pr) ? (float) $rl->pr : null;
+		$det->fk_warehouse     = (!empty($rl->fk_warehouse) && $rl->fk_warehouse !== '0' && $rl->fk_warehouse !== '') ? (int) $rl->fk_warehouse : null;
+		$det->info_bits        = (int) $rl->info_bits;
+		$det->rang             = (int) $rl->rang;
+		$det->fk_user_creat    = !empty($rl->fk_user_creat) ? (int) $rl->fk_user_creat : $user->id;
+		$det->fk_user_modif    = !empty($rl->fk_user_modif) ? (int) $rl->fk_user_modif : null;
+		$det->import_key       = (string) $rl->rowid;
+
+		// create() appelle computeTotals() qui recalcule total_ht, total_ht_part/service/refund
+		$newDetId = $det->create($user, 1);
+		if ($newDetId <= 0) {
+			$reason = "Erreur création det (ancien det rowid=".$rl->rowid.") : ".$det->error.' '.implode(', ', $det->errors);
+			out("       → ".$reason, 'err');
+			$phaseError = true;
+			break;
+		}
+
+		out("       Det créée : id=".$newDetId." (ancien det=".$rl->rowid.", job=".$targetJob->id.")", 'debug', $verbose);
+	}
+
+	if ($phaseError) {
+		$db->rollback();
+		$errorDetails[] = array('old_id' => $oldOR->rowid, 'ref' => $oldOR->ref, 'reason' => 'Erreur création des lignes de détail');
+		$countErrors++;
+		continue;
+	}
+
+	// 1b.11 : Migrer les liens element_element pour les lignes ST
+	foreach ($stLines as $sl) {
+		// Déterminer le job cible
+		$parentId = (int) $sl->fk_parent_line;
+		$targetJob = null;
+		if ($parentId > 0 && isset($jobMapping[$parentId])) {
+			$targetJob = $jobMapping[$parentId];
+		} elseif ($catchAllJob) {
+			$targetJob = $catchAllJob;
+		}
+		if (!$targetJob) {
+			continue;
+		}
+
+		// Liens operationorderdet → order_supplier (source = ancienne det)
+		$sqlLink  = "SELECT fk_target FROM ".MAIN_DB_PREFIX."element_element";
+		$sqlLink .= " WHERE fk_source = ".(int) $sl->rowid;
+		$sqlLink .= " AND sourcetype = 'operationorderdet' AND targettype = 'order_supplier'";
+		$resLink = $db->query($sqlLink);
+		if ($resLink) {
+			while ($objLink = $db->fetch_object($resLink)) {
+				$sqlIns = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."element_element (fk_source, sourcetype, fk_target, targettype)";
+				$sqlIns .= " VALUES (".(int) $targetJob->id.", 'operationorder_jobs', ".(int) $objLink->fk_target.", 'order_supplier')";
+				$db->query($sqlIns);
+			}
+			$db->free($resLink);
+		}
+
+		// Liens order_supplier → operationorderdet (target = ancienne det)
+		$sqlLink2  = "SELECT fk_source FROM ".MAIN_DB_PREFIX."element_element";
+		$sqlLink2 .= " WHERE fk_target = ".(int) $sl->rowid;
+		$sqlLink2 .= " AND targettype = 'operationorderdet' AND sourcetype = 'order_supplier'";
+		$resLink2 = $db->query($sqlLink2);
+		if ($resLink2) {
+			while ($objLink2 = $db->fetch_object($resLink2)) {
+				$sqlIns2 = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."element_element (fk_source, sourcetype, fk_target, targettype)";
+				$sqlIns2 .= " VALUES (".(int) $objLink2->fk_source.", 'order_supplier', ".(int) $targetJob->id.", 'operationorder_jobs')";
+				$db->query($sqlIns2);
+			}
+			$db->free($resLink2);
+		}
+	}
+
+	// 1b.12 : Migrer les liens element_element au niveau OR
+	// operationorder → X  devient  workshop_operationorder → X
+	// X → operationorder  devient  X → workshop_operationorder
+	$sqlOrLink  = "SELECT rowid, fk_source, sourcetype, fk_target, targettype";
+	$sqlOrLink .= " FROM ".MAIN_DB_PREFIX."element_element";
+	$sqlOrLink .= " WHERE (fk_source = ".(int) $oldOR->rowid." AND sourcetype = 'operationorder')";
+	$sqlOrLink .= " OR (fk_target = ".(int) $oldOR->rowid." AND targettype = 'operationorder')";
+	$resOrLink = $db->query($sqlOrLink);
+	if ($resOrLink) {
+		while ($objOrLink = $db->fetch_object($resOrLink)) {
+			if ($objOrLink->sourcetype === 'operationorder') {
+				$sqlInsOr = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."element_element (fk_source, sourcetype, fk_target, targettype)";
+				$sqlInsOr .= " VALUES (".(int) $newORId.", 'workshop_operationorder', ".(int) $objOrLink->fk_target.", '".$db->escape($objOrLink->targettype)."')";
+				$db->query($sqlInsOr);
+			} elseif ($objOrLink->targettype === 'operationorder') {
+				$sqlInsOr = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."element_element (fk_source, sourcetype, fk_target, targettype)";
+				$sqlInsOr .= " VALUES (".(int) $objOrLink->fk_source.", '".$db->escape($objOrLink->sourcetype)."', ".(int) $newORId.", 'workshop_operationorder')";
+				$db->query($sqlInsOr);
+			}
+		}
+		$db->free($resOrLink);
+	}
+
+	// 1b.13 : Recalcul des totaux — jobs puis OR
+	$jobCount = count($allNewJobs);
+	foreach ($allNewJobs as $job) {
+		$job->updateTotals($user);
+	}
+	$or->updateTotals($user);
+
+	out("       Totaux recalculés (".$jobCount." jobs, ".count($regularLines)." det)", 'debug', $verbose);
 
 	$db->commit();
 
-	out("       → OR créé (new id=".$newORId.")", 'ok');
+	out("       → OR migré (new id=".$newORId.", ".$jobCount." jobs, ".count($regularLines)." det)", 'ok');
 	$countMigrated++;
 }
 
