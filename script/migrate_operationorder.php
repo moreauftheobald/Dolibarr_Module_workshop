@@ -1277,47 +1277,91 @@ while ($oldOR = $db->fetch_object($resql)) {
 		continue;
 	}
 
-	// 1b.11 : Migrer les liens element_element pour les lignes ST
-	foreach ($stLines as $sl) {
-		// Déterminer le job cible
-		$parentId = (int) $sl->fk_parent_line;
-		$targetJob = null;
-		if ($parentId > 0 && isset($jobMapping[$parentId])) {
-			$targetJob = $jobMapping[$parentId];
-		} elseif ($catchAllJob) {
-			$targetJob = $catchAllJob;
-		}
-		if (!$targetJob) {
+	// 1b.11 : Migrer les liens element_element des lignes vers les jobs
+	// On ne se fie PAS à la classification ST (ex_or_st) car l'extrafield
+	// peut être absent ou vide. On cherche directement dans element_element
+	// tous les liens operationorderdet → order_supplier pour les lignes de cet OR.
+
+	// Construire la map old_det_rowid → target new job (pour toutes les lignes)
+	$detToJobMap = array(); // old_det_rowid => Operationorder_jobs object
+	foreach ($allLines as $line) {
+		$lineRowid = (int) $line->rowid;
+		$parentId  = (int) $line->fk_parent_line;
+
+		// Si la ligne EST un job, elle-même n'a pas de lien ST ; ce sont ses enfants
+		if (in_array($lineRowid, $jobRowids)) {
 			continue;
 		}
 
-		// Liens operationorderdet → order_supplier (source = ancienne det)
-		$sqlLink  = "SELECT fk_target FROM ".MAIN_DB_PREFIX."element_element";
-		$sqlLink .= " WHERE fk_source = ".(int) $sl->rowid;
-		$sqlLink .= " AND sourcetype = 'operationorderdet' AND targettype = 'order_supplier'";
-		$resLink = $db->query($sqlLink);
-		if ($resLink) {
-			while ($objLink = $db->fetch_object($resLink)) {
+		if ($parentId > 0 && isset($jobMapping[$parentId])) {
+			$detToJobMap[$lineRowid] = $jobMapping[$parentId];
+		} elseif ($catchAllJob) {
+			$detToJobMap[$lineRowid] = $catchAllJob;
+		}
+	}
+
+	// Collecter tous les old det rowids pour la requête IN (...)
+	$allOldDetRowids = array();
+	foreach ($allLines as $line) {
+		$allOldDetRowids[] = (int) $line->rowid;
+	}
+
+	$stLinkCount = 0;
+	if (!empty($allOldDetRowids)) {
+		// Liens : fk_source=old_det, sourcetype='operationorderdet', targettype='order_supplier'
+		$sqlSTLinks  = "SELECT fk_source, fk_target FROM ".MAIN_DB_PREFIX."element_element";
+		$sqlSTLinks .= " WHERE sourcetype = 'operationorderdet' AND targettype = 'order_supplier'";
+		$sqlSTLinks .= " AND fk_source IN (".implode(',', $allOldDetRowids).")";
+		$resSTLinks = $db->query($sqlSTLinks);
+		if ($resSTLinks) {
+			while ($objSTLink = $db->fetch_object($resSTLinks)) {
+				$oldDetId        = (int) $objSTLink->fk_source;
+				$supplierOrderId = (int) $objSTLink->fk_target;
+				$targetJob       = isset($detToJobMap[$oldDetId]) ? $detToJobMap[$oldDetId] : null;
+				if (!$targetJob && $catchAllJob) {
+					$targetJob = $catchAllJob;
+				}
+				if (!$targetJob) {
+					continue;
+				}
+
+				// Créer le lien job → order_supplier (nouveau format)
 				$sqlIns = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."element_element (fk_source, sourcetype, fk_target, targettype)";
-				$sqlIns .= " VALUES (".(int) $targetJob->id.", 'operationorder_jobs', ".(int) $objLink->fk_target.", 'order_supplier')";
+				$sqlIns .= " VALUES (".(int) $targetJob->id.", 'operationorder_jobs', ".$supplierOrderId.", 'order_supplier')";
 				$db->query($sqlIns);
+				$stLinkCount++;
 			}
-			$db->free($resLink);
+			$db->free($resSTLinks);
 		}
 
-		// Liens order_supplier → operationorderdet (target = ancienne det)
-		$sqlLink2  = "SELECT fk_source FROM ".MAIN_DB_PREFIX."element_element";
-		$sqlLink2 .= " WHERE fk_target = ".(int) $sl->rowid;
-		$sqlLink2 .= " AND targettype = 'operationorderdet' AND sourcetype = 'order_supplier'";
-		$resLink2 = $db->query($sqlLink2);
-		if ($resLink2) {
-			while ($objLink2 = $db->fetch_object($resLink2)) {
+		// Liens inversés : fk_target=old_det, targettype='operationorderdet', sourcetype='order_supplier'
+		$sqlSTLinks2  = "SELECT fk_source, fk_target FROM ".MAIN_DB_PREFIX."element_element";
+		$sqlSTLinks2 .= " WHERE targettype = 'operationorderdet' AND sourcetype = 'order_supplier'";
+		$sqlSTLinks2 .= " AND fk_target IN (".implode(',', $allOldDetRowids).")";
+		$resSTLinks2 = $db->query($sqlSTLinks2);
+		if ($resSTLinks2) {
+			while ($objSTLink2 = $db->fetch_object($resSTLinks2)) {
+				$oldDetId        = (int) $objSTLink2->fk_target;
+				$supplierOrderId = (int) $objSTLink2->fk_source;
+				$targetJob       = isset($detToJobMap[$oldDetId]) ? $detToJobMap[$oldDetId] : null;
+				if (!$targetJob && $catchAllJob) {
+					$targetJob = $catchAllJob;
+				}
+				if (!$targetJob) {
+					continue;
+				}
+
 				$sqlIns2 = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."element_element (fk_source, sourcetype, fk_target, targettype)";
-				$sqlIns2 .= " VALUES (".(int) $objLink2->fk_source.", 'order_supplier', ".(int) $targetJob->id.", 'operationorder_jobs')";
+				$sqlIns2 .= " VALUES (".(int) $targetJob->id.", 'operationorder_jobs', ".$supplierOrderId.", 'order_supplier')";
 				$db->query($sqlIns2);
+				$stLinkCount++;
 			}
-			$db->free($resLink2);
+			$db->free($resSTLinks2);
 		}
+	}
+
+	if ($stLinkCount > 0) {
+		out("       ST liens job→order_supplier créés : ".$stLinkCount, 'debug', $verbose);
 	}
 
 	// 1b.12 : Migrer les liens element_element au niveau OR
@@ -1346,13 +1390,15 @@ while ($oldOR = $db->fetch_object($resql)) {
 	}
 
 	// 1b.13 : Recalcul des totaux — jobs puis OR
+	// refreshExternalAmount() recalcule total_ht_external depuis les liens
+	// element_element (job→order_supplier) puis appelle updateTotals() en interne
 	$jobCount = count($allNewJobs);
 	foreach ($allNewJobs as $job) {
-		$job->updateTotals($user);
+		$job->refreshExternalAmount($user);
 	}
 	$or->updateTotals($user);
 
-	out("       Totaux recalculés (".$jobCount." jobs, ".count($regularLines)." det)", 'debug', $verbose);
+	out("       Totaux recalculés (".$jobCount." jobs, ".count($regularLines)." det, ".$stLinkCount." ST liens)", 'debug', $verbose);
 
 	$db->commit();
 
