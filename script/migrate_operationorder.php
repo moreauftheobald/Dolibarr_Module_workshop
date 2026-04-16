@@ -1006,23 +1006,36 @@ while ($oldOR = $db->fetch_object($resql)) {
 	}
 
 	// 1b.4 : Agrégation MO par job parent
-	$moAgg = array();       // old_parent_rowid => array('qty' => float, 'total_ht' => float, 'descriptions' => array())
-	$orphanMoAgg = array('qty' => 0, 'total_ht' => 0, 'descriptions' => array());
+	// Pour les OR créés avant le 01/01/2026, la quantité MO = time_spent (secondes) / 3600
+	// Pour les OR plus récents, la quantité MO = qty de la ligne
+	// Le prix horaire MO vient du champ price de la ligne MO
+	$isOldOR = (!empty($oldOR->date_creation) && $oldOR->date_creation < '2026-01-01');
+
+	$moAgg = array();       // old_parent_rowid => array('qty' => float, 'prices' => array(), 'descriptions' => array())
+	$orphanMoAgg = array('qty' => 0, 'prices' => array(), 'descriptions' => array());
 
 	foreach ($moLines as $ml) {
+		// Quantité : time_spent en heures centièmes pour les anciens OR, sinon qty
+		$moQty   = $isOldOR ? ((float) $ml->time_spent / 3600) : (float) $ml->qty;
+		$moPrice = (float) $ml->price;
+
 		$parentId = (int) $ml->fk_parent_line;
 		if ($parentId > 0 && in_array($parentId, $jobRowids)) {
 			if (!isset($moAgg[$parentId])) {
-				$moAgg[$parentId] = array('qty' => 0, 'total_ht' => 0, 'descriptions' => array());
+				$moAgg[$parentId] = array('qty' => 0, 'prices' => array(), 'descriptions' => array());
 			}
-			$moAgg[$parentId]['qty']      += (float) $ml->qty;
-			$moAgg[$parentId]['total_ht'] += (float) $ml->total_ht;
+			$moAgg[$parentId]['qty'] += $moQty;
+			if ($moPrice > 0) {
+				$moAgg[$parentId]['prices'][] = $moPrice;
+			}
 			if (!empty(trim($ml->description))) {
 				$moAgg[$parentId]['descriptions'][] = $ml->description;
 			}
 		} else {
-			$orphanMoAgg['qty']      += (float) $ml->qty;
-			$orphanMoAgg['total_ht'] += (float) $ml->total_ht;
+			$orphanMoAgg['qty'] += $moQty;
+			if ($moPrice > 0) {
+				$orphanMoAgg['prices'][] = $moPrice;
+			}
 			if (!empty(trim($ml->description))) {
 				$orphanMoAgg['descriptions'][] = $ml->description;
 			}
@@ -1071,7 +1084,7 @@ while ($oldOR = $db->fetch_object($resql)) {
 		empty($jobLines)
 		|| !empty($orphanRegularLines)
 		|| $orphanMoAgg['qty'] > 0
-		|| $orphanMoAgg['total_ht'] != 0
+		|| !empty($orphanMoAgg['prices'])
 		|| $orphanStAgg['total_ht'] != 0
 	);
 
@@ -1108,9 +1121,9 @@ while ($oldOR = $db->fetch_object($resql)) {
 		}
 
 		// MO agrégée pour ce job
-		$jobQtyMo    = isset($moAgg[(int) $jl->rowid]) ? $moAgg[(int) $jl->rowid]['qty'] : 0;
-		$jobTotalMo  = isset($moAgg[(int) $jl->rowid]) ? $moAgg[(int) $jl->rowid]['total_ht'] : 0;
-		$jobPrixMo   = ($jobQtyMo > 0) ? $jobTotalMo / $jobQtyMo : 0;
+		$jobQtyMo  = isset($moAgg[(int) $jl->rowid]) ? $moAgg[(int) $jl->rowid]['qty'] : 0;
+		$moPrices  = isset($moAgg[(int) $jl->rowid]) ? $moAgg[(int) $jl->rowid]['prices'] : array();
+		$jobPrixMo = !empty($moPrices) ? array_sum($moPrices) / count($moPrices) : 0;
 
 		// ST agrégée pour ce job
 		$jobTotalExt = isset($stAgg[(int) $jl->rowid]) ? $stAgg[(int) $jl->rowid]['total_ht'] : 0;
@@ -1184,7 +1197,8 @@ while ($oldOR = $db->fetch_object($resql)) {
 		$catchAllJob->fk_soc            = null;
 		$catchAllJob->fk_user_assign    = null;
 		$catchAllJob->qty_mo            = $orphanMoAgg['qty'];
-		$catchAllJob->prix_mo           = ($orphanMoAgg['qty'] > 0) ? $orphanMoAgg['total_ht'] / $orphanMoAgg['qty'] : 0;
+		$orphanMoPrices = $orphanMoAgg['prices'];
+		$catchAllJob->prix_mo           = !empty($orphanMoPrices) ? array_sum($orphanMoPrices) / count($orphanMoPrices) : 0;
 		$catchAllJob->remise_percent    = 0;
 		$catchAllJob->tva_tx_mo         = 20;
 		$catchAllJob->tva_tx_st         = 20;
