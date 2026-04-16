@@ -16,63 +16,44 @@
  */
 
 // ============================================================
-// Bootstrap Dolibarr CLI
+// Vérification CLI
 // ============================================================
-if (!defined('NOSESSION')) {
-	define('NOSESSION', '1');
-}
-if (!defined('NOTOKENRENEWAL')) {
-	define('NOTOKENRENEWAL', '1');
-}
-if (!defined('NOREQUIREMENU')) {
-	define('NOREQUIREMENU', '1');
-}
-if (!defined('NOREQUIREHTML')) {
-	define('NOREQUIREHTML', '1');
-}
-if (!defined('NOREQUIREAJAX')) {
-	define('NOREQUIREAJAX', '1');
-}
-if (!defined('NOLOGIN')) {
-	define('NOLOGIN', '1');
-}
-if (!defined('NOCSRFCHECK')) {
-	define('NOCSRFCHECK', '1');
+if (php_sapi_name() !== 'cli') {
+	die("Ce script doit être exécuté en ligne de commande.\n");
 }
 
-// Recherche du main.inc.php de Dolibarr
-$res = 0;
-if (!$res && !empty($_SERVER["CONTEXT_DOCUMENT_ROOT"])) {
-	$res = @include $_SERVER["CONTEXT_DOCUMENT_ROOT"]."/main.inc.php";
+// ============================================================
+// Bootstrap Dolibarr CLI
+// ============================================================
+if (!defined('NOTOKENRENEWAL'))  define('NOTOKENRENEWAL', 1);
+if (!defined('NOREQUIREMENU'))   define('NOREQUIREMENU', 1);
+if (!defined('NOREQUIREHTML'))   define('NOREQUIREHTML', 1);
+if (!defined('NOREQUIREAJAX'))   define('NOREQUIREAJAX', 1);
+if (!defined('NOLOGIN'))         define('NOLOGIN', 1);
+if (!defined('NOSESSION'))       define('NOSESSION', 1);
+
+// Recherche du master.inc.php — le module peut être dans htdocs/custom/workshop/ ou htdocs/workshop/
+$masterPaths = array(
+	dirname(__FILE__).'/../../../master.inc.php',         // custom/workshop/script/ → htdocs/
+	dirname(__FILE__).'/../../../../master.inc.php',      // custom/workshop/script/migration/ → htdocs/
+	dirname(__FILE__).'/../../master.inc.php',            // workshop/script/ → htdocs/ (si directement dans htdocs)
+);
+
+$masterFound = false;
+foreach ($masterPaths as $path) {
+	if (file_exists($path)) {
+		require_once $path;
+		$masterFound = true;
+		break;
+	}
 }
-$tmp  = empty($_SERVER['SCRIPT_FILENAME']) ? '' : $_SERVER['SCRIPT_FILENAME'];
-$tmp2 = realpath(__FILE__);
-$i    = strlen($tmp) - 1;
-$j    = strlen($tmp2) - 1;
-while ($i > 0 && $j > 0 && isset($tmp[$i]) && isset($tmp2[$j]) && $tmp[$i] == $tmp2[$j]) {
-	$i--;
-	$j--;
-}
-if (!$res && $i > 0 && file_exists(substr($tmp, 0, ($i + 1))."/main.inc.php")) {
-	$res = @include substr($tmp, 0, ($i + 1))."/main.inc.php";
-}
-if (!$res && $i > 0 && file_exists(dirname(substr($tmp, 0, ($i + 1)))."/main.inc.php")) {
-	$res = @include dirname(substr($tmp, 0, ($i + 1)))."/main.inc.php";
-}
-if (!$res && file_exists("../../main.inc.php")) {
-	$res = @include "../../main.inc.php";
-}
-if (!$res && file_exists("../../../main.inc.php")) {
-	$res = @include "../../../main.inc.php";
-}
-if (!$res && file_exists("../../../../main.inc.php")) {
-	$res = @include "../../../../main.inc.php";
-}
-if (!$res) {
-	die("Erreur: impossible de charger main.inc.php de Dolibarr\n");
+
+if (!$masterFound) {
+	die("Erreur : impossible de trouver master.inc.php. Vérifiez l'emplacement du script.\n");
 }
 
 require_once DOL_DOCUMENT_ROOT.'/core/lib/date.lib.php';
+require_once DOL_DOCUMENT_ROOT.'/core/lib/functions.lib.php';
 
 global $db, $conf;
 
