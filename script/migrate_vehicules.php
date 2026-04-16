@@ -307,9 +307,9 @@ while ($veh = $db->fetch_object($resVeh)) {
 		mig_log("  [OK] Véhicule #$oldId → #$newId (VIN=$vin, immat=$immat)");
 		$nbMigrated++;
 
-		// TODO : Étape 3 — Migration des activités (llx_dolifleet_vehicule_activity → llx_workshop_vehicule_activity)
-		// TODO : Étape 4 — Migration des opérations (llx_dolifleet_vehicule_operation → llx_workshop_vehicule_operation)
-		// TODO : Étape 5 — Migration des extrafields
+		// TODO : Migration des activités (llx_dolifleet_vehicule_activity → llx_workshop_vehicule_activity)
+		// TODO : Migration des opérations (llx_dolifleet_vehicule_operation → llx_workshop_vehicule_operation)
+		// TODO : Migration des extrafields
 	} else {
 		mig_log("  [DRY-RUN] Véhicule #$oldId (VIN=$vin, immat=$immat) serait migré");
 		$nbMigrated++;
@@ -318,15 +318,117 @@ while ($veh = $db->fetch_object($resVeh)) {
 $db->free($resVeh);
 
 // ============================================================
+// Étape 3 : Migration des liens véhicules (tracteur ↔ remorque)
+//
+// Les tables source et cible ont la même structure.
+// fk_source et fk_target référencent des rowid de véhicules qu'il
+// faut remapper via le import_key posé à l'étape 2.
+// Cette étape se fait APRÈS la boucle véhicules pour garantir que
+// tous les véhicules référencés existent dans la table cible.
+// ============================================================
+mig_log("--- Étape 3 : Migration des liens véhicules (vehicule_link) ---");
+
+// Construire le mapping old_vehicule_rowid → new_vehicule_rowid
+$mapVehiculeIds = array();
+$sqlMap = "SELECT rowid, import_key FROM ".$db->prefix()."workshop_vehicule";
+$sqlMap .= " WHERE import_key LIKE 'mig_df_%'";
+$resMap = $db->query($sqlMap);
+if ($resMap) {
+	while ($obj = $db->fetch_object($resMap)) {
+		// import_key = 'mig_df_96' → old_id = 96
+		$oldVehId = (int) str_replace('mig_df_', '', $obj->import_key);
+		$mapVehiculeIds[$oldVehId] = (int) $obj->rowid;
+	}
+	$db->free($resMap);
+}
+mig_log("  Mapping véhicules chargé : ".count($mapVehiculeIds)." correspondances");
+
+// Lire les liens source
+$sqlLinks = "SELECT * FROM ".$db->prefix()."dolifleet_vehicule_link ORDER BY rowid ASC";
+$resLinks = $db->query($sqlLinks);
+if (!$resLinks) {
+	mig_log("  Table dolifleet_vehicule_link introuvable ou erreur : ".$db->lasterror(), "ERROR");
+} else {
+	$nbLinksTotal    = $db->num_rows($resLinks);
+	$nbLinksMigrated = 0;
+	$nbLinksSkipped  = 0;
+	$nbLinksErrors   = 0;
+
+	mig_log("  $nbLinksTotal lien(s) à traiter");
+
+	while ($link = $db->fetch_object($resLinks)) {
+		$oldLinkId = (int) $link->rowid;
+		$oldSource = (int) $link->fk_source;
+		$oldTarget = (int) $link->fk_target;
+
+		// --- Idempotence : vérifier si ce link existe déjà (même couple source/target/date_start) ---
+		$newSource = isset($mapVehiculeIds[$oldSource]) ? $mapVehiculeIds[$oldSource] : 0;
+		$newTarget = isset($mapVehiculeIds[$oldTarget]) ? $mapVehiculeIds[$oldTarget] : 0;
+
+		if ($newSource == 0) {
+			mig_log("  [WARN] Link #$oldLinkId : fk_source=$oldSource non trouvé dans les véhicules migrés", "ERROR");
+			$nbLinksErrors++;
+			continue;
+		}
+		if ($newTarget == 0) {
+			mig_log("  [WARN] Link #$oldLinkId : fk_target=$oldTarget non trouvé dans les véhicules migrés", "ERROR");
+			$nbLinksErrors++;
+			continue;
+		}
+
+		// Vérifier doublon dans la cible
+		$sqlExist = "SELECT rowid FROM ".$db->prefix()."workshop_vehicule_link";
+		$sqlExist .= " WHERE fk_source = ".$newSource." AND fk_target = ".$newTarget;
+		$sqlExist .= " AND date_start ".($link->date_start !== null ? "= '".$db->escape($link->date_start)."'" : "IS NULL");
+		$resExist = $db->query($sqlExist);
+		if ($resExist && $db->num_rows($resExist) > 0) {
+			$nbLinksSkipped++;
+			continue;
+		}
+
+		if (!$dryRun) {
+			$sqlIns = "INSERT INTO ".$db->prefix()."workshop_vehicule_link";
+			$sqlIns .= " (date_creation, date_start, date_end, fk_source, fk_target, fk_soc_vehicule_source, fk_soc_vehicule_target)";
+			$sqlIns .= " VALUES (";
+			$sqlIns .= ($link->date_creation !== null ? "'".$db->escape($link->date_creation)."'" : "NULL");
+			$sqlIns .= ", ".($link->date_start !== null ? "'".$db->escape($link->date_start)."'" : "NULL");
+			$sqlIns .= ", ".($link->date_end !== null ? "'".$db->escape($link->date_end)."'" : "NULL");
+			$sqlIns .= ", ".$newSource;
+			$sqlIns .= ", ".$newTarget;
+			$sqlIns .= ", ".(int) $link->fk_soc_vehicule_source;
+			$sqlIns .= ", ".(int) $link->fk_soc_vehicule_target;
+			$sqlIns .= ")";
+
+			$resIns = $db->query($sqlIns);
+			if (!$resIns) {
+				mig_log("  [ERREUR] Link #$oldLinkId : ".$db->lasterror(), "ERROR");
+				$nbLinksErrors++;
+				continue;
+			}
+
+			$newLinkId = $db->last_insert_id($db->prefix()."workshop_vehicule_link");
+			mig_log("  [OK] Link #$oldLinkId → #$newLinkId (source=$oldSource→$newSource, target=$oldTarget→$newTarget)");
+			$nbLinksMigrated++;
+		} else {
+			mig_log("  [DRY-RUN] Link #$oldLinkId (source=$oldSource→$newSource, target=$oldTarget→$newTarget) serait migré");
+			$nbLinksMigrated++;
+		}
+	}
+	$db->free($resLinks);
+
+	mig_log("  Links : $nbLinksMigrated migrés, $nbLinksSkipped déjà présents, $nbLinksErrors erreurs");
+}
+
+// ============================================================
 // Résumé
 // ============================================================
 mig_log("=== Migration terminée ===");
-mig_log("  Total traités : $nbTotal");
-mig_log("  Migrés        : $nbMigrated");
-mig_log("  Déjà présents : $nbSkipped");
-mig_log("  Erreurs       : $nbErrors");
+mig_log("  Véhicules — Total : $nbTotal, Migrés : $nbMigrated, Déjà présents : $nbSkipped, Erreurs : $nbErrors");
+if (isset($nbLinksTotal)) {
+	mig_log("  Links     — Total : $nbLinksTotal, Migrés : $nbLinksMigrated, Déjà présents : $nbLinksSkipped, Erreurs : $nbLinksErrors");
+}
 
-if ($nbErrors > 0) {
+if ($nbErrors > 0 || (isset($nbLinksErrors) && $nbLinksErrors > 0)) {
 	exit(1);
 }
 
