@@ -950,6 +950,7 @@ while ($oldOR = $db->fetch_object($resql)) {
 
 	// 1b.1 : Lire toutes les anciennes lignes de cet OR avec extrafields produit
 	$sqlDet  = "SELECT od.*,";
+	$sqlDet .= " p.label AS product_label, p.description AS product_description,";
 	$sqlDet .= " COALESCE(pex.or_is_job, 0) AS ex_or_is_job,";
 	$sqlDet .= " COALESCE(pex.or_scan, 0) AS ex_or_scan,";
 	$sqlDet .= " COALESCE(pex.oorder_available_for_supplier_order, 0) AS ex_or_st";
@@ -1163,7 +1164,7 @@ while ($oldOR = $db->fetch_object($resql)) {
 
 		$job = new Operationorder_jobs($db);
 		$job->fk_operationorder = $newORId;
-		$job->label             = !empty($jl->label) ? $jl->label : 'Job';
+		$job->label             = !empty(trim($jl->label)) ? $jl->label : (!empty($jl->product_label) ? $jl->product_label : 'Job');
 		$job->description       = !empty($descParts) ? implode("\n", $descParts) : null;
 		$job->fk_service_type   = $newServiceTypeId > 0 ? $newServiceTypeId : null;
 		$job->fk_job_type       = null;
@@ -1287,8 +1288,8 @@ while ($oldOR = $db->fetch_object($resql)) {
 		$det = new Operationorderdet($db);
 		$det->fk_operationorder_jobs = $targetJob->id;
 		$det->fk_product       = !empty($rl->fk_product) ? (int) $rl->fk_product : null;
-		$det->label            = $rl->label;
-		$det->description      = $rl->description;
+		$det->label            = !empty(trim($rl->label)) ? $rl->label : (!empty($rl->product_label) ? $rl->product_label : null);
+		$det->description      = !empty(trim($rl->description)) ? $rl->description : (!empty($rl->product_description) ? $rl->product_description : null);
 		$det->product_type     = $productType;
 		$det->qty              = (float) $rl->qty;
 		$det->price            = (float) $rl->price;
