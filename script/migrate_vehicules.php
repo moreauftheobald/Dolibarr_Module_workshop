@@ -199,41 +199,13 @@ migrateDictionary($db, 'c_dolifleet_vehicule_activity_type', 'workshop_vehicule_
 migrateDictionary($db, 'c_dolifleet_vehicule_dimpneu', 'workshop_vehicule_c_vehicule_dimpneu', $dryRun);
 
 // ============================================================
-// Étape 1bis : Construire les caches de résolution code → rowid
-// pour les dictionnaires cibles (utile pour la boucle véhicules)
-// ============================================================
-
-/**
- * Charge un cache de résolution code → rowid depuis une table dictionnaire workshop.
- *
- * @param  DoliDB $db         Connexion DB
- * @param  string $table      Nom table sans préfixe llx_ (ex: 'workshop_vehicule_c_vehicule_type')
- * @return array              Mapping [code] => rowid (premier trouvé si doublons)
- */
-function loadDictCache(DoliDB $db, string $table): array
-{
-	$cache = array();
-	$sql = "SELECT rowid, code FROM ".$db->prefix().$table." WHERE code IS NOT NULL AND code != ''";
-	$res = $db->query($sql);
-	if ($res) {
-		while ($obj = $db->fetch_object($res)) {
-			if (!isset($cache[$obj->code])) {
-				$cache[$obj->code] = (int) $obj->rowid;
-			}
-		}
-		$db->free($res);
-	}
-	return $cache;
-}
-
-$cacheType     = loadDictCache($db, 'workshop_vehicule_c_vehicule_type');
-$cacheMark     = loadDictCache($db, 'workshop_vehicule_c_vehicule_mark');
-$cacheContract = loadDictCache($db, 'workshop_vehicule_c_contract_type');
-
-mig_log("  Caches chargés : ".count($cacheType)." types, ".count($cacheMark)." marques, ".count($cacheContract)." contrats");
-
-// ============================================================
 // Étape 2 : Parcours et migration des véhicules ligne par ligne
+//
+// Les FK dictionnaires (fk_vehicule_type, fk_vehicule_mark,
+// fk_contract_type) dans dolifleet sont des varchar qui stockent
+// le ROWID du dictionnaire source (ex: '3', '5').
+// Puisqu'on a conservé les rowid à l'étape 1, on peut directement
+// caster en integer sans table de mapping.
 // ============================================================
 mig_log("--- Étape 2 : Migration des véhicules ---");
 
@@ -271,34 +243,15 @@ while ($veh = $db->fetch_object($resVeh)) {
 		continue;
 	}
 
-	// --- Résolution des FK dictionnaires (varchar code → integer rowid via caches) ---
-	$newFkType = 0;
-	if (!empty($veh->fk_vehicule_type) && isset($cacheType[$veh->fk_vehicule_type])) {
-		$newFkType = $cacheType[$veh->fk_vehicule_type];
-	}
-
-	$newFkMark = 0;
-	if (!empty($veh->fk_vehicule_mark) && isset($cacheMark[$veh->fk_vehicule_mark])) {
-		$newFkMark = $cacheMark[$veh->fk_vehicule_mark];
-	}
-
-	$newFkContract = null;
-	if (!empty($veh->fk_contract_type) && isset($cacheContract[$veh->fk_contract_type])) {
-		$newFkContract = $cacheContract[$veh->fk_contract_type];
-	}
+	// --- Résolution des FK dictionnaires (varchar → integer, rowid conservés) ---
+	$newFkType     = !empty($veh->fk_vehicule_type) ? (int) $veh->fk_vehicule_type : 0;
+	$newFkMark     = !empty($veh->fk_vehicule_mark) ? (int) $veh->fk_vehicule_mark : 0;
+	$newFkContract = !empty($veh->fk_contract_type) ? (int) $veh->fk_contract_type : null;
 
 	// --- Troncature immatriculation (255 → 20 caractères) ---
 	$immat = substr((string) $veh->immatriculation, 0, 20);
 	if (strlen((string) $veh->immatriculation) > 20) {
 		mig_log("  [WARN] Véhicule #$oldId : immatriculation tronquée ('".$veh->immatriculation."' → '$immat')");
-	}
-
-	// --- Warnings FK non résolues ---
-	if (!empty($veh->fk_vehicule_type) && $newFkType == 0) {
-		mig_log("  [WARN] Véhicule #$oldId : fk_vehicule_type='".$veh->fk_vehicule_type."' non trouvé dans le dictionnaire cible", "ERROR");
-	}
-	if (!empty($veh->fk_vehicule_mark) && $newFkMark == 0) {
-		mig_log("  [WARN] Véhicule #$oldId : fk_vehicule_mark='".$veh->fk_vehicule_mark."' non trouvé dans le dictionnaire cible", "ERROR");
 	}
 
 	// --- Construction de l'INSERT ---
