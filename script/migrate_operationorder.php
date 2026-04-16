@@ -999,6 +999,42 @@ while ($oldOR = $db->fetch_object($resql)) {
 
 	out("       Lignes : ".count($allLines)." total (".count($jobLines)." jobs, ".count($moLines)." MO, ".count($stLines)." ST, ".count($regularLines)." régulières)", 'debug', $verbose);
 
+	// Diagnostic verbeux : montrer les liens element_element existants pour cet OR
+	if ($verbose && !empty($allLines)) {
+		$diagDetIds = array();
+		foreach ($allLines as $line) {
+			$diagDetIds[] = (int) $line->rowid;
+		}
+		// Liens depuis les anciennes lignes det
+		$sqlDiag  = "SELECT fk_source, sourcetype, fk_target, targettype FROM ".MAIN_DB_PREFIX."element_element";
+		$sqlDiag .= " WHERE (fk_source IN (".implode(',', $diagDetIds).") AND sourcetype LIKE '%operationorder%')";
+		$sqlDiag .= " OR (fk_target IN (".implode(',', $diagDetIds).") AND targettype LIKE '%operationorder%')";
+		$resDiag = $db->query($sqlDiag);
+		$diagCount = 0;
+		if ($resDiag) {
+			while ($objDiag = $db->fetch_object($resDiag)) {
+				out("       [DIAG det] src=".$objDiag->fk_source." (".$objDiag->sourcetype.") → tgt=".$objDiag->fk_target." (".$objDiag->targettype.")", 'debug', $verbose);
+				$diagCount++;
+			}
+			$db->free($resDiag);
+		}
+		// Liens depuis l'ancien OR
+		$sqlDiag2  = "SELECT fk_source, sourcetype, fk_target, targettype FROM ".MAIN_DB_PREFIX."element_element";
+		$sqlDiag2 .= " WHERE (fk_source = ".(int) $oldOR->rowid." AND sourcetype LIKE '%operationorder%')";
+		$sqlDiag2 .= " OR (fk_target = ".(int) $oldOR->rowid." AND targettype LIKE '%operationorder%')";
+		$resDiag2 = $db->query($sqlDiag2);
+		if ($resDiag2) {
+			while ($objDiag2 = $db->fetch_object($resDiag2)) {
+				out("       [DIAG or]  src=".$objDiag2->fk_source." (".$objDiag2->sourcetype.") → tgt=".$objDiag2->fk_target." (".$objDiag2->targettype.")", 'debug', $verbose);
+				$diagCount++;
+			}
+			$db->free($resDiag2);
+		}
+		if ($diagCount === 0) {
+			out("       [DIAG] Aucun lien element_element trouvé pour cet OR ni ses lignes", 'debug', $verbose);
+		}
+	}
+
 	// 1b.3 : Ensemble des rowid des anciennes lignes-jobs (pour résolution des parents)
 	$jobRowids = array();
 	foreach ($jobLines as $jl) {
