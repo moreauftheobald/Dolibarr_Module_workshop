@@ -1261,6 +1261,7 @@ while ($oldOR = $db->fetch_object($resql)) {
 	}
 
 	// 1b.10 : Créer les lignes de détail (Operationorderdet) pour les lignes régulières
+	$detCreatedCount = 0;
 	foreach ($regularLines as $rl) {
 		// Déterminer le job parent
 		$parentId = (int) $rl->fk_parent_line;
@@ -1276,12 +1277,19 @@ while ($oldOR = $db->fetch_object($resql)) {
 			continue;
 		}
 
+		// Déterminer product_type : si l'ancienne ligne avait total_ht_reimbursement > 0
+		// c'est une ligne de remboursement → product_type = 2 (TYPE_REFUND)
+		$productType = (int) $rl->product_type;
+		if (isset($rl->total_ht_reimbursement) && (float) $rl->total_ht_reimbursement > 0) {
+			$productType = Operationorderdet::TYPE_REFUND; // 2
+		}
+
 		$det = new Operationorderdet($db);
 		$det->fk_operationorder_jobs = $targetJob->id;
 		$det->fk_product       = !empty($rl->fk_product) ? (int) $rl->fk_product : null;
 		$det->label            = $rl->label;
 		$det->description      = $rl->description;
-		$det->product_type     = (int) $rl->product_type;
+		$det->product_type     = $productType;
 		$det->qty              = (float) $rl->qty;
 		$det->price            = (float) $rl->price;
 		$det->remise_percent   = (float) $rl->remise_percent;
@@ -1303,8 +1311,19 @@ while ($oldOR = $db->fetch_object($resql)) {
 			break;
 		}
 
-		out("       Det créée : id=".$newDetId." (ancien det=".$rl->rowid.", job=".$targetJob->id.")", 'debug', $verbose);
+		// Correction post-création : restaurer date_creation d'origine
+		if (!empty($rl->date_creation)) {
+			$sqlFixDet = "UPDATE ".MAIN_DB_PREFIX."workshop_operationorderdet SET";
+			$sqlFixDet .= " date_creation = '".$db->escape($rl->date_creation)."'";
+			$sqlFixDet .= " WHERE rowid = ".(int) $newDetId;
+			$db->query($sqlFixDet);
+		}
+
+		$detCreatedCount++;
+		out("       Det créée : id=".$newDetId." (ancien det=".$rl->rowid.", job=".$targetJob->id.", type=".$productType.")", 'debug', $verbose);
 	}
+
+	out("       Lignes det créées : ".$detCreatedCount, 'debug', $verbose);
 
 	if ($phaseError) {
 		$db->rollback();
@@ -1434,11 +1453,11 @@ while ($oldOR = $db->fetch_object($resql)) {
 	}
 	$or->updateTotals($user);
 
-	out("       Totaux recalculés (".$jobCount." jobs, ".count($regularLines)." det, ".$stLinkCount." ST liens)", 'debug', $verbose);
+	out("       Totaux recalculés (".$jobCount." jobs, ".$detCreatedCount." det, ".$stLinkCount." ST liens)", 'debug', $verbose);
 
 	$db->commit();
 
-	out("       → OR migré (new id=".$newORId.", ".$jobCount." jobs, ".count($regularLines)." det)", 'ok');
+	out("       → OR migré (new id=".$newORId.", ".$jobCount." jobs, ".$detCreatedCount." det, ".$stLinkCount." ST)", 'ok');
 	$countMigrated++;
 }
 
