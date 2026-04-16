@@ -1,0 +1,1200 @@
+-- ============================================================================
+-- MIGRATION : operationorder → workshop
+-- ============================================================================
+-- Ce fichier contient les requetes SQL de migration des donnees
+-- de l'ancien module operationorder vers le module workshop.
+--
+-- A executer dans l'ordre, requete par requete.
+-- Prerequis : les tables workshop (llx_workshop_*) doivent deja exister.
+-- ============================================================================
+
+-- ============================================================================
+-- ETAPE 1 : Migration des statuts OR
+-- ============================================================================
+-- Strategie :
+--   - Les anciens statuts (llx_operationorder_status) sont par entite (entity variable)
+--   - Les nouveaux statuts (llx_workshop_operationorder_status) sont transverses (entity = 0)
+--   - On insere un statut par code unique (GROUP BY code)
+--   - On cree ensuite une table de correspondance ancien rowid -> nouveau rowid via le code
+-- ============================================================================
+
+-- 1.1 : Vidage de la table de destination avant insertion
+TRUNCATE TABLE llx_workshop_operationorder_status;
+
+-- 1.2 : Insertion des statuts uniques dans la table workshop
+--        On prend les valeurs du premier statut rencontre pour chaque code (MIN(rowid))
+INSERT INTO llx_workshop_operationorder_status (
+    date_creation,
+    entity,
+    code,
+    label,
+    color,
+    rang,
+    status,
+    planable,
+    clean_event,
+    display_on_planning,
+    check_virtual_stock,
+    or_pointable,
+    save_date_cloture,
+    require_planned_date,
+    update_vehicule_info,
+    require_conf,
+    import_key
+)
+SELECT
+    NOW(),
+    0,
+    old_s.code,
+    old_s.label,
+    IFNULL(NULLIF(old_s.color, ''), '#3c8dbc'),
+    old_s.rang,
+    CAST(IFNULL(NULLIF(old_s.status, ''), 1) AS UNSIGNED),
+    CAST(IFNULL(NULLIF(old_s.planable, ''), 0) AS UNSIGNED),
+    CAST(IFNULL(NULLIF(old_s.clean_event, ''), 0) AS UNSIGNED),
+    CAST(IFNULL(NULLIF(old_s.display_on_planning, ''), 0) AS UNSIGNED),
+    CAST(IFNULL(NULLIF(old_s.check_virtual_stock, ''), 0) AS UNSIGNED),
+    CAST(IFNULL(NULLIF(old_s.or_pointable, ''), 0) AS UNSIGNED),
+    CAST(IFNULL(NULLIF(old_s.save_date_cloture, ''), 0) AS UNSIGNED),
+    CAST(IFNULL(NULLIF(old_s.require_planned_date, ''), 0) AS UNSIGNED),
+    CAST(IFNULL(NULLIF(old_s.update_vehicule_info, ''), 0) AS UNSIGNED),
+    CAST(IFNULL(NULLIF(old_s.require_conf, ''), 1) AS UNSIGNED),
+    'mig-oo'
+FROM llx_operationorder_status old_s
+INNER JOIN (
+    SELECT code, MIN(rowid) AS min_rowid
+    FROM llx_operationorder_status
+    GROUP BY code
+) first_per_code ON old_s.rowid = first_per_code.min_rowid
+WHERE old_s.code IS NOT NULL
+  AND old_s.code != '';
+
+-- 1.3 : Creation de la table de correspondance ancien status -> nouveau status
+--        Chaque ancien rowid (toutes entites confondues) est mappe vers le nouveau rowid via le code
+CREATE TABLE IF NOT EXISTS llx_migration_operationorder_status_map (
+    old_status_id   integer NOT NULL,
+    new_status_id   integer NOT NULL,
+    code            varchar(128) NOT NULL,
+    old_entity      integer NOT NULL DEFAULT 0,
+    PRIMARY KEY (old_status_id)
+) ENGINE=innodb;
+
+-- 1.4 : Remplissage de la table de correspondance
+INSERT INTO llx_migration_operationorder_status_map (old_status_id, new_status_id, code, old_entity)
+SELECT
+    old_s.rowid       AS old_status_id,
+    new_s.rowid       AS new_status_id,
+    old_s.code        AS code,
+    old_s.entity      AS old_entity
+FROM llx_operationorder_status old_s
+INNER JOIN llx_workshop_operationorder_status new_s ON new_s.code = old_s.code
+WHERE old_s.code IS NOT NULL
+  AND old_s.code != '';
+
+-- ============================================================================
+-- ETAPE 2 : Migration des transitions de statuts (status_target)
+-- ============================================================================
+-- Strategie :
+--   - Les anciennes transitions referencent les anciens rowid de statuts
+--   - On remappe via llx_migration_operationorder_status_map
+--   - Les transitions etaient dupliquees par entite, on dedoublonne avec DISTINCT
+-- ============================================================================
+
+-- 2.1 : Vidage de la table de destination avant insertion
+TRUNCATE TABLE llx_workshop_operationorder_status_target;
+
+-- 2.2 : Insertion des transitions avec remapping des rowid via la table de correspondance
+INSERT INTO llx_workshop_operationorder_status_target (
+    date_creation,
+    fk_workshop_operationorderstatus,
+    fk_workshop_operationorderstatus_target
+)
+SELECT DISTINCT
+    NOW(),
+    map_src.new_status_id,
+    map_dst.new_status_id
+FROM llx_operationorder_status_target old_t
+INNER JOIN llx_migration_operationorder_status_map map_src
+    ON map_src.old_status_id = old_t.fk_operationorderstatus
+INNER JOIN llx_migration_operationorder_status_map map_dst
+    ON map_dst.old_status_id = old_t.fk_operationorderstatus_target;
+
+-- ============================================================================
+-- ETAPE 3 : Migration des droits par groupe utilisateur (status_usergroup_rights)
+-- ============================================================================
+-- Strategie :
+--   - Table geree par entite : on conserve l'entite d'origine
+--   - L'ancienne table n'avait pas de champ entity, on le recupere depuis
+--     la table de correspondance (old_entity du statut source)
+--   - On remappe fk_operationorderstatus via la table de correspondance
+-- ============================================================================
+
+-- 3.1 : Vidage de la table de destination avant insertion
+TRUNCATE TABLE llx_workshop_operationorder_status_usergroup_rights;
+
+-- 3.2 : Insertion des droits avec remapping du statut et recuperation de l'entite
+INSERT INTO llx_workshop_operationorder_status_usergroup_rights (
+    date_creation,
+    fk_workshop_operationorderstatus,
+    code,
+    fk_usergroup,
+    entity
+)
+SELECT
+    NOW(),
+    map_s.new_status_id,
+    old_r.code,
+    old_r.fk_usergroup,
+    map_s.old_entity
+FROM llx_operationorder_status_usergroup_rights old_r
+INNER JOIN llx_migration_operationorder_status_map map_s
+    ON map_s.old_status_id = old_r.fk_operationorderstatus
+INNER JOIN llx_usergroup ug
+    ON ug.rowid = old_r.fk_usergroup;
+
+-- ============================================================================
+-- ETAPE 4 : Migration des conducteurs
+-- ============================================================================
+-- Strategie :
+--   - Les conducteurs etaient des contacts (llx_socpeople) identifies par
+--     un extrafield "driver" = 1 dans llx_socpeople_extrafields
+--   - On les migre vers la table dediee llx_workshop_conducteur
+--   - On force le rowid du conducteur = rowid du contact d'origine
+--     => pas besoin de table de correspondance, le fk_conducteur des OR
+--        pointera directement vers le bon enregistrement
+-- ============================================================================
+
+-- 4.1 : Vidage de la table de destination avant insertion
+TRUNCATE TABLE llx_workshop_conducteur;
+
+-- 4.2 : Insertion des conducteurs en conservant le rowid d'origine
+INSERT INTO llx_workshop_conducteur (
+    rowid,
+    date_creation,
+    nom,
+    prenom,
+    fk_soc,
+    fk_user_creat
+)
+SELECT
+    sp.rowid,
+    NOW(),
+    sp.lastname,
+    IFNULL(sp.firstname, ''),
+    sp.fk_soc,
+    NULL
+FROM llx_socpeople sp
+INNER JOIN llx_socpeople_extrafields spx
+    ON spx.fk_object = sp.rowid
+WHERE spx.driver = 1;
+
+-- ============================================================================
+-- ETAPE 5 : Migration des Ordres de Reparation (OR)
+-- ============================================================================
+-- Strategie :
+--   - On force le rowid pour simplifier la migration des jobs/det ensuite
+--   - Le status est remappe via la table de correspondance (fallback sur "Facture")
+--   - fk_conducteur et fk_vehicule conservent leur rowid d'origine (deja migres)
+--   - date_start et date_end a NULL (mise a jour ulterieure)
+--   - temps_immobilisation peuple depuis time_planned_f (secondes)
+--   - categories ignore pour le moment (migration tags ulterieure)
+--   - fk_contrat, fk_user_cloture ignores
+-- ============================================================================
+
+-- 5.1 : Vidage de la table de destination avant insertion
+TRUNCATE TABLE llx_workshop_operationorder;
+
+-- 5.2 : Insertion des OR avec remapping du statut
+INSERT INTO llx_workshop_operationorder (
+    rowid,
+    date_creation,
+    ref,
+    ref_client,
+    entity,
+    fk_soc,
+    fk_vehicule,
+    fk_conducteur,
+    date_valid,
+    date_start,
+    date_end,
+    date_planned,
+    km,
+    note_public,
+    note_private,
+    fk_user_creat,
+    fk_user_modif,
+    fk_user_valid,
+    fk_user_assign,
+    model_pdf,
+    last_main_doc,
+    total_ht,
+    total_ht_part,
+    total_ht_mo,
+    total_ht_service,
+    total_ht_external,
+    total_ht_refund,
+    import_key,
+    status,
+    temps_immobilisation,
+    check_or
+)
+SELECT
+    oo.rowid,
+    oo.date_creation,
+    oo.ref,
+    oo.ref_client,
+    oo.entity,
+    oo.fk_soc,
+    oo.fk_vehicule,
+    oo.fk_conducteur,
+    oo.date_valid,
+    NULL,
+    NULL,
+    oo.planned_date,
+    oo.km_on_creation,
+    oo.note_public,
+    oo.note_private,
+    oo.fk_user_creat,
+    oo.fk_user_modif,
+    oo.fk_user_valid,
+    oo.fk_user_meca,
+    oo.model_pdf,
+    oo.last_main_doc,
+    oo.total_ht,
+    oo.total_ht_part,
+    oo.total_ht_mo,
+    oo.total_ht_service,
+    oo.total_ht_external,
+    oo.total_ht_reimbursement,
+    oo.import_key,
+    IFNULL(map_s.new_status_id, (SELECT rowid FROM llx_workshop_operationorder_status WHERE code = 'FACTURE' LIMIT 1)),
+    oo.time_planned_f,
+    oo.orcheck
+FROM llx_operationorder oo
+INNER JOIN (
+    SELECT ref, entity, MIN(rowid) AS min_rowid
+    FROM llx_operationorder
+    GROUP BY ref, entity
+) dedup ON oo.rowid = dedup.min_rowid
+LEFT JOIN llx_migration_operationorder_status_map map_s
+    ON map_s.old_status_id = oo.status;
+
+-- ============================================================================
+-- ETAPE 6 : Migration des types de service (ex types de jobs)
+-- ============================================================================
+-- Strategie :
+--   - On migre llx_c_operationorder_type → llx_workshop_c_servicetype
+--   - On force les rowid pour simplifier la migration des jobs ensuite
+--   - On cree un type par defaut "Mecanique Generale" en rowid 1
+--   - Les jobs sans type (NULL/0) utiliseront ce type par defaut
+--   - Gestion transversale (pas d'entity)
+-- ============================================================================
+
+-- 6.1 : Vidage de la table de destination avant insertion
+TRUNCATE TABLE llx_workshop_c_servicetype;
+
+-- 6.2 : Creation du type par defaut "Mecanique Generale" avec rowid = 1
+INSERT INTO llx_workshop_c_servicetype (
+    rowid,
+    date_creation,
+    code,
+    label,
+    fk_job_type,
+    fk_soc,
+    plannable,
+    prix_mo,
+    tva_tx_mo,
+    tva_tx_st,
+    active
+)
+VALUES (
+    1,
+    NOW(),
+    'MECA_GEN',
+    'Mécanique Générale',
+    NULL,
+    NULL,
+    1,
+    0,
+    20,
+    20,
+    1
+);
+
+-- 6.3 : Insertion des types existants depuis l'ancien module
+--        On decale les rowid de +1 pour eviter le conflit avec le type par defaut (rowid 1)
+--        On dedoublonne par code (DISTINCT) car les types etaient par entite
+INSERT INTO llx_workshop_c_servicetype (
+    rowid,
+    date_creation,
+    code,
+    label,
+    fk_job_type,
+    fk_soc,
+    plannable,
+    prix_mo,
+    tva_tx_mo,
+    tva_tx_st,
+    active
+)
+SELECT
+    oot.rowid + 1,
+    NOW(),
+    oot.code,
+    oot.label,
+    NULL,
+    oot.fk_soc,
+    1,
+    0,
+    20,
+    20,
+    CASE WHEN oot.active IS NULL OR oot.active = '' THEN 1 ELSE CAST(oot.active AS UNSIGNED) END
+FROM llx_c_operationorder_type oot
+INNER JOIN (
+    SELECT code, MIN(rowid) AS min_rowid
+    FROM llx_c_operationorder_type
+    GROUP BY code
+) dedup ON oot.rowid = dedup.min_rowid;
+
+-- ============================================================================
+-- ETAPE 7 : Migration des Jobs (lignes "job" de l'ancien module)
+-- ============================================================================
+-- Strategie :
+--   - Dans l'ancien module, un job est une ligne de llx_operationorderdet dont
+--     le produit a l'extrafield or_is_job = 1 ET fk_parent_line = 0/NULL
+--   - On force le rowid pour simplifier le lien fk_operationorder_jobs des det
+--   - fk_service_type = ancien fk_c_operationorder_type + 1 (decalage etape 6)
+--     si NULL ou 0 → 1 (MECA_GEN)
+--   - fk_soc recupere depuis le service type lie au job
+--   - qty_mo et prix_mo a 0 (sera traite dans un 2eme temps)
+--   - fk_user_assign, fk_job_type a NULL
+--   - tva_tx_mo = 20, tva_tx_st = 20, remise_percent = 0
+--   - On ne traite que les lignes qui sont des jobs (or_is_job = 1)
+--   - On ignore les OR sans job pour le moment
+-- ============================================================================
+
+-- 7.1 : Vidage de la table de destination avant insertion
+TRUNCATE TABLE llx_workshop_operationorder_jobs;
+
+-- 7.2 : Insertion des jobs
+INSERT INTO llx_workshop_operationorder_jobs (
+    rowid,
+    date_creation,
+    fk_operationorder,
+    label,
+    description,
+    fk_service_type,
+    fk_job_type,
+    fk_soc,
+    fk_user_assign,
+    qty_mo,
+    prix_mo,
+    time_planned,
+    time_spent,
+    rang,
+    date_start,
+    date_end,
+    total_ht,
+    total_ht_part,
+    total_ht_mo,
+    total_ht_service,
+    total_ht_external,
+    total_ht_refund,
+    note_public,
+    note_private,
+    fk_user_creat,
+    fk_user_modif,
+    import_key,
+    tva_tx_mo,
+    tva_tx_st,
+    remise_percent
+)
+SELECT
+    od.rowid,
+    od.date_creation,
+    od.fk_operation_order,
+    od.label,
+    od.description,
+    CASE
+        WHEN od.fk_c_operationorder_type IS NULL OR od.fk_c_operationorder_type = 0 THEN 1
+        ELSE od.fk_c_operationorder_type + 1
+    END,
+    NULL,
+    st.fk_soc,
+    NULL,
+    0,
+    0,
+    od.time_planned,
+    od.time_spent,
+    od.rang,
+    NULL,
+    NULL,
+    od.total_ht,
+    od.total_ht_part,
+    od.total_ht_mo,
+    od.total_ht_service,
+    od.total_ht_external,
+    od.total_ht_reimbursement,
+    NULL,
+    NULL,
+    od.fk_user_creat,
+    od.fk_user_modif,
+    od.rowid,
+    20,
+    20,
+    0
+FROM llx_operationorderdet od
+INNER JOIN llx_product p ON p.rowid = od.fk_product
+INNER JOIN llx_product_extrafields pex ON pex.fk_object = p.rowid AND pex.or_is_job = 1
+LEFT JOIN llx_workshop_c_servicetype st ON st.rowid = CASE
+    WHEN od.fk_c_operationorder_type IS NULL OR od.fk_c_operationorder_type = 0 THEN 1
+    ELSE od.fk_c_operationorder_type + 1
+END
+WHERE (od.fk_parent_line IS NULL OR od.fk_parent_line = 0);
+
+-- 7.3 : Creation d'un job "Mecanique Generale" par defaut pour les OR sans aucun job
+INSERT INTO llx_workshop_operationorder_jobs (
+    date_creation,
+    fk_operationorder,
+    label,
+    description,
+    fk_service_type,
+    fk_job_type,
+    fk_soc,
+    fk_user_assign,
+    qty_mo,
+    prix_mo,
+    time_planned,
+    time_spent,
+    rang,
+    date_start,
+    date_end,
+    total_ht,
+    total_ht_part,
+    total_ht_mo,
+    total_ht_service,
+    total_ht_external,
+    total_ht_refund,
+    note_public,
+    note_private,
+    fk_user_creat,
+    fk_user_modif,
+    import_key,
+    tva_tx_mo,
+    tva_tx_st,
+    remise_percent
+)
+SELECT
+    NOW(),
+    woo.rowid,
+    'Mécanique Générale',
+    NULL,
+    1,
+    NULL,
+    NULL,
+    NULL,
+    0,
+    0,
+    0,
+    0,
+    0,
+    NULL,
+    NULL,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    NULL,
+    NULL,
+    woo.fk_user_creat,
+    NULL,
+    CONCAT('mig-or-', woo.rowid),
+    20,
+    20,
+    0
+FROM llx_workshop_operationorder woo
+WHERE woo.rowid NOT IN (
+    SELECT fk_operationorder FROM llx_workshop_operationorder_jobs
+);
+
+-- ============================================================================
+-- ETAPE 8 : Mise a jour de la main d'oeuvre (MO) sur les jobs
+-- ============================================================================
+-- Strategie :
+--   - Pour chaque job migre, on cherche ses lignes enfants de MO dans l'ancien module
+--   - Une ligne est de la MO si le produit a l'extrafield or_scan = 1
+--   - Les lignes enfants sont liees par fk_parent_line = rowid du job (ancien det)
+--   - qty_mo = somme des quantites MO
+--   - total_ht_mo = somme des total_ht des lignes MO
+--   - prix_mo = total_ht_mo / qty_mo
+-- ============================================================================
+
+-- 8.1 : Mise a jour des jobs avec les donnees MO
+UPDATE llx_workshop_operationorder_jobs wj
+INNER JOIN (
+    SELECT
+        od.fk_parent_line AS job_rowid,
+        SUM(od.qty) AS sum_qty,
+        SUM(od.total_ht) AS sum_total_ht
+    FROM llx_operationorderdet od
+    INNER JOIN llx_product p ON p.rowid = od.fk_product
+    INNER JOIN llx_product_extrafields pex ON pex.fk_object = p.rowid AND pex.or_scan = 1
+    WHERE od.fk_parent_line IS NOT NULL
+      AND od.fk_parent_line > 0
+    GROUP BY od.fk_parent_line
+) mo ON mo.job_rowid = wj.rowid
+SET
+    wj.qty_mo = mo.sum_qty,
+    wj.total_ht_mo = mo.sum_total_ht,
+    wj.prix_mo = CASE
+        WHEN mo.sum_qty > 0 THEN mo.sum_total_ht / mo.sum_qty
+        ELSE 0
+    END;
+
+-- 8.2 : Mise a jour des jobs par defaut (etape 7.3) avec les lignes MO orphelines
+--        Ce sont les lignes MO (or_scan=1) sans parent (fk_parent_line NULL/0)
+--        On les rattache au job par defaut de leur OR via fk_operation_order
+UPDATE llx_workshop_operationorder_jobs wj
+INNER JOIN (
+    SELECT
+        od.fk_operation_order AS or_rowid,
+        SUM(od.qty) AS sum_qty,
+        SUM(od.total_ht) AS sum_total_ht
+    FROM llx_operationorderdet od
+    INNER JOIN llx_product p ON p.rowid = od.fk_product
+    INNER JOIN llx_product_extrafields pex ON pex.fk_object = p.rowid AND pex.or_scan = 1
+    WHERE (od.fk_parent_line IS NULL OR od.fk_parent_line = 0)
+    GROUP BY od.fk_operation_order
+) mo ON mo.or_rowid = wj.fk_operationorder
+SET
+    wj.qty_mo = mo.sum_qty,
+    wj.total_ht_mo = mo.sum_total_ht,
+    wj.prix_mo = CASE
+        WHEN mo.sum_qty > 0 THEN mo.sum_total_ht / mo.sum_qty
+        ELSE 0
+    END
+WHERE wj.import_key LIKE 'mig-or-%';
+
+-- 8.3 : Creation d'un job "Mecanique Generale" pour les OR qui ont des jobs
+--        mais aussi des lignes MO orphelines (sans parent)
+INSERT INTO llx_workshop_operationorder_jobs (
+    date_creation,
+    fk_operationorder,
+    label,
+    description,
+    fk_service_type,
+    fk_job_type,
+    fk_soc,
+    fk_user_assign,
+    qty_mo,
+    prix_mo,
+    time_planned,
+    time_spent,
+    rang,
+    date_start,
+    date_end,
+    total_ht,
+    total_ht_part,
+    total_ht_mo,
+    total_ht_service,
+    total_ht_external,
+    total_ht_refund,
+    note_public,
+    note_private,
+    fk_user_creat,
+    fk_user_modif,
+    import_key,
+    tva_tx_mo,
+    tva_tx_st,
+    remise_percent
+)
+SELECT DISTINCT
+    NOW(),
+    od.fk_operation_order,
+    'Mécanique Générale',
+    NULL,
+    1,
+    NULL,
+    NULL,
+    NULL,
+    0,
+    0,
+    0,
+    0,
+    999,
+    NULL,
+    NULL,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    NULL,
+    NULL,
+    woo.fk_user_creat,
+    NULL,
+    CONCAT('mig-mo-', od.fk_operation_order),
+    20,
+    20,
+    0
+FROM llx_operationorderdet od
+INNER JOIN llx_product p ON p.rowid = od.fk_product
+INNER JOIN llx_product_extrafields pex ON pex.fk_object = p.rowid AND pex.or_scan = 1
+INNER JOIN llx_workshop_operationorder woo ON woo.rowid = od.fk_operation_order
+WHERE (od.fk_parent_line IS NULL OR od.fk_parent_line = 0)
+  AND od.fk_operation_order NOT IN (
+      SELECT fk_operationorder FROM llx_workshop_operationorder_jobs WHERE import_key LIKE 'mig-or-%'
+  )
+GROUP BY od.fk_operation_order;
+
+-- 8.4 : Mise a jour de ces jobs avec les lignes MO orphelines
+UPDATE llx_workshop_operationorder_jobs wj
+INNER JOIN (
+    SELECT
+        od.fk_operation_order AS or_rowid,
+        SUM(od.qty) AS sum_qty,
+        SUM(od.total_ht) AS sum_total_ht
+    FROM llx_operationorderdet od
+    INNER JOIN llx_product p ON p.rowid = od.fk_product
+    INNER JOIN llx_product_extrafields pex ON pex.fk_object = p.rowid AND pex.or_scan = 1
+    WHERE (od.fk_parent_line IS NULL OR od.fk_parent_line = 0)
+    GROUP BY od.fk_operation_order
+) mo ON mo.or_rowid = wj.fk_operationorder
+SET
+    wj.qty_mo = mo.sum_qty,
+    wj.total_ht_mo = mo.sum_total_ht,
+    wj.prix_mo = CASE
+        WHEN mo.sum_qty > 0 THEN mo.sum_total_ht / mo.sum_qty
+        ELSE 0
+    END
+WHERE wj.import_key LIKE 'mig-mo-%';
+
+-- 8.5 : Concatenation des descriptions de MO dans les jobs
+--        Cas 1 : Jobs migres (etape 7.2) — lignes MO enfants via fk_parent_line
+UPDATE llx_workshop_operationorder_jobs wj
+INNER JOIN (
+    SELECT
+        od.fk_parent_line AS job_rowid,
+        GROUP_CONCAT(od.description SEPARATOR '\n') AS concat_desc
+    FROM llx_operationorderdet od
+    INNER JOIN llx_product p ON p.rowid = od.fk_product
+    INNER JOIN llx_product_extrafields pex ON pex.fk_object = p.rowid AND pex.or_scan = 1
+    WHERE od.fk_parent_line IS NOT NULL
+      AND od.fk_parent_line > 0
+      AND od.description IS NOT NULL
+      AND od.description != ''
+    GROUP BY od.fk_parent_line
+) mo ON mo.job_rowid = wj.rowid
+SET wj.description = CONCAT_WS('\n', wj.description, mo.concat_desc);
+
+-- 8.6 : Cas 2 : Jobs par defaut des OR sans job (etape 7.3) — lignes MO orphelines
+UPDATE llx_workshop_operationorder_jobs wj
+INNER JOIN (
+    SELECT
+        od.fk_operation_order AS or_rowid,
+        GROUP_CONCAT(od.description SEPARATOR '\n') AS concat_desc
+    FROM llx_operationorderdet od
+    INNER JOIN llx_product p ON p.rowid = od.fk_product
+    INNER JOIN llx_product_extrafields pex ON pex.fk_object = p.rowid AND pex.or_scan = 1
+    WHERE (od.fk_parent_line IS NULL OR od.fk_parent_line = 0)
+      AND od.description IS NOT NULL
+      AND od.description != ''
+    GROUP BY od.fk_operation_order
+) mo ON mo.or_rowid = wj.fk_operationorder
+SET wj.description = CONCAT_WS('\n', wj.description, mo.concat_desc)
+WHERE wj.import_key LIKE 'mig-or-%';
+
+-- 8.7 : Cas 3 : Jobs MO orphelines dans OR avec jobs (etape 8.3)
+UPDATE llx_workshop_operationorder_jobs wj
+INNER JOIN (
+    SELECT
+        od.fk_operation_order AS or_rowid,
+        GROUP_CONCAT(od.description SEPARATOR '\n') AS concat_desc
+    FROM llx_operationorderdet od
+    INNER JOIN llx_product p ON p.rowid = od.fk_product
+    INNER JOIN llx_product_extrafields pex ON pex.fk_object = p.rowid AND pex.or_scan = 1
+    WHERE (od.fk_parent_line IS NULL OR od.fk_parent_line = 0)
+      AND od.description IS NOT NULL
+      AND od.description != ''
+    GROUP BY od.fk_operation_order
+) mo ON mo.or_rowid = wj.fk_operationorder
+SET wj.description = CONCAT_WS('\n', wj.description, mo.concat_desc)
+WHERE wj.import_key LIKE 'mig-mo-%';
+
+-- ============================================================================
+-- ETAPE 9 : Migration de la sous-traitance (ST)
+-- ============================================================================
+-- Strategie :
+--   - Meme logique que la MO mais avec l'extrafield oorder_available_for_supplier_order = 1
+--   - total_ht_external = somme des totaux HT des lignes ST
+--   - Descriptions concatenees dans le job
+--   - Liens element_element mis a jour (operationorderdet → operationorder_jobs)
+--   - On reutilise les jobs catch-all existants (mig-or-%, mig-mo-%) si possible
+-- ============================================================================
+
+-- 9.1 : Mise a jour des jobs migres avec les lignes ST enfants (fk_parent_line > 0)
+UPDATE llx_workshop_operationorder_jobs wj
+INNER JOIN (
+    SELECT
+        od.fk_parent_line AS job_rowid,
+        SUM(od.total_ht) AS sum_total_ht
+    FROM llx_operationorderdet od
+    INNER JOIN llx_product p ON p.rowid = od.fk_product
+    INNER JOIN llx_product_extrafields pex ON pex.fk_object = p.rowid AND pex.oorder_available_for_supplier_order = 1
+    WHERE od.fk_parent_line IS NOT NULL
+      AND od.fk_parent_line > 0
+    GROUP BY od.fk_parent_line
+) st ON st.job_rowid = wj.rowid
+SET wj.total_ht_external = st.sum_total_ht;
+
+-- 9.2 : Mise a jour des jobs catch-all existants (mig-or-% et mig-mo-%) avec lignes ST orphelines
+UPDATE llx_workshop_operationorder_jobs wj
+INNER JOIN (
+    SELECT
+        od.fk_operation_order AS or_rowid,
+        SUM(od.total_ht) AS sum_total_ht
+    FROM llx_operationorderdet od
+    INNER JOIN llx_product p ON p.rowid = od.fk_product
+    INNER JOIN llx_product_extrafields pex ON pex.fk_object = p.rowid AND pex.oorder_available_for_supplier_order = 1
+    WHERE (od.fk_parent_line IS NULL OR od.fk_parent_line = 0)
+    GROUP BY od.fk_operation_order
+) st ON st.or_rowid = wj.fk_operationorder
+SET wj.total_ht_external = st.sum_total_ht
+WHERE wj.import_key LIKE 'mig-or-%' OR wj.import_key LIKE 'mig-mo-%';
+
+-- 9.3 : Creation de jobs pour les OR qui ont des lignes ST orphelines
+--        mais aucun job catch-all existant (ni mig-or-%, ni mig-mo-%)
+INSERT INTO llx_workshop_operationorder_jobs (
+    date_creation,
+    fk_operationorder,
+    label,
+    description,
+    fk_service_type,
+    fk_job_type,
+    fk_soc,
+    fk_user_assign,
+    qty_mo,
+    prix_mo,
+    time_planned,
+    time_spent,
+    rang,
+    date_start,
+    date_end,
+    total_ht,
+    total_ht_part,
+    total_ht_mo,
+    total_ht_service,
+    total_ht_external,
+    total_ht_refund,
+    note_public,
+    note_private,
+    fk_user_creat,
+    fk_user_modif,
+    import_key,
+    tva_tx_mo,
+    tva_tx_st,
+    remise_percent
+)
+SELECT
+    NOW(),
+    st_or.or_rowid,
+    'Mécanique Générale',
+    NULL,
+    1,
+    NULL,
+    NULL,
+    NULL,
+    0,
+    0,
+    0,
+    0,
+    999,
+    NULL,
+    NULL,
+    0,
+    0,
+    0,
+    0,
+    st_or.sum_total_ht,
+    0,
+    NULL,
+    NULL,
+    woo.fk_user_creat,
+    NULL,
+    CONCAT('mig-st-', st_or.or_rowid),
+    20,
+    20,
+    0
+FROM (
+    SELECT
+        od.fk_operation_order AS or_rowid,
+        SUM(od.total_ht) AS sum_total_ht
+    FROM llx_operationorderdet od
+    INNER JOIN llx_product p ON p.rowid = od.fk_product
+    INNER JOIN llx_product_extrafields pex ON pex.fk_object = p.rowid AND pex.oorder_available_for_supplier_order = 1
+    WHERE (od.fk_parent_line IS NULL OR od.fk_parent_line = 0)
+      AND od.fk_operation_order NOT IN (
+          SELECT fk_operationorder FROM llx_workshop_operationorder_jobs
+          WHERE import_key LIKE 'mig-or-%' OR import_key LIKE 'mig-mo-%'
+      )
+    GROUP BY od.fk_operation_order
+) st_or
+INNER JOIN llx_workshop_operationorder woo ON woo.rowid = st_or.or_rowid;
+
+-- 9.4 : Concatenation des descriptions ST — jobs migres (lignes enfants)
+UPDATE llx_workshop_operationorder_jobs wj
+INNER JOIN (
+    SELECT
+        od.fk_parent_line AS job_rowid,
+        GROUP_CONCAT(od.description SEPARATOR '\n') AS concat_desc
+    FROM llx_operationorderdet od
+    INNER JOIN llx_product p ON p.rowid = od.fk_product
+    INNER JOIN llx_product_extrafields pex ON pex.fk_object = p.rowid AND pex.oorder_available_for_supplier_order = 1
+    WHERE od.fk_parent_line IS NOT NULL
+      AND od.fk_parent_line > 0
+      AND od.description IS NOT NULL
+      AND od.description != ''
+    GROUP BY od.fk_parent_line
+) st ON st.job_rowid = wj.rowid
+SET wj.description = CONCAT_WS('\n', wj.description, st.concat_desc);
+
+-- 9.5 : Concatenation des descriptions ST — jobs catch-all (mig-or-%, mig-mo-%, mig-st-%)
+UPDATE llx_workshop_operationorder_jobs wj
+INNER JOIN (
+    SELECT
+        od.fk_operation_order AS or_rowid,
+        GROUP_CONCAT(od.description SEPARATOR '\n') AS concat_desc
+    FROM llx_operationorderdet od
+    INNER JOIN llx_product p ON p.rowid = od.fk_product
+    INNER JOIN llx_product_extrafields pex ON pex.fk_object = p.rowid AND pex.oorder_available_for_supplier_order = 1
+    WHERE (od.fk_parent_line IS NULL OR od.fk_parent_line = 0)
+      AND od.description IS NOT NULL
+      AND od.description != ''
+    GROUP BY od.fk_operation_order
+) st ON st.or_rowid = wj.fk_operationorder
+SET wj.description = CONCAT_WS('\n', wj.description, st.concat_desc)
+WHERE wj.import_key LIKE 'mig-or-%'
+   OR wj.import_key LIKE 'mig-mo-%'
+   OR wj.import_key LIKE 'mig-st-%';
+
+-- 9.6 : Mise a jour des liens element_element
+--        operationorderdet → order_supplier devient operationorder_jobs → order_supplier
+--        Cas 1 : lignes ST enfants — le job = fk_parent_line de l'ancien det
+UPDATE llx_element_element ee
+INNER JOIN llx_operationorderdet od ON od.rowid = ee.fk_source
+INNER JOIN llx_product p ON p.rowid = od.fk_product
+INNER JOIN llx_product_extrafields pex ON pex.fk_object = p.rowid AND pex.oorder_available_for_supplier_order = 1
+SET ee.fk_source = od.fk_parent_line,
+    ee.sourcetype = 'operationorder_jobs'
+WHERE ee.sourcetype = 'operationorderdet'
+  AND ee.targettype = 'order_supplier'
+  AND od.fk_parent_line IS NOT NULL
+  AND od.fk_parent_line > 0;
+
+-- 9.7 : Cas 2 : lignes ST orphelines — le job = catch-all de l'OR
+--        Plusieurs det orphelines du meme OR peuvent pointer vers le meme order_supplier
+--        → on supprime puis reinscrit avec DISTINCT pour eviter les doublons sur l'index unique
+
+-- 9.7a : Insertion des nouveaux liens job → order_supplier (dedoublonnes)
+INSERT IGNORE INTO llx_element_element (fk_source, sourcetype, fk_target, targettype)
+SELECT DISTINCT
+    wj.rowid,
+    'operationorder_jobs',
+    ee.fk_target,
+    'order_supplier'
+FROM llx_element_element ee
+INNER JOIN llx_operationorderdet od ON od.rowid = ee.fk_source
+INNER JOIN llx_product p ON p.rowid = od.fk_product
+INNER JOIN llx_product_extrafields pex ON pex.fk_object = p.rowid AND pex.oorder_available_for_supplier_order = 1
+INNER JOIN llx_workshop_operationorder_jobs wj
+    ON wj.fk_operationorder = od.fk_operation_order
+    AND (wj.import_key LIKE 'mig-or-%' OR wj.import_key LIKE 'mig-mo-%' OR wj.import_key LIKE 'mig-st-%')
+WHERE ee.sourcetype = 'operationorderdet'
+  AND ee.targettype = 'order_supplier'
+  AND (od.fk_parent_line IS NULL OR od.fk_parent_line = 0);
+
+-- 9.7b : Suppression des anciens liens orphelins operationorderdet → order_supplier
+DELETE ee
+FROM llx_element_element ee
+INNER JOIN llx_operationorderdet od ON od.rowid = ee.fk_source
+INNER JOIN llx_product p ON p.rowid = od.fk_product
+INNER JOIN llx_product_extrafields pex ON pex.fk_object = p.rowid AND pex.oorder_available_for_supplier_order = 1
+WHERE ee.sourcetype = 'operationorderdet'
+  AND ee.targettype = 'order_supplier'
+  AND (od.fk_parent_line IS NULL OR od.fk_parent_line = 0);
+
+-- 9.8 : Sens inverse : order_supplier → operationorderdet devient order_supplier → operationorder_jobs
+--        Cas 1 : lignes ST enfants
+UPDATE llx_element_element ee
+INNER JOIN llx_operationorderdet od ON od.rowid = ee.fk_target
+INNER JOIN llx_product p ON p.rowid = od.fk_product
+INNER JOIN llx_product_extrafields pex ON pex.fk_object = p.rowid AND pex.oorder_available_for_supplier_order = 1
+SET ee.fk_target = od.fk_parent_line,
+    ee.targettype = 'operationorder_jobs'
+WHERE ee.sourcetype = 'order_supplier'
+  AND ee.targettype = 'operationorderdet'
+  AND od.fk_parent_line IS NOT NULL
+  AND od.fk_parent_line > 0;
+
+-- 9.9a : Sens inverse orphelines : insertion des nouveaux liens (dedoublonnes)
+INSERT IGNORE INTO llx_element_element (fk_source, sourcetype, fk_target, targettype)
+SELECT DISTINCT
+    ee.fk_source,
+    'order_supplier',
+    wj.rowid,
+    'operationorder_jobs'
+FROM llx_element_element ee
+INNER JOIN llx_operationorderdet od ON od.rowid = ee.fk_target
+INNER JOIN llx_product p ON p.rowid = od.fk_product
+INNER JOIN llx_product_extrafields pex ON pex.fk_object = p.rowid AND pex.oorder_available_for_supplier_order = 1
+INNER JOIN llx_workshop_operationorder_jobs wj
+    ON wj.fk_operationorder = od.fk_operation_order
+    AND (wj.import_key LIKE 'mig-or-%' OR wj.import_key LIKE 'mig-mo-%' OR wj.import_key LIKE 'mig-st-%')
+WHERE ee.sourcetype = 'order_supplier'
+  AND ee.targettype = 'operationorderdet'
+  AND (od.fk_parent_line IS NULL OR od.fk_parent_line = 0);
+
+-- 9.9b : Suppression des anciens liens orphelins order_supplier → operationorderdet
+DELETE ee
+FROM llx_element_element ee
+INNER JOIN llx_operationorderdet od ON od.rowid = ee.fk_target
+INNER JOIN llx_product p ON p.rowid = od.fk_product
+INNER JOIN llx_product_extrafields pex ON pex.fk_object = p.rowid AND pex.oorder_available_for_supplier_order = 1
+WHERE ee.sourcetype = 'order_supplier'
+  AND ee.targettype = 'operationorderdet'
+  AND (od.fk_parent_line IS NULL OR od.fk_parent_line = 0);
+
+-- 9.10 : Lien OR → commande fournisseur : sourcetype operationorder → workshop_operationorder
+UPDATE llx_element_element
+SET sourcetype = 'workshop_operationorder'
+WHERE sourcetype = 'operationorder'
+  AND targettype = 'order_supplier';
+
+-- ============================================================================
+-- ETAPE 10 : Migration des lignes de detail (produits/services)
+-- ============================================================================
+-- Strategie :
+--   - On prend toutes les lignes qui ne sont PAS des jobs (or_is_job=1 + parent),
+--     PAS de la MO (or_scan=1), PAS de la sous-traitance (oorder_available_for_supplier_order=1)
+--   - fk_operationorder_jobs : fk_parent_line si > 0, sinon catch-all de l'OR
+--   - rowid force depuis l'ancien rowid
+--   - import_key = ancien rowid
+--   - fk_warehouse : cast varchar → integer, vide → NULL
+-- ============================================================================
+
+-- 10.1 : Vidage de la table de destination avant insertion
+TRUNCATE TABLE llx_workshop_operationorderdet;
+
+-- 10.2 : Creation de jobs catch-all pour les OR qui ont des lignes produit sans job valide
+--         (orphelines OU dont le fk_parent_line ne pointe pas vers un job)
+--         mais aucun catch-all existant
+INSERT INTO llx_workshop_operationorder_jobs (
+    date_creation,
+    fk_operationorder,
+    label,
+    description,
+    fk_service_type,
+    fk_job_type,
+    fk_soc,
+    fk_user_assign,
+    qty_mo,
+    prix_mo,
+    time_planned,
+    time_spent,
+    rang,
+    date_start,
+    date_end,
+    total_ht,
+    total_ht_part,
+    total_ht_mo,
+    total_ht_service,
+    total_ht_external,
+    total_ht_refund,
+    note_public,
+    note_private,
+    fk_user_creat,
+    fk_user_modif,
+    import_key,
+    tva_tx_mo,
+    tva_tx_st,
+    remise_percent
+)
+SELECT
+    NOW(),
+    orphan_or.or_rowid,
+    'Mécanique Générale',
+    NULL,
+    1,
+    NULL,
+    NULL,
+    NULL,
+    0,
+    0,
+    0,
+    0,
+    999,
+    NULL,
+    NULL,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    NULL,
+    NULL,
+    woo.fk_user_creat,
+    NULL,
+    CONCAT('mig-det-', orphan_or.or_rowid),
+    20,
+    20,
+    0
+FROM (
+    SELECT DISTINCT od.fk_operation_order AS or_rowid
+    FROM llx_operationorderdet od
+    LEFT JOIN llx_product p ON p.rowid = od.fk_product
+    LEFT JOIN llx_product_extrafields pex ON pex.fk_object = p.rowid
+    WHERE (pex.or_is_job IS NULL OR pex.or_is_job != 1)
+      AND (pex.or_scan IS NULL OR pex.or_scan != 1)
+      AND (pex.oorder_available_for_supplier_order IS NULL OR pex.oorder_available_for_supplier_order != 1)
+      AND (
+          (od.fk_parent_line IS NULL OR od.fk_parent_line = 0)
+          OR od.fk_parent_line NOT IN (SELECT rowid FROM llx_workshop_operationorder_jobs)
+      )
+      AND od.fk_operation_order NOT IN (
+          SELECT fk_operationorder FROM llx_workshop_operationorder_jobs
+          WHERE import_key LIKE 'mig-or-%' OR import_key LIKE 'mig-mo-%' OR import_key LIKE 'mig-st-%'
+      )
+) orphan_or
+INNER JOIN llx_workshop_operationorder woo ON woo.rowid = orphan_or.or_rowid;
+
+-- 10.3 : Insertion des lignes avec parent valide (fk_parent_line existe dans les jobs)
+INSERT INTO llx_workshop_operationorderdet (
+    rowid,
+    date_creation,
+    fk_operationorder_jobs,
+    fk_product,
+    label,
+    description,
+    qty,
+    price,
+    remise_percent,
+    remise,
+    total_ht,
+    product_type,
+    rang,
+    pc,
+    pr,
+    fk_warehouse,
+    info_bits,
+    total_ht_part,
+    total_ht_service,
+    total_ht_refund,
+    fk_user_creat,
+    fk_user_modif,
+    import_key
+)
+SELECT
+    od.rowid,
+    od.date_creation,
+    od.fk_parent_line,
+    od.fk_product,
+    od.label,
+    od.description,
+    od.qty,
+    od.price,
+    od.remise_percent,
+    od.remise,
+    od.total_ht,
+    od.product_type,
+    od.rang,
+    od.pc,
+    od.pr,
+    CASE WHEN od.fk_warehouse IS NULL OR od.fk_warehouse = '' OR od.fk_warehouse = '0' THEN NULL ELSE CAST(od.fk_warehouse AS SIGNED) END,
+    od.info_bits,
+    od.total_ht_part,
+    od.total_ht_service,
+    od.total_ht_reimbursement,
+    od.fk_user_creat,
+    od.fk_user_modif,
+    od.rowid
+FROM llx_operationorderdet od
+LEFT JOIN llx_product p ON p.rowid = od.fk_product
+LEFT JOIN llx_product_extrafields pex ON pex.fk_object = p.rowid
+WHERE od.fk_parent_line IS NOT NULL
+  AND od.fk_parent_line > 0
+  AND od.fk_parent_line IN (SELECT rowid FROM llx_workshop_operationorder_jobs)
+  AND (pex.or_is_job IS NULL OR pex.or_is_job != 1)
+  AND (pex.or_scan IS NULL OR pex.or_scan != 1)
+  AND (pex.oorder_available_for_supplier_order IS NULL OR pex.oorder_available_for_supplier_order != 1);
+
+-- 10.4 : Insertion des lignes sans job valide — le job = catch-all de l'OR
+--         (orphelines OU dont le fk_parent_line ne pointe pas vers un job)
+INSERT INTO llx_workshop_operationorderdet (
+    rowid,
+    date_creation,
+    fk_operationorder_jobs,
+    fk_product,
+    label,
+    description,
+    qty,
+    price,
+    remise_percent,
+    remise,
+    total_ht,
+    product_type,
+    rang,
+    pc,
+    pr,
+    fk_warehouse,
+    info_bits,
+    total_ht_part,
+    total_ht_service,
+    total_ht_refund,
+    fk_user_creat,
+    fk_user_modif,
+    import_key
+)
+SELECT
+    od.rowid,
+    od.date_creation,
+    wj.rowid,
+    od.fk_product,
+    od.label,
+    od.description,
+    od.qty,
+    od.price,
+    od.remise_percent,
+    od.remise,
+    od.total_ht,
+    od.product_type,
+    od.rang,
+    od.pc,
+    od.pr,
+    CASE WHEN od.fk_warehouse IS NULL OR od.fk_warehouse = '' OR od.fk_warehouse = '0' THEN NULL ELSE CAST(od.fk_warehouse AS SIGNED) END,
+    od.info_bits,
+    od.total_ht_part,
+    od.total_ht_service,
+    od.total_ht_reimbursement,
+    od.fk_user_creat,
+    od.fk_user_modif,
+    od.rowid
+FROM llx_operationorderdet od
+LEFT JOIN llx_product p ON p.rowid = od.fk_product
+LEFT JOIN llx_product_extrafields pex ON pex.fk_object = p.rowid
+INNER JOIN (
+    SELECT fk_operationorder, MIN(rowid) AS rowid
+    FROM llx_workshop_operationorder_jobs
+    WHERE import_key LIKE 'mig-or-%' OR import_key LIKE 'mig-mo-%' OR import_key LIKE 'mig-st-%' OR import_key LIKE 'mig-det-%'
+    GROUP BY fk_operationorder
+) wj ON wj.fk_operationorder = od.fk_operation_order
+WHERE (pex.or_is_job IS NULL OR pex.or_is_job != 1)
+  AND (pex.or_scan IS NULL OR pex.or_scan != 1)
+  AND (pex.oorder_available_for_supplier_order IS NULL OR pex.oorder_available_for_supplier_order != 1)
+  AND (
+      (od.fk_parent_line IS NULL OR od.fk_parent_line = 0)
+      OR od.fk_parent_line NOT IN (SELECT rowid FROM llx_workshop_operationorder_jobs)
+  );
