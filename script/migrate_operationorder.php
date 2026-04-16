@@ -1263,6 +1263,7 @@ while ($oldOR = $db->fetch_object($resql)) {
 
 	// 1b.10 : Créer les lignes de détail (Operationorderdet) pour les lignes régulières
 	$detCreatedCount = 0;
+	$productToDetMap = array(); // fk_product => new det rowid (pour mapping mouvements de stock)
 	foreach ($regularLines as $rl) {
 		// Déterminer le job parent
 		$parentId = (int) $rl->fk_parent_line;
@@ -1320,6 +1321,15 @@ while ($oldOR = $db->fetch_object($resql)) {
 			$db->query($sqlFixDet);
 		}
 
+		// Enregistrer le mapping produit → nouveau det pour les mouvements de stock
+		if (!empty($rl->fk_product)) {
+			$pid = (int) $rl->fk_product;
+			if (!isset($productToDetMap[$pid])) {
+				$productToDetMap[$pid] = (int) $newDetId;
+			}
+			// Si plusieurs det pour le même produit, on garde le premier
+		}
+
 		$detCreatedCount++;
 		out("       Det créée : id=".$newDetId." (ancien det=".$rl->rowid.", job=".$targetJob->id.", type=".$productType.")", 'debug', $verbose);
 	}
@@ -1331,6 +1341,52 @@ while ($oldOR = $db->fetch_object($resql)) {
 		$errorDetails[] = array('old_id' => $oldOR->rowid, 'ref' => $oldOR->ref, 'reason' => 'Erreur création des lignes de détail');
 		$countErrors++;
 		continue;
+	}
+
+	// 1b.10b : Mise à jour des mouvements de stock existants pour cet OR
+	// Les anciens mouvements ont origintype='operationorder@operationorder' et fk_origin=ancien_OR_rowid.
+	// On les UPDATE pour pointer vers la ligne de détail Workshop :
+	//   origintype → 'operationorderdet@workshop'
+	//   fk_origin  → new det rowid (via matching fk_product)
+	$mvtUpdatedCount = 0;
+	if (!empty($productToDetMap)) {
+		$sqlMvt  = "SELECT rowid, fk_product FROM ".MAIN_DB_PREFIX."stock_mouvement";
+		$sqlMvt .= " WHERE origintype = 'operationorder@operationorder'";
+		$sqlMvt .= " AND fk_origin = ".(int) $oldOR->rowid;
+		$resMvt = $db->query($sqlMvt);
+		if ($resMvt) {
+			while ($objMvt = $db->fetch_object($resMvt)) {
+				$mvtProductId = (int) $objMvt->fk_product;
+				if (isset($productToDetMap[$mvtProductId])) {
+					$newDetIdForMvt = $productToDetMap[$mvtProductId];
+					$sqlUpdMvt  = "UPDATE ".MAIN_DB_PREFIX."stock_mouvement SET";
+					$sqlUpdMvt .= " origintype = 'operationorderdet@workshop'";
+					$sqlUpdMvt .= ", fk_origin = ".(int) $newDetIdForMvt;
+					$sqlUpdMvt .= " WHERE rowid = ".(int) $objMvt->rowid;
+					$db->query($sqlUpdMvt);
+					$mvtUpdatedCount++;
+				} else {
+					out("       → WARN mouvement stock rowid=".$objMvt->rowid." : produit ".$mvtProductId." sans ligne det correspondante", 'warn');
+				}
+			}
+			$db->free($resMvt);
+		}
+	} else {
+		// Pas de det créées mais il peut y avoir des mouvements de stock à signaler
+		$sqlMvtCheck  = "SELECT COUNT(*) AS nb FROM ".MAIN_DB_PREFIX."stock_mouvement";
+		$sqlMvtCheck .= " WHERE origintype = 'operationorder@operationorder'";
+		$sqlMvtCheck .= " AND fk_origin = ".(int) $oldOR->rowid;
+		$resMvtCheck = $db->query($sqlMvtCheck);
+		if ($resMvtCheck) {
+			$objMvtCheck = $db->fetch_object($resMvtCheck);
+			if ((int) $objMvtCheck->nb > 0) {
+				out("       → WARN : ".$objMvtCheck->nb." mouvement(s) de stock pour cet OR mais aucune ligne det créée", 'warn');
+			}
+		}
+	}
+
+	if ($mvtUpdatedCount > 0) {
+		out("       Mouvements de stock mis à jour : ".$mvtUpdatedCount, 'debug', $verbose);
 	}
 
 	// 1b.11 : Migrer les liens element_element des lignes vers les jobs
@@ -1458,7 +1514,7 @@ while ($oldOR = $db->fetch_object($resql)) {
 
 	$db->commit();
 
-	out("       → OR migré (new id=".$newORId.", ".$jobCount." jobs, ".$detCreatedCount." det, ".$stLinkCount." ST)", 'ok');
+	out("       → OR migré (new id=".$newORId.", ".$jobCount." jobs, ".$detCreatedCount." det, ".$stLinkCount." ST, ".$mvtUpdatedCount." mvt stock)", 'ok');
 	$countMigrated++;
 }
 
