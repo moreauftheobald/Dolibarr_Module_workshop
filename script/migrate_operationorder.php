@@ -913,21 +913,25 @@ while ($oldOR = $db->fetch_object($resql)) {
 	}
 
 	// --- Corrections post-création ---
-	// createCommon force entity=$conf->entity et date_creation=dol_now()
+	// createCommon force entity=$conf->entity, date_creation=dol_now() et ref=(PROVxxx)
 	// On rétablit les valeurs d'origine
 	$sqlFix = "UPDATE ".MAIN_DB_PREFIX."workshop_operationorder SET";
-	$sqlFix .= " entity = ".(int) $oldOR->entity;
+	$sqlFix .= " ref = '".$db->escape($oldOR->ref)."'";
+	$sqlFix .= ", entity = ".(int) $oldOR->entity;
 	$sqlFix .= ", date_creation = ".($oldOR->date_creation ? "'".$db->escape($oldOR->date_creation)."'" : "NULL");
 	$sqlFix .= " WHERE rowid = ".(int) $newORId;
 	$resFix = $db->query($sqlFix);
 	if (!$resFix) {
 		$db->rollback();
-		$reason = "Erreur correction entity/date_creation : ".$db->lasterror();
+		$reason = "Erreur correction ref/entity/date_creation : ".$db->lasterror();
 		out("       → ERREUR post-correction OR : ".$reason, 'err');
 		$errorDetails[] = array('old_id' => $oldOR->rowid, 'ref' => $oldOR->ref, 'reason' => $reason);
 		$countErrors++;
 		continue;
 	}
+	// Mettre à jour l'objet en mémoire aussi
+	$or->ref    = $oldOR->ref;
+	$or->entity = (int) $oldOR->entity;
 
 	// --- Lien tag (catégorie) ---
 	if (!empty($newTagId)) {
