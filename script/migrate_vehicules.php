@@ -498,6 +498,178 @@ if (!$resAct) {
 }
 
 // ============================================================
+// Étape 5 : Migration des opérations de maintenance (calendriers d'entretien)
+//
+// Ancien modèle : vehicule_operation.fk_product → llx_product
+// Nouveau modèle : vehicule_operation.fk_maintenance_operation → c_maintenance_operation
+//
+// Le dictionnaire c_maintenance_operation doit être peuplé AVANT
+// d'exécuter ce script (voir sql/data_maintenance_operations.sql).
+//
+// Mapping statique product_id → maintenance_operation rowid,
+// issu de l'analyse croisée des données dolifleet.
+// ============================================================
+mig_log("--- Étape 5 : Migration des opérations de maintenance (vehicule_operation) ---");
+
+// Mapping ancien fk_product → nouveau fk_maintenance_operation (rowid)
+$mapProductToMaintOp = array(
+	// Universelles
+	20492 => 1,   // CTRL-LIMIT — Contrôle du limiteur de vitesse
+	20493 => 2,   // CTRL-TACHY — Contrôle du tachygraphe
+	20490 => 3,   // CT — Contrôle Technique
+	20491 => 4,   // CTRL-EXTINCT — Contrôle Annuel Extincteur
+	4295  => 4,   // CTRL-EXTINCT — idem (ancien doublon produit)
+	4292  => 5,   // CTRL-ANN-TRT — Contrôles annuels tracteur
+
+	// Tracteur+Porteur toutes marques
+	20476 => 6,   // VID-MOT — Vidange Moteur
+	20487 => 7,   // VID-BV — Huile/filtre boîte de vitesse
+	20488 => 8,   // VID-PONT — Vidange huile de pont
+	20486 => 9,   // REG-SOUP-INJ — Réglage soupapes et injecteurs-pompes
+	20477 => 10,  // FILT-AIR — Remplacement Filtre à air
+	20478 => 11,  // LIQ-REFROID — Liquide de refroidissement
+	20479 => 12,  // DESSIC-AIR — Cartouche dessiccateur d'air
+	20481 => 13,  // FILT-DPF — Insert filtre DPF
+	20480 => 14,  // FILT-RESERV — Filtre aération réservoir
+	20483 => 15,  // COURR-VENT — Courroies ventilateur
+	20482 => 16,  // COURR-ALTER — Courroies alternateur
+	20484 => 17,  // CHG-ALTER — Changement alternateur
+	20485 => 18,  // CHG-REGUL — Changement régulateur de charge
+	20489 => 19,  // FILT-CLIM — Filtre clim
+	20475 => 20,  // SERV-COMPLET — Service complet
+	4547  => 21,  // VID-RETARD — Retardeur vidange
+
+	// IVECO (type=1, mark=11)
+	21205 => 22,  // ENT-INT-IVECO — Entretien intermédiaire
+	21206 => 22,  // ENT-INT-IVECO — idem (doublon produit)
+	21220 => 23,  // ENT-150K-IVECO — Entretien 150 000 kms
+	20928 => 24,  // CA-ROLFO-PT — Campagne fixation poteau
+
+	// Mercedes (type=1, mark=7)
+	20560 => 25,  // VID-MOT-MB — Vidange moteur Mercedes
+	20561 => 26,  // VID-LR-MB — Vidange LR Mercedes
+	20516 => 27,  // BAT-MB — Batteries Mercedes
+	21043 => 28,  // CTRL-ETHYL — Ethylotest
+
+	// Porteur (type=2)
+	5092  => 29,  // CTRL-ANN-PRT — Contrôles annuels porteur
+	4531  => 30,  // REG-SOUP-PRT — Soupapes porteur
+	4572  => 31,  // DPF-PRT-1 — DPF porteur var. 1
+	4573  => 32,  // DPF-PRT-2 — DPF porteur var. 2
+
+	// Remorque toutes marques (type=3)
+	20289 => 33,  // CS-TRRQ — Check Sécurité
+	5088  => 34,  // CTRL-ANN-RQ — Contrôles annuels remorque
+	5089  => 35,  // CT-R — Contrôle Technique Remorque
+	20208 => 36,  // CTRL-ROLFO-M1 — Contrôle équipement Rolfo
+	20553 => 37,  // VERIF-CS-RQ — Cales et sangles
+	19840 => 38,  // LOHR-V1
+	19841 => 39,  // LOHR-V2
+	19842 => 40,  // LOHR-V3
+
+	// Remorque spécifique marque
+	20496 => 41,  // FEUX-PLAT-RQ — Feux additionnel (mark 3)
+	21117 => 42,  // MONT-ROULEAU — Montage rouleau (mark 3)
+	20570 => 43,  // CA-BPW — Campagne Etrier BPW (mark 8)
+);
+
+// Vérifier que le dictionnaire cible est peuplé
+$sqlCheckDict = "SELECT COUNT(*) as nb FROM ".$db->prefix()."workshop_vehicule_c_maintenance_operation";
+$resCheckDict = $db->query($sqlCheckDict);
+$objCheck = $db->fetch_object($resCheckDict);
+if ((int) $objCheck->nb === 0) {
+	mig_log("  ERREUR : la table workshop_vehicule_c_maintenance_operation est vide !", "ERROR");
+	mig_log("  Exécutez d'abord : sql/data_maintenance_operations.sql", "ERROR");
+} else {
+	mig_log("  Dictionnaire maintenance : ".$objCheck->nb." entrées trouvées");
+
+	// Lire les opérations source
+	$sqlOpe = "SELECT * FROM ".$db->prefix()."dolifleet_vehicule_operation ORDER BY fk_vehicule ASC, rang ASC";
+	$resOpe = $db->query($sqlOpe);
+	if (!$resOpe) {
+		mig_log("  Table dolifleet_vehicule_operation introuvable ou erreur : ".$db->lasterror(), "ERROR");
+	} else {
+		$nbOpeTotal    = $db->num_rows($resOpe);
+		$nbOpeMigrated = 0;
+		$nbOpeSkipped  = 0;
+		$nbOpeErrors   = 0;
+
+		mig_log("  $nbOpeTotal opération(s) à traiter");
+
+		while ($ope = $db->fetch_object($resOpe)) {
+			$oldOpeId  = (int) $ope->rowid;
+			$oldVehId  = (int) $ope->fk_vehicule;
+			$oldProdId = (int) $ope->fk_product;
+
+			// Résoudre le nouveau fk_vehicule
+			$newVehId = isset($mapVehiculeIds[$oldVehId]) ? $mapVehiculeIds[$oldVehId] : 0;
+			if ($newVehId == 0) {
+				mig_log("  [WARN] Opération #$oldOpeId : fk_vehicule=$oldVehId non trouvé dans les véhicules migrés", "ERROR");
+				$nbOpeErrors++;
+				continue;
+			}
+
+			// Résoudre fk_product → fk_maintenance_operation
+			$newMaintOpId = isset($mapProductToMaintOp[$oldProdId]) ? $mapProductToMaintOp[$oldProdId] : 0;
+			if ($newMaintOpId == 0) {
+				mig_log("  [WARN] Opération #$oldOpeId : fk_product=$oldProdId non trouvé dans le mapping produit → maintenance_operation", "ERROR");
+				$nbOpeErrors++;
+				continue;
+			}
+
+			// Idempotence : vérifier si cette opération existe déjà (même véhicule + maintenance_operation)
+			$sqlExist = "SELECT rowid FROM ".$db->prefix()."workshop_vehicule_operation";
+			$sqlExist .= " WHERE fk_vehicule = ".$newVehId;
+			$sqlExist .= " AND fk_maintenance_operation = ".$newMaintOpId;
+			$resExist = $db->query($sqlExist);
+			if ($resExist && $db->num_rows($resExist) > 0) {
+				$nbOpeSkipped++;
+				continue;
+			}
+
+			if (!$dryRun) {
+				$sqlIns = "INSERT INTO ".$db->prefix()."workshop_vehicule_operation";
+				$sqlIns .= " (date_creation, fk_vehicule, fk_maintenance_operation, status, rang, km, delai_from_last_op,";
+				$sqlIns .= " date_done, km_done, date_next, km_next, on_time, or_next, date_due)";
+				$sqlIns .= " VALUES (";
+				$sqlIns .= ($ope->date_creation !== null ? "'".$db->escape($ope->date_creation)."'" : "NULL");
+				$sqlIns .= ", ".$newVehId;
+				$sqlIns .= ", ".$newMaintOpId;
+				$sqlIns .= ", ".(int) $ope->status;
+				$sqlIns .= ", ".(int) $ope->rang;
+				$sqlIns .= ", ".(float) $ope->km;
+				$sqlIns .= ", ".(int) $ope->delai_from_last_op;
+				$sqlIns .= ", ".($ope->date_done !== null ? "'".$db->escape($ope->date_done)."'" : "NULL");
+				$sqlIns .= ", ".(float) $ope->km_done;
+				$sqlIns .= ", ".($ope->date_next !== null ? "'".$db->escape($ope->date_next)."'" : "NULL");
+				$sqlIns .= ", ".(float) $ope->km_next;
+				$sqlIns .= ", ".(int) $ope->on_time;
+				$sqlIns .= ", ".(int) $ope->or_next;
+				$sqlIns .= ", ".($ope->date_due !== null ? "'".$db->escape($ope->date_due)."'" : "NULL");
+				$sqlIns .= ")";
+
+				$resIns = $db->query($sqlIns);
+				if (!$resIns) {
+					mig_log("  [ERREUR] Opération #$oldOpeId : ".$db->lasterror(), "ERROR");
+					$nbOpeErrors++;
+					continue;
+				}
+
+				$newOpeId = $db->last_insert_id($db->prefix()."workshop_vehicule_operation");
+				mig_log("  [OK] Opération #$oldOpeId → #$newOpeId (veh=$oldVehId→$newVehId, product=$oldProdId→maintOp=$newMaintOpId)");
+				$nbOpeMigrated++;
+			} else {
+				mig_log("  [DRY-RUN] Opération #$oldOpeId (veh=$oldVehId→$newVehId, product=$oldProdId→maintOp=$newMaintOpId) serait migrée");
+				$nbOpeMigrated++;
+			}
+		}
+		$db->free($resOpe);
+
+		mig_log("  Opérations : $nbOpeMigrated migrées, $nbOpeSkipped déjà présentes, $nbOpeErrors erreurs");
+	}
+}
+
+// ============================================================
 // Résumé
 // ============================================================
 mig_log("=== Migration terminée ===");
@@ -508,10 +680,14 @@ if (isset($nbLinksTotal)) {
 if (isset($nbActTotal)) {
 	mig_log("  Activités  — Total : $nbActTotal, Migrés : $nbActMigrated, Déjà présentes : $nbActSkipped, Erreurs : $nbActErrors");
 }
+if (isset($nbOpeTotal)) {
+	mig_log("  Opérations — Total : $nbOpeTotal, Migrées : $nbOpeMigrated, Déjà présentes : $nbOpeSkipped, Erreurs : $nbOpeErrors");
+}
 
 $hasErrors = $nbErrors > 0
 	|| (isset($nbLinksErrors) && $nbLinksErrors > 0)
-	|| (isset($nbActErrors) && $nbActErrors > 0);
+	|| (isset($nbActErrors) && $nbActErrors > 0)
+	|| (isset($nbOpeErrors) && $nbOpeErrors > 0);
 
 if ($hasErrors) {
 	exit(1);
