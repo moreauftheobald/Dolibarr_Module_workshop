@@ -1321,8 +1321,8 @@ while ($oldOR = $db->fetch_object($resql)) {
 	}
 
 	// 1b.12 : Migrer les liens element_element au niveau OR
-	// operationorder → X  devient  workshop_operationorder → X
-	// X → operationorder  devient  X → workshop_operationorder
+	// Le $element de la classe Workshop est 'operationorder' (pas 'workshop_operationorder')
+	// On duplique les liens de l'ancien rowid vers le nouveau rowid, même sourcetype/targettype
 	$sqlOrLink  = "SELECT rowid, fk_source, sourcetype, fk_target, targettype";
 	$sqlOrLink .= " FROM ".MAIN_DB_PREFIX."element_element";
 	$sqlOrLink .= " WHERE (fk_source = ".(int) $oldOR->rowid." AND sourcetype = 'operationorder')";
@@ -1330,13 +1330,14 @@ while ($oldOR = $db->fetch_object($resql)) {
 	$resOrLink = $db->query($sqlOrLink);
 	if ($resOrLink) {
 		while ($objOrLink = $db->fetch_object($resOrLink)) {
-			if ($objOrLink->sourcetype === 'operationorder') {
+			if ($objOrLink->sourcetype === 'operationorder' && (int) $objOrLink->fk_source === (int) $oldOR->rowid) {
 				$sqlInsOr = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."element_element (fk_source, sourcetype, fk_target, targettype)";
-				$sqlInsOr .= " VALUES (".(int) $newORId.", 'workshop_operationorder', ".(int) $objOrLink->fk_target.", '".$db->escape($objOrLink->targettype)."')";
+				$sqlInsOr .= " VALUES (".(int) $newORId.", 'operationorder', ".(int) $objOrLink->fk_target.", '".$db->escape($objOrLink->targettype)."')";
 				$db->query($sqlInsOr);
-			} elseif ($objOrLink->targettype === 'operationorder') {
+			}
+			if ($objOrLink->targettype === 'operationorder' && (int) $objOrLink->fk_target === (int) $oldOR->rowid) {
 				$sqlInsOr = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."element_element (fk_source, sourcetype, fk_target, targettype)";
-				$sqlInsOr .= " VALUES (".(int) $objOrLink->fk_source.", '".$db->escape($objOrLink->sourcetype)."', ".(int) $newORId.", 'workshop_operationorder')";
+				$sqlInsOr .= " VALUES (".(int) $objOrLink->fk_source.", '".$db->escape($objOrLink->sourcetype)."', ".(int) $newORId.", 'operationorder')";
 				$db->query($sqlInsOr);
 			}
 		}
