@@ -1321,8 +1321,9 @@ while ($oldOR = $db->fetch_object($resql)) {
 	}
 
 	// 1b.12 : Migrer les liens element_element au niveau OR
-	// Le $element de la classe Workshop est 'operationorder' (pas 'workshop_operationorder')
-	// On duplique les liens de l'ancien rowid vers le nouveau rowid, même sourcetype/targettype
+	// Dans le nouveau module, add_object_linked utilise getElementType() = 'workshop_operationorder'
+	// Les anciens liens utilisent sourcetype/targettype = 'operationorder'
+	// On les duplique en remplaçant 'operationorder' par 'workshop_operationorder'
 	$sqlOrLink  = "SELECT rowid, fk_source, sourcetype, fk_target, targettype";
 	$sqlOrLink .= " FROM ".MAIN_DB_PREFIX."element_element";
 	$sqlOrLink .= " WHERE (fk_source = ".(int) $oldOR->rowid." AND sourcetype = 'operationorder')";
@@ -1332,12 +1333,12 @@ while ($oldOR = $db->fetch_object($resql)) {
 		while ($objOrLink = $db->fetch_object($resOrLink)) {
 			if ($objOrLink->sourcetype === 'operationorder' && (int) $objOrLink->fk_source === (int) $oldOR->rowid) {
 				$sqlInsOr = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."element_element (fk_source, sourcetype, fk_target, targettype)";
-				$sqlInsOr .= " VALUES (".(int) $newORId.", 'operationorder', ".(int) $objOrLink->fk_target.", '".$db->escape($objOrLink->targettype)."')";
+				$sqlInsOr .= " VALUES (".(int) $newORId.", 'workshop_operationorder', ".(int) $objOrLink->fk_target.", '".$db->escape($objOrLink->targettype)."')";
 				$db->query($sqlInsOr);
 			}
 			if ($objOrLink->targettype === 'operationorder' && (int) $objOrLink->fk_target === (int) $oldOR->rowid) {
 				$sqlInsOr = "INSERT IGNORE INTO ".MAIN_DB_PREFIX."element_element (fk_source, sourcetype, fk_target, targettype)";
-				$sqlInsOr .= " VALUES (".(int) $objOrLink->fk_source.", '".$db->escape($objOrLink->sourcetype)."', ".(int) $newORId.", 'operationorder')";
+				$sqlInsOr .= " VALUES (".(int) $objOrLink->fk_source.", '".$db->escape($objOrLink->sourcetype)."', ".(int) $newORId.", 'workshop_operationorder')";
 				$db->query($sqlInsOr);
 			}
 		}
