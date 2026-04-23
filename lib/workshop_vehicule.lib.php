@@ -57,7 +57,7 @@ function vehiculePrepareHead($object)
 
 	if (isModEnabled("workshop") && $user->hasRight('workshop', 'operationorders', 'read')) {
 		$nbOperationOrder = getNbORVehicle($object->id);
-		$head[$h][0] = dol_buildpath('/workshop/or_list.php?origin=vehicule&originid='.$object->id, 1);
+		$head[$h][0] = dol_buildpath('/workshop/operationorder/or_list.php?origin=vehicule&originid='.$object->id, 1);
 		$head[$h][1] = $langs->trans('ORListHisto').'<span class="badge marginleftonlyshort">'.max($nbOperationOrder, 0).'</span>';
 		$head[$h][2] = 'list';
 		$h++;

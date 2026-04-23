@@ -180,7 +180,7 @@ Déclarer les hooks disponibles dans `modWorkshop.class.php`.
 /workshop/workshopindex.php                        → tableau de bord
 /workshop/vehicule/vehicule_list.php               → liste des véhicules
 /workshop/vehicule/vehicule_card.php               → fiche véhicule
-/workshop/or_list.php                              → liste des OR
+/workshop/operationorder/or_list.php               → liste des OR
 /workshop/operationorder/or_card.php               → fiche OR
 /workshop/operationorder/operationorder_planning.php → planning OR
 /workshop/workshop_planning.php                    → planning atelier global
