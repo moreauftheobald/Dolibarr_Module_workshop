@@ -651,8 +651,7 @@ if ($mode === 'journee') {
 	// Match JSGantt default task bar metrics so the bar is actually visible
 	// (passing a custom itemClass replaces .gtaskblue / .gtaskred entirely)
 	print '  #GanttChartDIV [class^="wsorstatus-"] { height: 13px; opacity: 0.9; margin-top: 1px; border: 1px solid rgba(0,0,0,0.2); cursor: pointer; }' . "\n";
-	// Hide JSGantt built-in tooltip (target by ID and all possible class names)
-	print '  #JSGanttToolTip, .JSGanttToolTip, .gtooltip, div.gantt_tooltip { display: none !important; visibility: hidden !important; }' . "\n";
+	print '  #wsGanttTooltip { pointer-events: none; }' . "\n";
 	foreach ($gantt_status_colors as $stid => $col) {
 		$col_safe = preg_match('/^#[0-9a-fA-F]{3,8}$/', $col) ? $col : '#3c8dbc';
 		print '  #GanttChartDIV .wsorstatus-' . (int) $stid . ' { background-color: ' . $col_safe . ' !important; }' . "\n";
@@ -690,7 +689,6 @@ if ($mode === 'journee') {
 	print '  g.setFormatArr("day");' . "\n";
 	print '  g.setCaptionType(\'Caption\');' . "\n";
 	print '  g.setUseFade(0);' . "\n";
-	print '  g.setUseToolTip(0);' . "\n";
 	print "\n";
 	// Calculate dayColWidth so 28 displayed days fill the available width
 	// (JSGantt adds ~1 week padding on each side: 2 requested weeks → 4 displayed)
@@ -713,39 +711,19 @@ if ($mode === 'journee') {
 	print "\n";
 
 	// -----------------------------------------------------------------------
-	// Output one TaskItem per loaded OR (or a placeholder if none found)
+	// Tooltip data object (task_seq_id => HTML) – declared before AddTaskItem
 	// -----------------------------------------------------------------------
-	if (empty($gantt_or_rows)) {
-		// No OR in the visible period – render an empty bar with the "no data" label
-		print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
-		print '    0,' . "\n";
-		print '    \'' . dol_escape_js($langs->trans('WorkshopPlanningNoOR')) . '\',' . "\n";
-		print '    \'' . dol_escape_js($week_start) . '\',' . "\n";
-		print '    \'' . dol_escape_js($period_end) . '\',' . "\n";
-		print '    \'ggroupblack\',' . "\n";
-		print '    \'\', 0, \'\', 0, 0, 0, 1, \'\', \'\', \'\',' . "\n";
-		print '    g' . "\n";
-		print '  ));' . "\n";
-	} else {
+	print '  var wsTooltipData = {' . "\n";
+	if (!empty($gantt_or_rows)) {
 		$or_card_url = dol_buildpath('/workshop/operationorder/or_card.php', 1);
 		$task_seq = 1;
-
-		// Build tooltip data as a JS object (task_seq => HTML)
-		$tooltip_data = array();
+		$first_tt = true;
 		foreach ($gantt_or_rows as $or) {
-			$or_id     = (int) $or->rowid;
-			$or_ref    = (string) ($or->ref ?? '');
-			$immat     = trim((string) ($or->immatriculation ?? ''));
-			$soc       = trim((string) ($or->soc_name ?? ''));
-			$start_str = date('Y-m-d', strtotime($or->date_start));
-			$end_str   = date('Y-m-d', strtotime($or->date_end) + 86400);
-			$css_class = 'wsorstatus-' . (int) $or->status;
-			$name      = $immat !== '' ? $immat . ' - ' . $or_ref : $or_ref;
-			$link      = $or_card_url . '?id=' . $or_id;
+			$or_id = (int) $or->rowid;
+			$or_ref = (string) ($or->ref ?? '');
+			$immat = trim((string) ($or->immatriculation ?? ''));
+			$soc = trim((string) ($or->soc_name ?? ''));
 
-			$seq = $task_seq++;
-
-			// Tooltip HTML
 			$tt  = '<b>' . dol_escape_htmltag($or_ref) . '</b><br>';
 			$tt .= dol_escape_htmltag($langs->trans('Customer')) . ' : ' . dol_escape_htmltag($soc ?: '-') . '<br>';
 			$tt .= dol_escape_htmltag($langs->trans('Immatriculation')) . ' : ' . dol_escape_htmltag($immat ?: '-') . '<br>';
@@ -757,10 +735,54 @@ if ($mode === 'journee') {
 					$tt .= dol_escape_htmltag($job_label) . '<br>';
 				}
 			}
-			$tooltip_data[$seq] = $tt;
+			print '    ' . ($first_tt ? '' : ',') . $task_seq . ':\'' . dol_escape_js($tt) . '\'' . "\n";
+			$first_tt = false;
+			$task_seq++;
+		}
+	}
+	print '  };' . "\n";
+	print "\n";
+
+	// Tooltip template: try JSGantt native setTooltipTemplate, fallback to custom system
+	print '  var wsTooltipOK = false;' . "\n";
+	print '  if (typeof g.setTooltipTemplate === "function") {' . "\n";
+	print '    try {' . "\n";
+	print '      g.setTooltipTemplate(function(task) {' . "\n";
+	print '        var id = task.getID ? task.getID() : task.pID;' . "\n";
+	print '        return wsTooltipData[id] || task.getName();' . "\n";
+	print '      });' . "\n";
+	print '      wsTooltipOK = true;' . "\n";
+	print '    } catch(ex) {}' . "\n";
+	print '  }' . "\n";
+	print "\n";
+
+	// -----------------------------------------------------------------------
+	// Output one TaskItem per loaded OR (or a placeholder if none found)
+	// -----------------------------------------------------------------------
+	if (empty($gantt_or_rows)) {
+		print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
+		print '    0,' . "\n";
+		print '    \'' . dol_escape_js($langs->trans('WorkshopPlanningNoOR')) . '\',' . "\n";
+		print '    \'' . dol_escape_js($week_start) . '\',' . "\n";
+		print '    \'' . dol_escape_js($period_end) . '\',' . "\n";
+		print '    \'ggroupblack\',' . "\n";
+		print '    \'\', 0, \'\', 0, 0, 0, 1, \'\', \'\', \'\',' . "\n";
+		print '    g' . "\n";
+		print '  ));' . "\n";
+	} else {
+		$task_seq = 1;
+		foreach ($gantt_or_rows as $or) {
+			$or_id     = (int) $or->rowid;
+			$or_ref    = (string) ($or->ref ?? '');
+			$immat     = trim((string) ($or->immatriculation ?? ''));
+			$start_str = date('Y-m-d', strtotime($or->date_start));
+			$end_str   = date('Y-m-d', strtotime($or->date_end) + 86400);
+			$css_class = 'wsorstatus-' . (int) $or->status;
+			$name      = $immat !== '' ? $immat . ' - ' . $or_ref : $or_ref;
+			$link      = $or_card_url . '?id=' . $or_id;
 
 			print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
-			print '    ' . $seq . ',' . "\n";
+			print '    ' . ($task_seq++) . ',' . "\n";
 			print '    \'' . dol_escape_js($name) . '\',' . "\n";
 			print '    \'' . dol_escape_js($start_str) . '\',' . "\n";
 			print '    \'' . dol_escape_js($end_str)   . '\',' . "\n";
@@ -784,65 +806,37 @@ if ($mode === 'journee') {
 	// Draw the chart
 	print '  g.Draw(250 + (nbDays * dayW) + 20);' . "\n";
 	print "\n";
-	// Kill JSGantt native tooltip: override function + remove/hide existing element
-	print '  if (typeof JSGantt !== "undefined" && JSGantt.showToolTip) { JSGantt.showToolTip = function(){}; }' . "\n";
-	print '  var jsTT = document.getElementById("JSGanttToolTip");' . "\n";
-	print '  if (jsTT) { jsTT.parentNode.removeChild(jsTT); }' . "\n";
-	print "\n";
 
-	// Custom tooltip system (independent of JSGantt built-in tooltips)
-	print '  var wsTooltips = {' . "\n";
-	$first = true;
-	foreach (($tooltip_data ?? array()) as $tid => $html) {
-		print '    ' . ($first ? '' : ',') . '"' . $tid . '": \'' . dol_escape_js($html) . '\'' . "\n";
-		$first = false;
-	}
-	print '  };' . "\n";
-	print "\n";
-	print '  var ttDiv = document.createElement("div");' . "\n";
-	print '  ttDiv.id = "wsGanttTooltip";' . "\n";
-	print '  ttDiv.style.cssText = "display:none;position:fixed;z-index:99999;background:#fff;border:1px solid #aaa;border-radius:4px;padding:8px;box-shadow:2px 2px 6px rgba(0,0,0,.2);max-width:350px;font-size:12px;line-height:1.5;pointer-events:none;";' . "\n";
-	print '  document.body.appendChild(ttDiv);' . "\n";
-	print "\n";
-	// Use event delegation: listen on the whole chart, find the task ID from the bar element
-	print '  ganttEl.addEventListener("mouseenter", function(e) {' . "\n";
-	print '    var bar = e.target.closest("[class^=\'wsorstatus-\']");' . "\n";
-	print '    if (!bar) return;' . "\n";
-	// Walk up to find a parent with an id containing the task number (bardiv_N, child_N, etc.)
-	print '    var taskId = null;' . "\n";
-	print '    var el = bar;' . "\n";
-	print '    while (el && el !== ganttEl) {' . "\n";
-	print '      if (el.id) {' . "\n";
-	print '        var m = el.id.match(/(?:bardiv_|taskbar_|child_|childrow_)(\d+)/);' . "\n";
-	print '        if (m) { taskId = m[1]; break; }' . "\n";
+	// Fallback tooltip system if setTooltipTemplate was not available
+	print '  if (!wsTooltipOK) {' . "\n";
+	print '    var ttDiv = document.createElement("div");' . "\n";
+	print '    ttDiv.style.cssText = "display:none;position:fixed;z-index:99999;background:#fff;border:1px solid #aaa;border-radius:4px;padding:8px;box-shadow:2px 2px 6px rgba(0,0,0,.2);max-width:350px;font-size:12px;line-height:1.5;pointer-events:none;";' . "\n";
+	print '    document.body.appendChild(ttDiv);' . "\n";
+	print '    ganttEl.addEventListener("mouseover", function(e) {' . "\n";
+	print '      var bar = e.target;' . "\n";
+	print '      if (!bar.className || bar.className.indexOf("wsorstatus-") !== 0) return;' . "\n";
+	print '      var el = bar; var taskId = null;' . "\n";
+	print '      while (el && el !== ganttEl) {' . "\n";
+	print '        if (el.id) { var m = el.id.match(/(\\d+)/); if (m) { taskId = m[1]; break; } }' . "\n";
+	print '        el = el.parentElement;' . "\n";
 	print '      }' . "\n";
-	print '      el = el.parentElement;' . "\n";
-	print '    }' . "\n";
-	print '    if (taskId && wsTooltips[taskId]) {' . "\n";
-	print '      ttDiv.innerHTML = wsTooltips[taskId];' . "\n";
-	print '      ttDiv.style.display = "block";' . "\n";
-	print '      ttDiv.style.left = (e.clientX + 12) + "px";' . "\n";
-	print '      ttDiv.style.top = (e.clientY + 12) + "px";' . "\n";
-	print '    }' . "\n";
-	print '  }, true);' . "\n";
-	print '  ganttEl.addEventListener("mousemove", function(e) {' . "\n";
-	print '    if (ttDiv.style.display === "block") {' . "\n";
-	print '      ttDiv.style.left = (e.clientX + 12) + "px";' . "\n";
-	print '      ttDiv.style.top = (e.clientY + 12) + "px";' . "\n";
-	print '    }' . "\n";
-	print '  }, true);' . "\n";
-	print '  ganttEl.addEventListener("mouseleave", function(e) {' . "\n";
-	print '    var bar = e.target.closest("[class^=\'wsorstatus-\']");' . "\n";
-	print '    if (bar || e.target === ganttEl) {' . "\n";
-	print '      ttDiv.style.display = "none";' . "\n";
-	print '    }' . "\n";
-	print '  }, true);' . "\n";
-	print '  ganttEl.addEventListener("mouseout", function(e) {' . "\n";
-	print '    var toEl = e.relatedTarget;' . "\n";
-	print '    if (!toEl || !toEl.closest("[class^=\'wsorstatus-\']")) {' . "\n";
-	print '      ttDiv.style.display = "none";' . "\n";
-	print '    }' . "\n";
-	print '  }, true);' . "\n";
+	print '      if (taskId && wsTooltipData[taskId]) {' . "\n";
+	print '        ttDiv.innerHTML = wsTooltipData[taskId];' . "\n";
+	print '        ttDiv.style.display = "block";' . "\n";
+	print '      }' . "\n";
+	print '    });' . "\n";
+	print '    ganttEl.addEventListener("mousemove", function(e) {' . "\n";
+	print '      if (ttDiv.style.display === "block") {' . "\n";
+	print '        ttDiv.style.left = (e.clientX + 14) + "px";' . "\n";
+	print '        ttDiv.style.top = (e.clientY + 14) + "px";' . "\n";
+	print '      }' . "\n";
+	print '    });' . "\n";
+	print '    ganttEl.addEventListener("mouseout", function(e) {' . "\n";
+	print '      if (!e.relatedTarget || !e.relatedTarget.className || e.relatedTarget.className.indexOf("wsorstatus-") !== 0) {' . "\n";
+	print '        ttDiv.style.display = "none";' . "\n";
+	print '      }' . "\n";
+	print '    });' . "\n";
+	print '  }' . "\n";
 
 	print '});' . "\n";
 	print '</script>' . "\n";
