@@ -651,7 +651,6 @@ if ($mode === 'journee') {
 	// Match JSGantt default task bar metrics so the bar is actually visible
 	// (passing a custom itemClass replaces .gtaskblue / .gtaskred entirely)
 	print '  #GanttChartDIV [class^="wsorstatus-"] { height: 13px; opacity: 0.9; margin-top: 1px; border: 1px solid rgba(0,0,0,0.2); cursor: pointer; }' . "\n";
-	print '  #wsGanttTooltip { pointer-events: none; }' . "\n";
 	foreach ($gantt_status_colors as $stid => $col) {
 		$col_safe = preg_match('/^#[0-9a-fA-F]{3,8}$/', $col) ? $col : '#3c8dbc';
 		print '  #GanttChartDIV .wsorstatus-' . (int) $stid . ' { background-color: ' . $col_safe . ' !important; }' . "\n";
@@ -689,6 +688,13 @@ if ($mode === 'journee') {
 	print '  g.setFormatArr("day");' . "\n";
 	print '  g.setCaptionType(\'Caption\');' . "\n";
 	print '  g.setUseFade(0);' . "\n";
+	// Tooltip: hide all default fields except Notes (which contains our custom HTML)
+	print '  g.setShowTaskInfoStartDate(0);' . "\n";
+	print '  g.setShowTaskInfoEndDate(0);' . "\n";
+	print '  g.setShowTaskInfoDur(0);' . "\n";
+	print '  g.setShowTaskInfoComp(0);' . "\n";
+	print '  g.setShowTaskInfoRes(0);' . "\n";
+	print '  g.setShowTaskInfoNotes(1);' . "\n";
 	print "\n";
 	// Calculate dayColWidth so 28 displayed days fill the available width
 	// (JSGantt adds ~1 week padding on each side: 2 requested weeks → 4 displayed)
@@ -711,13 +717,7 @@ if ($mode === 'journee') {
 	print "\n";
 
 	// -----------------------------------------------------------------------
-	// Tooltip: getNotes() returns a DOM <span> element, use .innerHTML for string
 	// -----------------------------------------------------------------------
-	print '  g.setTooltipTemplate(function(task) {' . "\n";
-	print '    var el = task.getNotes ? task.getNotes() : null;' . "\n";
-	print '    var html = (el && el.innerHTML) ? el.innerHTML : "";' . "\n";
-	print '    return html || task.getName();' . "\n";
-	print '  });' . "\n";
 	print "\n";
 
 	// -----------------------------------------------------------------------
