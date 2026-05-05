@@ -779,35 +779,41 @@ if ($mode === 'journee') {
 	print "\n";
 
 	// Custom tooltip system – JSGantt strips HTML from Notes, so we handle it ourselves
+	// Match bars by JSGantt's internal element IDs (bardiv_N where N = task seq ID)
 	if (!empty($tooltip_html_array)) {
-		print '  var wsTT = [' . "\n";
+		print '  var wsTT = {' . "\n";
 		foreach ($tooltip_html_array as $i => $html) {
-			print '    ' . ($i > 0 ? ',' : '') . '\'' . dol_escape_js($html) . '\'' . "\n";
+			print '    ' . ($i + 1) . ':\'' . dol_escape_js($html) . '\'' . ($i < count($tooltip_html_array) - 1 ? ',' : '') . "\n";
 		}
-		print '  ];' . "\n";
+		print '  };' . "\n";
 		print '  var ttEl = document.createElement("div");' . "\n";
 		print '  ttEl.style.cssText = "display:none;position:fixed;z-index:99999;background:#fff;border:1px solid #999;border-radius:4px;padding:8px 10px;box-shadow:2px 2px 8px rgba(0,0,0,.25);max-width:360px;font-size:12px;line-height:1.6;";' . "\n";
 		print '  document.body.appendChild(ttEl);' . "\n";
-		// After Draw + setUseSort(0), DOM order of bars matches insertion order
-		print '  var allBars = ganttEl.querySelectorAll(\'div[class^="wsorstatus-"]\');' . "\n";
-		print '  for (var i = 0; i < allBars.length; i++) {' . "\n";
-		print '    (function(idx) {' . "\n";
-		print '      allBars[idx].addEventListener("mouseenter", function(ev) {' . "\n";
-		print '        if (idx < wsTT.length) {' . "\n";
-		print '          ttEl.innerHTML = wsTT[idx];' . "\n";
-		print '          ttEl.style.display = "block";' . "\n";
-		print '          ttEl.style.left = (ev.clientX + 14) + "px";' . "\n";
-		print '          ttEl.style.top = (ev.clientY - 10) + "px";' . "\n";
-		print '        }' . "\n";
-		print '      });' . "\n";
-		print '      allBars[idx].addEventListener("mousemove", function(ev) {' . "\n";
-		print '        ttEl.style.left = (ev.clientX + 14) + "px";' . "\n";
-		print '        ttEl.style.top = (ev.clientY - 10) + "px";' . "\n";
-		print '      });' . "\n";
-		print '      allBars[idx].addEventListener("mouseleave", function() {' . "\n";
-		print '        ttEl.style.display = "none";' . "\n";
-		print '      });' . "\n";
-		print '    })(i);' . "\n";
+		print "\n";
+		// Attach tooltip to each bar found by JSGantt element ID patterns
+		print '  Object.keys(wsTT).forEach(function(tid) {' . "\n";
+		// Try multiple JSGantt ID patterns to find the bar element
+		print '    var bar = document.getElementById("bardiv_" + tid)' . "\n";
+		print '           || document.getElementById("taskbar_" + tid)' . "\n";
+		print '           || document.getElementById("child_" + tid);' . "\n";
+		print '    if (!bar) return;' . "\n";
+		print '    bar.addEventListener("mouseenter", function(ev) {' . "\n";
+		print '      ttEl.innerHTML = wsTT[tid];' . "\n";
+		print '      ttEl.style.display = "block";' . "\n";
+		print '      ttEl.style.left = (ev.clientX + 14) + "px";' . "\n";
+		print '      ttEl.style.top = (ev.clientY - 10) + "px";' . "\n";
+		print '    });' . "\n";
+		print '    bar.addEventListener("mousemove", function(ev) {' . "\n";
+		print '      ttEl.style.left = (ev.clientX + 14) + "px";' . "\n";
+		print '      ttEl.style.top = (ev.clientY - 10) + "px";' . "\n";
+		print '    });' . "\n";
+		print '    bar.addEventListener("mouseleave", function() {' . "\n";
+		print '      ttEl.style.display = "none";' . "\n";
+		print '    });' . "\n";
+		print '  });' . "\n";
+		// Debug: log if no bars found (check console for actual IDs)
+		print '  if (!document.getElementById("bardiv_1") && !document.getElementById("taskbar_1") && !document.getElementById("child_1")) {' . "\n";
+		print '    console.log("WS Tooltip debug - no bar found by ID. First 5 IDs in chart:", Array.from(ganttEl.querySelectorAll("[id]")).slice(0,10).map(function(e){return e.id;}));' . "\n";
 		print '  }' . "\n";
 	}
 
