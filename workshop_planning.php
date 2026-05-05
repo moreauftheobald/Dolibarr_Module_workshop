@@ -650,9 +650,10 @@ if ($mode === 'journee') {
 	print '  #GanttChartDIV .gname      { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' . "\n";
 	// Match JSGantt default task bar metrics so the bar is actually visible
 	// (passing a custom itemClass replaces .gtaskblue / .gtaskred entirely)
-	print '  #GanttChartDIV [class^="wsorstatus-"] { height: 13px; opacity: 0.9; margin-top: 1px; border: 1px solid rgba(0,0,0,0.2); }' . "\n";
+	print '  #GanttChartDIV [class^="wsorstatus-"] { height: 13px; opacity: 0.9; margin-top: 1px; border: 1px solid rgba(0,0,0,0.2); cursor: pointer; }' . "\n";
+	// Hide JSGantt built-in tooltip
+	print '  .JSGanttToolTip, .gtooltip, div.gantt_tooltip { display: none !important; }' . "\n";
 	foreach ($gantt_status_colors as $stid => $col) {
-		// Whitelist hex colors (#RGB, #RRGGBB, #RRGGBBAA) – fallback to default blue
 		$col_safe = preg_match('/^#[0-9a-fA-F]{3,8}$/', $col) ? $col : '#3c8dbc';
 		print '  #GanttChartDIV .wsorstatus-' . (int) $stid . ' { background-color: ' . $col_safe . ' !important; }' . "\n";
 	}
@@ -784,35 +785,33 @@ if ($mode === 'journee') {
 	print '  g.Draw(250 + (nbDays * dayW) + 20);' . "\n";
 	print "\n";
 
-	// Custom tooltip system (independent of JSGantt tooltip which may not exist)
-	print '  var wsTooltips = {' . "\n";
+	// Custom tooltip system (independent of JSGantt built-in tooltips)
+	print '  var wsTooltips = [' . "\n";
 	$first = true;
 	foreach (($tooltip_data ?? array()) as $tid => $html) {
-		print '    ' . ($first ? '' : ',') . $tid . ': \'' . dol_escape_js($html) . '\'' . "\n";
+		print '    ' . ($first ? '' : ',') . '\'' . dol_escape_js($html) . '\'' . "\n";
 		$first = false;
 	}
-	print '  };' . "\n";
+	print '  ];' . "\n";
 	print "\n";
 	print '  var ttDiv = document.createElement("div");' . "\n";
 	print '  ttDiv.id = "wsGanttTooltip";' . "\n";
-	print '  ttDiv.style.cssText = "display:none;position:absolute;z-index:9999;background:#fff;border:1px solid #aaa;border-radius:4px;padding:8px;box-shadow:2px 2px 6px rgba(0,0,0,.2);max-width:350px;font-size:12px;line-height:1.5;pointer-events:none;";' . "\n";
+	print '  ttDiv.style.cssText = "display:none;position:fixed;z-index:99999;background:#fff;border:1px solid #aaa;border-radius:4px;padding:8px;box-shadow:2px 2px 6px rgba(0,0,0,.2);max-width:350px;font-size:12px;line-height:1.5;pointer-events:none;";' . "\n";
 	print '  document.body.appendChild(ttDiv);' . "\n";
 	print "\n";
-	// Attach events to each task bar row — JSGantt renders rows with id "childrow_N"
-	print '  Object.keys(wsTooltips).forEach(function(tid) {' . "\n";
-	print '    var row = document.getElementById("childrow_" + tid);' . "\n";
-	print '    if (!row) return;' . "\n";
-	print '    var bar = row.querySelector("[class^=\'wsorstatus-\']");' . "\n";
-	print '    if (!bar) return;' . "\n";
+	// Find all task bars by class prefix and attach tooltip by DOM order
+	print '  var bars = ganttEl.querySelectorAll("[class^=\'wsorstatus-\']");' . "\n";
+	print '  bars.forEach(function(bar, idx) {' . "\n";
+	print '    if (idx >= wsTooltips.length) return;' . "\n";
 	print '    bar.addEventListener("mouseenter", function(e) {' . "\n";
-	print '      ttDiv.innerHTML = wsTooltips[tid];' . "\n";
+	print '      ttDiv.innerHTML = wsTooltips[idx];' . "\n";
 	print '      ttDiv.style.display = "block";' . "\n";
-	print '      ttDiv.style.left = (e.pageX + 12) + "px";' . "\n";
-	print '      ttDiv.style.top = (e.pageY + 12) + "px";' . "\n";
+	print '      ttDiv.style.left = (e.clientX + 12) + "px";' . "\n";
+	print '      ttDiv.style.top = (e.clientY + 12) + "px";' . "\n";
 	print '    });' . "\n";
 	print '    bar.addEventListener("mousemove", function(e) {' . "\n";
-	print '      ttDiv.style.left = (e.pageX + 12) + "px";' . "\n";
-	print '      ttDiv.style.top = (e.pageY + 12) + "px";' . "\n";
+	print '      ttDiv.style.left = (e.clientX + 12) + "px";' . "\n";
+	print '      ttDiv.style.top = (e.clientY + 12) + "px";' . "\n";
 	print '    });' . "\n";
 	print '    bar.addEventListener("mouseleave", function() {' . "\n";
 	print '      ttDiv.style.display = "none";' . "\n";
