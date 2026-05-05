@@ -714,7 +714,9 @@ if ($mode === 'journee') {
 			$immat     = trim((string) ($or->immatriculation ?? ''));
 			$soc       = trim((string) ($or->soc_name ?? ''));
 			$start_str = date('Y-m-d', strtotime($or->date_start));
-			$end_str   = date('Y-m-d', strtotime($or->date_end));
+			// JSGantt day view treats the end date as exclusive midnight – shift it by
+			// +1 day so the bar covers the whole last day instead of stopping at 00:00
+			$end_str   = date('Y-m-d', strtotime($or->date_end) + 86400);
 			$css_class = 'wsorstatus-' . (int) $or->status;
 			// Row header: "IMMAT - REF" (or just REF if no vehicule)
 			$name      = $immat !== '' ? $immat . ' - ' . $or_ref : $or_ref;
