@@ -778,43 +778,61 @@ if ($mode === 'journee') {
 	print '  g.Draw(250 + (nbDays * dayW) + 20);' . "\n";
 	print "\n";
 
-	// Custom tooltip system – JSGantt strips HTML from Notes, so we handle it ourselves
-	// Match bars by JSGantt's internal element IDs (bardiv_N where N = task seq ID)
+	// Custom tooltip – debug DOM then attach events
 	if (!empty($tooltip_html_array)) {
-		print '  var wsTT = {' . "\n";
+		print '  var wsTT = [' . "\n";
 		foreach ($tooltip_html_array as $i => $html) {
-			print '    ' . ($i + 1) . ':\'' . dol_escape_js($html) . '\'' . ($i < count($tooltip_html_array) - 1 ? ',' : '') . "\n";
+			print '    ' . ($i > 0 ? ',' : '') . '\'' . dol_escape_js($html) . '\'' . "\n";
 		}
-		print '  };' . "\n";
+		print '  ];' . "\n";
+		print '  console.log("WS_TOOLTIP: wsTT has " + wsTT.length + " entries");' . "\n";
+		print '  console.log("WS_TOOLTIP: IDs in gantt:", Array.from(ganttEl.querySelectorAll("[id]")).slice(0,20).map(function(e){return e.id+"("+e.tagName+"."+e.className.substring(0,20)+")";}));' . "\n";
+		print '  console.log("WS_TOOLTIP: elements with wsorstatus:", ganttEl.querySelectorAll("[class*=wsorstatus]").length);' . "\n";
+		print '  console.log("WS_TOOLTIP: gtaskbar elements:", ganttEl.querySelectorAll(".gtaskbar,.gtaskbarcontainer,.gtaskcomplete").length);' . "\n";
+		print "\n";
 		print '  var ttEl = document.createElement("div");' . "\n";
 		print '  ttEl.style.cssText = "display:none;position:fixed;z-index:99999;background:#fff;border:1px solid #999;border-radius:4px;padding:8px 10px;box-shadow:2px 2px 8px rgba(0,0,0,.25);max-width:360px;font-size:12px;line-height:1.6;";' . "\n";
 		print '  document.body.appendChild(ttEl);' . "\n";
 		print "\n";
-		// Attach tooltip to each bar found by JSGantt element ID patterns
-		print '  Object.keys(wsTT).forEach(function(tid) {' . "\n";
-		// Try multiple JSGantt ID patterns to find the bar element
-		print '    var bar = document.getElementById("bardiv_" + tid)' . "\n";
-		print '           || document.getElementById("taskbar_" + tid)' . "\n";
-		print '           || document.getElementById("child_" + tid);' . "\n";
-		print '    if (!bar) return;' . "\n";
-		print '    bar.addEventListener("mouseenter", function(ev) {' . "\n";
-		print '      ttEl.innerHTML = wsTT[tid];' . "\n";
+		// Event delegation on entire gantt chart
+		print '  ganttEl.addEventListener("mouseover", function(ev) {' . "\n";
+		print '    var t = ev.target;' . "\n";
+		print '    var cls = t.className || "";' . "\n";
+		print '    if (cls.indexOf("wsorstatus-") === -1) {' . "\n";
+		print '      t = t.closest ? t.closest("[class*=wsorstatus-]") : null;' . "\n";
+		print '    }' . "\n";
+		print '    if (!t) return;' . "\n";
+		// Find which row this bar is in by counting previous sibling rows
+		print '    var row = t.closest("tr");' . "\n";
+		print '    if (!row) return;' . "\n";
+		print '    var tbody = row.parentElement;' . "\n";
+		print '    var rows = tbody.querySelectorAll("tr");' . "\n";
+		print '    var idx = -1;' . "\n";
+		print '    for (var i = 0; i < rows.length; i++) {' . "\n";
+		print '      if (rows[i].querySelector("[class*=wsorstatus-]")) {' . "\n";
+		print '        idx++;' . "\n";
+		print '        if (rows[i] === row) break;' . "\n";
+		print '      }' . "\n";
+		print '    }' . "\n";
+		print '    if (idx >= 0 && idx < wsTT.length) {' . "\n";
+		print '      ttEl.innerHTML = wsTT[idx];' . "\n";
 		print '      ttEl.style.display = "block";' . "\n";
 		print '      ttEl.style.left = (ev.clientX + 14) + "px";' . "\n";
 		print '      ttEl.style.top = (ev.clientY - 10) + "px";' . "\n";
-		print '    });' . "\n";
-		print '    bar.addEventListener("mousemove", function(ev) {' . "\n";
+		print '    }' . "\n";
+		print '  });' . "\n";
+		print '  ganttEl.addEventListener("mousemove", function(ev) {' . "\n";
+		print '    if (ttEl.style.display === "block") {' . "\n";
 		print '      ttEl.style.left = (ev.clientX + 14) + "px";' . "\n";
 		print '      ttEl.style.top = (ev.clientY - 10) + "px";' . "\n";
-		print '    });' . "\n";
-		print '    bar.addEventListener("mouseleave", function() {' . "\n";
-		print '      ttEl.style.display = "none";' . "\n";
-		print '    });' . "\n";
+		print '    }' . "\n";
 		print '  });' . "\n";
-		// Debug: log if no bars found (check console for actual IDs)
-		print '  if (!document.getElementById("bardiv_1") && !document.getElementById("taskbar_1") && !document.getElementById("child_1")) {' . "\n";
-		print '    console.log("WS Tooltip debug - no bar found by ID. First 5 IDs in chart:", Array.from(ganttEl.querySelectorAll("[id]")).slice(0,10).map(function(e){return e.id;}));' . "\n";
-		print '  }' . "\n";
+		print '  ganttEl.addEventListener("mouseout", function(ev) {' . "\n";
+		print '    var to = ev.relatedTarget;' . "\n";
+		print '    if (!to || (!to.closest || !to.closest("[class*=wsorstatus-]"))) {' . "\n";
+		print '      ttEl.style.display = "none";' . "\n";
+		print '    }' . "\n";
+		print '  });' . "\n";
 	}
 
 	print '});' . "\n";
