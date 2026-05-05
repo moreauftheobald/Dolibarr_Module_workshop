@@ -727,6 +727,7 @@ if ($mode === 'journee') {
 		$or_card_url = dol_buildpath('/workshop/operationorder/or_card.php', 1);
 		$task_seq = 1;
 		$tooltip_html_array = array();
+		$tooltip_links_array = array();
 		foreach ($gantt_or_rows as $or) {
 			$or_id     = (int) $or->rowid;
 			$or_ref    = (string) ($or->ref ?? '');
@@ -751,6 +752,7 @@ if ($mode === 'journee') {
 				}
 			}
 			$tooltip_html_array[] = $tt;
+			$tooltip_links_array[] = $link;
 
 			print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
 			print '    ' . ($task_seq++) . ',' . "\n";
@@ -778,11 +780,16 @@ if ($mode === 'journee') {
 	print '  g.Draw(250 + (nbDays * dayW) + 20);' . "\n";
 	print "\n";
 
-	// Custom tooltip – debug DOM then attach events
+	// Custom tooltip + click-to-navigate on bars
 	if (!empty($tooltip_html_array)) {
 		print '  var wsTT = [' . "\n";
 		foreach ($tooltip_html_array as $i => $html) {
 			print '    ' . ($i > 0 ? ',' : '') . '\'' . dol_escape_js($html) . '\'' . "\n";
+		}
+		print '  ];' . "\n";
+		print '  var wsLinks = [' . "\n";
+		foreach ($tooltip_links_array as $i => $lnk) {
+			print '    ' . ($i > 0 ? ',' : '') . '\'' . dol_escape_js($lnk) . '\'' . "\n";
 		}
 		print '  ];' . "\n";
 		print "\n";
@@ -790,26 +797,29 @@ if ($mode === 'journee') {
 		print '  ttEl.style.cssText = "display:none;position:fixed;z-index:99999;background:#fff;border:1px solid #999;border-radius:4px;padding:8px 10px;box-shadow:2px 2px 8px rgba(0,0,0,.25);max-width:360px;font-size:12px;line-height:1.6;";' . "\n";
 		print '  document.body.appendChild(ttEl);' . "\n";
 		print "\n";
-		// Event delegation on entire gantt chart
-		print '  ganttEl.addEventListener("mouseover", function(ev) {' . "\n";
-		print '    var t = ev.target;' . "\n";
-		print '    var cls = t.className || "";' . "\n";
-		print '    if (cls.indexOf("wsorstatus-") === -1) {' . "\n";
+		// Helper: find bar index from a target element
+		print '  function wsGetBarIdx(t) {' . "\n";
+		print '    if (!t) return -1;' . "\n";
+		print '    if ((t.className || "").indexOf("wsorstatus-") === -1) {' . "\n";
 		print '      t = t.closest ? t.closest("[class*=wsorstatus-]") : null;' . "\n";
 		print '    }' . "\n";
-		print '    if (!t) return;' . "\n";
-		// Find which row this bar is in by counting previous sibling rows
+		print '    if (!t) return -1;' . "\n";
 		print '    var row = t.closest("tr");' . "\n";
-		print '    if (!row) return;' . "\n";
-		print '    var tbody = row.parentElement;' . "\n";
-		print '    var rows = tbody.querySelectorAll("tr");' . "\n";
+		print '    if (!row) return -1;' . "\n";
+		print '    var rows = row.parentElement.querySelectorAll("tr");' . "\n";
 		print '    var idx = -1;' . "\n";
 		print '    for (var i = 0; i < rows.length; i++) {' . "\n";
 		print '      if (rows[i].querySelector("[class*=wsorstatus-]")) {' . "\n";
 		print '        idx++;' . "\n";
-		print '        if (rows[i] === row) break;' . "\n";
+		print '        if (rows[i] === row) return idx;' . "\n";
 		print '      }' . "\n";
 		print '    }' . "\n";
+		print '    return -1;' . "\n";
+		print '  }' . "\n";
+		print "\n";
+		// Tooltip on hover
+		print '  ganttEl.addEventListener("mouseover", function(ev) {' . "\n";
+		print '    var idx = wsGetBarIdx(ev.target);' . "\n";
 		print '    if (idx >= 0 && idx < wsTT.length) {' . "\n";
 		print '      ttEl.innerHTML = wsTT[idx];' . "\n";
 		print '      ttEl.style.display = "block";' . "\n";
@@ -827,6 +837,13 @@ if ($mode === 'journee') {
 		print '    var to = ev.relatedTarget;' . "\n";
 		print '    if (!to || (!to.closest || !to.closest("[class*=wsorstatus-]"))) {' . "\n";
 		print '      ttEl.style.display = "none";' . "\n";
+		print '    }' . "\n";
+		print '  });' . "\n";
+		// Click on bar navigates to OR card
+		print '  ganttEl.addEventListener("click", function(ev) {' . "\n";
+		print '    var idx = wsGetBarIdx(ev.target);' . "\n";
+		print '    if (idx >= 0 && idx < wsLinks.length) {' . "\n";
+		print '      window.location.href = wsLinks[idx];' . "\n";
 		print '    }' . "\n";
 		print '  });' . "\n";
 	}
