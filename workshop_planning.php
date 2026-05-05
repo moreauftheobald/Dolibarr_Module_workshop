@@ -601,7 +601,7 @@ if ($mode === 'journee') {
 	$sql .= ' v.immatriculation,';
 	$sql .= ' soc.nom AS soc_name';
 	$sql .= ' FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder o';
-	$sql .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder_status s ON s.rowid = o.status';
+	$sql .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder_status s ON s.rowid = o.status AND s.display_on_planning = 1';
 	$sql .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'workshop_vehicule v ON v.rowid = o.fk_vehicule';
 	$sql .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'societe soc ON soc.rowid = o.fk_soc';
 	$sql .= ' WHERE o.entity IN (' . getEntity('workshop') . ')';
@@ -711,8 +711,8 @@ if ($mode === 'journee') {
 			$start_str = date('Y-m-d', strtotime($or->date_start));
 			$end_str   = date('Y-m-d', strtotime($or->date_end));
 			$css_class = 'wsorstatus-' . (int) $or->status;
-			$name      = $immat !== '' ? $immat : $or_ref;
-			$caption   = trim($or_ref . ($soc !== '' ? ' — ' . $soc : ''));
+			// Row header: "IMMAT - REF" (or just REF if no vehicule)
+			$name      = $immat !== '' ? $immat . ' - ' . $or_ref : $or_ref;
 			$link      = $or_card_url . '?id=' . $or_id;
 
 			print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
@@ -729,7 +729,7 @@ if ($mode === 'journee') {
 			print '    0,' . "\n";                                           // Parent
 			print '    1,' . "\n";                                           // Open
 			print '    \'\',' . "\n";                                        // Dependencies
-			print '    \'' . dol_escape_js($caption) . '\',' . "\n";         // Caption
+			print '    \'\',' . "\n";                                        // Caption (none – plain bar)
 			print '    \'\',' . "\n";                                        // Notes
 			print '    g' . "\n";                                            // Chart reference
 			print '  ));' . "\n";
