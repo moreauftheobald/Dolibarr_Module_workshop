@@ -711,19 +711,13 @@ if ($mode === 'journee') {
 	print "\n";
 
 	// -----------------------------------------------------------------------
-	// Tooltip: use setTooltipTemplate with Notes field containing tooltip HTML
+	// Tooltip: getNotes() returns a DOM <span> element, use .innerHTML for string
 	// -----------------------------------------------------------------------
-	print '  if (typeof g.setTooltipTemplate === "function") {' . "\n";
-	print '    g.setTooltipTemplate(function(task) {' . "\n";
-	// Try all possible accessors for the Notes field
-	print '      var n = "";' . "\n";
-	print '      if (task.getNotes) n = task.getNotes();' . "\n";
-	print '      else if (task.pNotes !== undefined) n = task.pNotes;' . "\n";
-	print '      else if (task.vNotes !== undefined) n = task.vNotes;' . "\n";
-	print '      else if (task.mNotes !== undefined) n = task.mNotes;' . "\n";
-	print '      return n || task.getName();' . "\n";
-	print '    });' . "\n";
-	print '  }' . "\n";
+	print '  g.setTooltipTemplate(function(task) {' . "\n";
+	print '    var el = task.getNotes ? task.getNotes() : null;' . "\n";
+	print '    var html = (el && el.innerHTML) ? el.innerHTML : "";' . "\n";
+	print '    return html || task.getName();' . "\n";
+	print '  });' . "\n";
 	print "\n";
 
 	// -----------------------------------------------------------------------
@@ -754,8 +748,18 @@ if ($mode === 'journee') {
 			$name      = $immat !== '' ? $immat . ' - ' . $or_ref : $or_ref;
 			$link      = $or_card_url . '?id=' . $or_id;
 
-			// Tooltip: start with just the OR ref (debug)
-			$tt = $or_ref;
+			// Tooltip HTML for the Notes field
+			$tt  = '<b>' . dol_escape_htmltag($or_ref) . '</b><br>';
+			$tt .= dol_escape_htmltag($langs->trans('Customer')) . ' : ' . dol_escape_htmltag($soc ?: '-') . '<br>';
+			$tt .= dol_escape_htmltag($langs->trans('Immatriculation')) . ' : ' . dol_escape_htmltag($immat ?: '-') . '<br>';
+			$tt .= dol_escape_htmltag($langs->trans('Status')) . ' : ' . dol_escape_htmltag((string) ($or->status_label ?? '')) . '<br>';
+			$tt .= dol_print_date(strtotime($or->date_start), 'day') . ' &#8594; ' . dol_print_date(strtotime($or->date_end), 'day');
+			if (!empty($gantt_or_jobs[$or_id])) {
+				$tt .= '<hr style="margin:4px 0;border:0;border-top:1px solid #ccc;">';
+				foreach ($gantt_or_jobs[$or_id] as $job_label) {
+					$tt .= dol_escape_htmltag($job_label) . '<br>';
+				}
+			}
 
 			print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
 			print '    ' . ($task_seq++) . ',' . "\n";
