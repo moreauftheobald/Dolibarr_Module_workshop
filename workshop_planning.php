@@ -533,10 +533,50 @@ if ($mode === 'journee') {
 	// Date format for JSGantt input (matches Dolibarr date output)
 	$dateformatinput = 'yyyy-mm-dd';
 
-	// CSS: narrow task name column, ellipsis on long names
+	// -----------------------------------------------------------------------
+	// Load OR data for the visible period (week_start ± 1 week pad on each side)
+	// -----------------------------------------------------------------------
+	$visible_start = date('Y-m-d', strtotime($week_start)  - 7 * 86400);
+	$visible_end   = date('Y-m-d', strtotime($period_end)  + 7 * 86400);
+
+	$sql  = 'SELECT o.rowid, o.ref, o.date_start, o.date_end, o.status,';
+	$sql .= ' s.color AS status_color, s.label AS status_label,';
+	$sql .= ' v.immatriculation,';
+	$sql .= ' soc.nom AS soc_name';
+	$sql .= ' FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder o';
+	$sql .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder_status s ON s.rowid = o.status';
+	$sql .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'workshop_vehicule v ON v.rowid = o.fk_vehicule';
+	$sql .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'societe soc ON soc.rowid = o.fk_soc';
+	$sql .= ' WHERE o.entity IN (' . getEntity('workshop') . ')';
+	$sql .= ' AND o.date_start IS NOT NULL AND o.date_end IS NOT NULL';
+	$sql .= " AND o.date_start <= '" . $db->escape($visible_end)   . " 23:59:59'";
+	$sql .= " AND o.date_end   >= '" . $db->escape($visible_start) . " 00:00:00'";
+	$sql .= ' ORDER BY v.immatriculation ASC, o.date_start ASC';
+
+	$gantt_or_rows       = array();
+	$gantt_status_colors = array(); // status_id => '#rrggbb'
+	$resql = $db->query($sql);
+	if ($resql) {
+		while ($obj = $db->fetch_object($resql)) {
+			$gantt_or_rows[] = $obj;
+			if (!empty($obj->status) && !empty($obj->status_color)) {
+				$gantt_status_colors[(int) $obj->status] = $obj->status_color;
+			}
+		}
+		$db->free($resql);
+	} else {
+		dol_syslog('workshop_planning atelier SQL error: ' . $db->lasterror(), LOG_ERR);
+	}
+
+	// CSS: narrow task name column, ellipsis on long names + per-status bar colors
 	print '<style type="text/css">' . "\n";
 	print '  #GanttChartDIV .gmainleft  { width: 250px !important; min-width: 200px; max-width: 300px; }' . "\n";
-	print '  #GanttChartDIV .gname      { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' . "\n";
+	print '  #GanttChartDIV .gname      { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' . "\n";
+	foreach ($gantt_status_colors as $stid => $col) {
+		// Whitelist hex colors (#RGB, #RRGGBB, #RRGGBBAA) – fallback to default blue
+		$col_safe = preg_match('/^#[0-9a-fA-F]{3,8}$/', $col) ? $col : '#3c8dbc';
+		print '  #GanttChartDIV .wsorstatus-' . (int) $stid . ' { background-color: ' . $col_safe . ' !important; border-color: ' . $col_safe . ' !important; }' . "\n";
+	}
 	print '</style>' . "\n";
 
 	print '<div style="margin-top:4px;">' . "\n";
@@ -591,40 +631,57 @@ if ($mode === 'journee') {
 	print "\n";
 
 	// -----------------------------------------------------------------------
-	// Load OR data for the displayed week
+	// Output one TaskItem per loaded OR (or a placeholder if none found)
 	// -----------------------------------------------------------------------
-	// TODO: Load real OR data via AJAX or PHP query. For now, show an empty
-	// Gantt with a placeholder message when no data is available.
-	//
-	// Future data loading pattern:
-	// - Query llx_workshop_operationorder WHERE date_planned BETWEEN week_start AND week_end
-	// - For each OR: g.AddTaskItem(new JSGantt.TaskItem(id, name, start, end, ...))
-	// -----------------------------------------------------------------------
+	if (empty($gantt_or_rows)) {
+		// No OR in the visible period – render an empty bar with the "no data" label
+		print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
+		print '    0,' . "\n";
+		print '    \'' . dol_escape_js($langs->trans('WorkshopPlanningNoOR')) . '\',' . "\n";
+		print '    \'' . dol_escape_js($week_start) . '\',' . "\n";
+		print '    \'' . dol_escape_js($period_end) . '\',' . "\n";
+		print '    \'ggroupblack\',' . "\n";
+		print '    \'\', 0, \'\', 0, 0, 0, 1, \'\', \'\', \'\',' . "\n";
+		print '    g' . "\n";
+		print '  ));' . "\n";
+	} else {
+		$or_card_url = dol_buildpath('/workshop/operationorder/or_card.php', 1);
+		foreach ($gantt_or_rows as $or) {
+			$or_id     = (int) $or->rowid;
+			$or_ref    = (string) ($or->ref ?? '');
+			$immat     = trim((string) ($or->immatriculation ?? ''));
+			$soc       = trim((string) ($or->soc_name ?? ''));
+			$start_str = date('Y-m-d', strtotime($or->date_start));
+			$end_str   = date('Y-m-d', strtotime($or->date_end));
+			$css_class = 'wsorstatus-' . (int) $or->status;
+			$name      = $immat !== '' ? $immat : $or_ref;
+			$caption   = trim($or_ref . ($soc !== '' ? ' — ' . $soc : ''));
+			$link      = $or_card_url . '?id=' . $or_id;
 
-	// Add a placeholder task so the Gantt renders its timeline structure
-	// even when no real OR data is loaded yet
-	print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
-	print '    0,' . "\n";                                                          // ID
-	print '    \'' . dol_escape_js($langs->trans('WorkshopPlanningNoOR')) . '\',' . "\n"; // Name
-	print '    \'' . dol_escape_js($week_start) . '\',' . "\n";                     // Start
-	print '    \'' . dol_escape_js($period_end) . '\',' . "\n";                    // End
-	print '    \'ggroupblack\',' . "\n";                                            // CSS class
-	print '    \'\',' . "\n";                                                       // Link
-	print '    0,' . "\n";                                                          // Milestone
-	print '    \'\',' . "\n";                                                       // Resource
-	print '    0,' . "\n";                                                          // Percent complete
-	print '    0,' . "\n";                                                          // Group
-	print '    0,' . "\n";                                                          // Parent
-	print '    1,' . "\n";                                                          // Open
-	print '    \'\',' . "\n";                                                       // Dependencies
-	print '    \'\',' . "\n";                                                       // Caption
-	print '    \'\',' . "\n";                                                       // Notes
-	print '    g' . "\n";                                                           // Chart reference
-	print '  ));' . "\n";
+			print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
+			print '    ' . $or_id . ',' . "\n";                              // ID
+			print '    \'' . dol_escape_js($name) . '\',' . "\n";            // Name
+			print '    \'' . dol_escape_js($start_str) . '\',' . "\n";       // Start
+			print '    \'' . dol_escape_js($end_str)   . '\',' . "\n";       // End
+			print '    \'' . dol_escape_js($css_class) . '\',' . "\n";       // CSS class (per status color)
+			print '    \'' . dol_escape_js($link) . '\',' . "\n";            // Link
+			print '    0,' . "\n";                                           // Milestone
+			print '    \'\',' . "\n";                                        // Resource
+			print '    0,' . "\n";                                           // Percent complete
+			print '    0,' . "\n";                                           // Group
+			print '    0,' . "\n";                                           // Parent
+			print '    1,' . "\n";                                           // Open
+			print '    \'\',' . "\n";                                        // Dependencies
+			print '    \'' . dol_escape_js($caption) . '\',' . "\n";         // Caption
+			print '    \'\',' . "\n";                                        // Notes
+			print '    g' . "\n";                                            // Chart reference
+			print '  ));' . "\n";
+		}
+	}
 	print "\n";
 
-	// Draw the chart – width = left panel + (nbDays * dayColWidth)
-	print '  g.Draw(150 + (nbDays * dayW) + 20);' . "\n";
+	// Draw the chart – width = left panel (250px) + (nbDays * dayColWidth) + margin
+	print '  g.Draw(250 + (nbDays * dayW) + 20);' . "\n";
 	print '});' . "\n";
 	print '</script>' . "\n";
 
