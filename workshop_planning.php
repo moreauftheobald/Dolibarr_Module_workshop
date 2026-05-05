@@ -131,8 +131,9 @@ if ($action === 'plan_or' && $user->hasRight('workshop', 'workshopplanning', 'wr
 			dol_include_once('/workshop/class/operationorder.class.php');
 			$or = new Operationorder($db);
 			if ($or->fetch($or_id) > 0) {
-				$or->date_start = $ts_start;
-				$or->date_end   = $ts_end;
+				// Snap to whole-day boundaries: start at 00:00:00, end at 23:59:59
+				$or->date_start = mktime(0,  0,  0,  (int) date('n', $ts_start), (int) date('j', $ts_start), (int) date('Y', $ts_start));
+				$or->date_end   = mktime(23, 59, 59, (int) date('n', $ts_end),   (int) date('j', $ts_end),   (int) date('Y', $ts_end));
 				$db->begin();
 				$res_upd = $or->update($user);
 				if ($res_upd > 0) {
