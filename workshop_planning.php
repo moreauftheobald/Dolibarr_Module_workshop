@@ -535,7 +535,7 @@ if ($mode === 'journee') {
 
 	// CSS: narrow task name column, ellipsis on long names
 	print '<style type="text/css">' . "\n";
-	print '  #GanttChartDIV .gmainleft  { width: 150px !important; min-width: 120px; max-width: 180px; }' . "\n";
+	print '  #GanttChartDIV .gmainleft  { width: 250px !important; min-width: 200px; max-width: 300px; }' . "\n";
 	print '  #GanttChartDIV .gname      { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' . "\n";
 	print '</style>' . "\n";
 
@@ -573,7 +573,7 @@ if ($mode === 'journee') {
 	print "\n";
 	// Calculate dayColWidth so 28 displayed days fill the available width
 	// (JSGantt adds ~1 week padding on each side: 2 requested weeks → 4 displayed)
-	print '  var availW = (jQuery(".fiche").width() || document.body.clientWidth) - 150 - 60;' . "\n";
+	print '  var availW = (jQuery(".fiche").width() || document.body.clientWidth) - 250 - 80;' . "\n";
 	print '  var nbDays = 28;' . "\n";
 	print '  var dayW = Math.max(Math.floor(availW / nbDays), 18);' . "\n";
 	print '  g.setDayColWidth(dayW);' . "\n";

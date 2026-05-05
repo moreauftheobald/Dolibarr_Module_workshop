@@ -888,7 +888,7 @@ class pdf_standard_or extends ModelePDFWorkshop
 
 			$desc_text = '';
 			if (!empty($job->description)) {
-				$desc_text = trim(strip_tags($job->description));
+				$desc_text = trim(html_entity_decode(strip_tags($job->description), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
 			}
 
 			$job->fetchLines();
@@ -1124,7 +1124,7 @@ class pdf_standard_or extends ModelePDFWorkshop
 
 						$cy = $det_row_y + $det_row_h;
 
-						$det_desc = !empty($detline->description) ? trim(strip_tags($detline->description)) : '';
+						$det_desc = !empty($detline->description) ? trim(html_entity_decode(strip_tags($detline->description), ENT_QUOTES | ENT_HTML5, 'UTF-8')) : '';
 						if ($det_desc !== '') {
 							$pdf->SetFont('', 'I', $default_font_size - 2);
 							$pdf->SetTextColor(80, 80, 80);
@@ -1263,7 +1263,7 @@ class pdf_standard_or extends ModelePDFWorkshop
 		// ── Note publique dans le cadre Commentaires ──────────────────────────
 		$content_y  = $footer_y + $title_h + $ipad;
 		$content_h  = $footer_h - $title_h - 2 * $ipad; // ≈ 26 mm
-		$notetoshow = !empty($object->note_public) ? strip_tags($object->note_public) : '';
+		$notetoshow = !empty($object->note_public) ? html_entity_decode(strip_tags($object->note_public), ENT_QUOTES | ENT_HTML5, 'UTF-8') : '';
 
 		if ($notetoshow !== '') {
 			$pdf->SetFont('', '', $default_font_size - 2);

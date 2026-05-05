@@ -696,6 +696,28 @@ class Operationorder extends CommonObject
 	}
 
 	/**
+	 * Peut-on lire cet OR avec son statut courant ?
+	 *
+	 * @param  User $user Utilisateur
+	 * @return bool
+	 */
+	public function canRead(User $user)
+	{
+		return $this->userCan($user, 'read');
+	}
+
+	/**
+	 * Peut-on modifier cet OR avec son statut courant ?
+	 *
+	 * @param  User $user Utilisateur
+	 * @return bool
+	 */
+	public function canWrite(User $user)
+	{
+		return $this->userCan($user, 'edit');
+	}
+
+	/**
 	 * Passer l'ordre de réparation à un nouveau statut dynamique.
 	 *
 	 * Vérifie :

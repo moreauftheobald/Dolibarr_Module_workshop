@@ -107,6 +107,11 @@ if ($id > 0) {
 		dol_print_error($db, $object->error);
 		exit;
 	}
+	if (!$object->canRead($user)) {
+		accessforbidden();
+	}
+	// Pour un OR existant : droit d'écriture dépendant du statut courant
+	$permissiontoadd = $object->canWrite($user);
 }
 
 // Fonctions helpers orCardState* → voir lib/workshop_or_card.lib.php
@@ -1339,14 +1344,26 @@ if ($id > 0) {
 	// Commande Pièces + Débit Pièce (uniquement si statut dans WORKSHOP_OR_ORDERABLE_STATUS)
 	if ($isCurrentOrderable) {
 		$commandeUrl = dol_buildpath('/workshop/operationorder/or_commande_pieces.php', 1).'?id='.$object->id;
-		print '<a class="butAction" href="'.dol_escape_htmltag($commandeUrl).'">';
-		print img_picto('', 'fa-shopping-cart', 'class="paddingright"').$langs->trans('CommandePieces');
-		print '</a>'."\n";
+		if ($canEditAtStatus) {
+			print '<a class="butAction" href="'.dol_escape_htmltag($commandeUrl).'">';
+			print img_picto('', 'fa-shopping-cart', 'class="paddingright"').$langs->trans('CommandePieces');
+			print '</a>'."\n";
+		} else {
+			print '<a class="butActionRefused classfortooltip" title="'.dol_escape_htmltag($langs->trans('NotEnoughPermissions')).'">';
+			print img_picto('', 'fa-shopping-cart', 'class="paddingright"').$langs->trans('CommandePieces');
+			print '</a>'."\n";
+		}
 
 		$debitUrl = dol_buildpath('/workshop/operationorder/or_pieces.php', 1).'?id='.$object->id;
-		print '<a class="butAction" href="'.dol_escape_htmltag($debitUrl).'">';
-		print img_picto('', 'fa-boxes', 'class="paddingright"').$langs->trans('DebitPiece');
-		print '</a>'."\n";
+		if ($canEditAtStatus) {
+			print '<a class="butAction" href="'.dol_escape_htmltag($debitUrl).'">';
+			print img_picto('', 'fa-boxes', 'class="paddingright"').$langs->trans('DebitPiece');
+			print '</a>'."\n";
+		} else {
+			print '<a class="butActionRefused classfortooltip" title="'.dol_escape_htmltag($langs->trans('NotEnoughPermissions')).'">';
+			print img_picto('', 'fa-boxes', 'class="paddingright"').$langs->trans('DebitPiece');
+			print '</a>'."\n";
+		}
 	}
 
 	// Découper l'OR
@@ -1361,8 +1378,8 @@ if ($id > 0) {
 		print '</a>'."\n";
 	}
 
-	// Supprimer
-	$permissiontodelete = $user->hasRight('workshop', 'operationorders', 'delete');
+	// Supprimer — droit global de suppression ET droit d'écriture sur le statut courant
+	$permissiontodelete = $user->hasRight('workshop', 'operationorders', 'delete') && $object->canWrite($user);
 	if ($permissiontodelete) {
 		$deleteUrl = $_SERVER['PHP_SELF'].'?id='.$object->id.'&action=delete&token='.newToken();
 		print '<a class="butActionDelete" href="'.dol_escape_htmltag($deleteUrl).'">';
