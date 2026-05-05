@@ -651,8 +651,8 @@ if ($mode === 'journee') {
 	// Match JSGantt default task bar metrics so the bar is actually visible
 	// (passing a custom itemClass replaces .gtaskblue / .gtaskred entirely)
 	print '  #GanttChartDIV [class^="wsorstatus-"] { height: 13px; opacity: 0.9; margin-top: 1px; border: 1px solid rgba(0,0,0,0.2); cursor: pointer; }' . "\n";
-	// Hide JSGantt built-in tooltip
-	print '  .JSGanttToolTip, .gtooltip, div.gantt_tooltip { display: none !important; }' . "\n";
+	// Hide JSGantt built-in tooltip (target by ID and all possible class names)
+	print '  #JSGanttToolTip, .JSGanttToolTip, .gtooltip, div.gantt_tooltip { display: none !important; visibility: hidden !important; }' . "\n";
 	foreach ($gantt_status_colors as $stid => $col) {
 		$col_safe = preg_match('/^#[0-9a-fA-F]{3,8}$/', $col) ? $col : '#3c8dbc';
 		print '  #GanttChartDIV .wsorstatus-' . (int) $stid . ' { background-color: ' . $col_safe . ' !important; }' . "\n";
@@ -783,6 +783,11 @@ if ($mode === 'journee') {
 
 	// Draw the chart
 	print '  g.Draw(250 + (nbDays * dayW) + 20);' . "\n";
+	print "\n";
+	// Kill JSGantt native tooltip: override function + remove/hide existing element
+	print '  if (typeof JSGantt !== "undefined" && JSGantt.showToolTip) { JSGantt.showToolTip = function(){}; }' . "\n";
+	print '  var jsTT = document.getElementById("JSGanttToolTip");' . "\n";
+	print '  if (jsTT) { jsTT.parentNode.removeChild(jsTT); }' . "\n";
 	print "\n";
 
 	// Custom tooltip system (independent of JSGantt built-in tooltips)
