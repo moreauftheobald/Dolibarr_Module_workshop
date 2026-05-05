@@ -131,9 +131,9 @@ if ($action === 'plan_or' && $user->hasRight('workshop', 'workshopplanning', 'wr
 			dol_include_once('/workshop/class/operationorder.class.php');
 			$or = new Operationorder($db);
 			if ($or->fetch($or_id) > 0) {
-				// Snap to whole-day boundaries: start at 00:00:00, end at 23:59:59
-				$or->date_start = mktime(0,  0,  0,  (int) date('n', $ts_start), (int) date('j', $ts_start), (int) date('Y', $ts_start));
-				$or->date_end   = mktime(23, 59, 59, (int) date('n', $ts_end),   (int) date('j', $ts_end),   (int) date('Y', $ts_end));
+				// Date-only storage: snap both to 00:00:00 of the chosen day
+				$or->date_start = mktime(0, 0, 0, (int) date('n', $ts_start), (int) date('j', $ts_start), (int) date('Y', $ts_start));
+				$or->date_end   = mktime(0, 0, 0, (int) date('n', $ts_end),   (int) date('j', $ts_end),   (int) date('Y', $ts_end));
 				$db->begin();
 				$res_upd = $or->update($user);
 				if ($res_upd > 0) {
@@ -610,7 +610,8 @@ if ($mode === 'journee') {
 	// Either date_start or date_end must fall inside the displayed interval
 	$sql .= " AND ((o.date_start BETWEEN '" . $db->escape($visible_start) . " 00:00:00' AND '" . $db->escape($visible_end) . " 23:59:59')";
 	$sql .= "  OR  (o.date_end   BETWEEN '" . $db->escape($visible_start) . " 00:00:00' AND '" . $db->escape($visible_end) . " 23:59:59'))";
-	$sql .= ' ORDER BY v.immatriculation ASC, o.date_start ASC';
+	// Newest OR first (highest date_start at top of the Gantt)
+	$sql .= ' ORDER BY o.date_start DESC, v.immatriculation ASC';
 
 	$gantt_or_rows       = array();
 	$gantt_status_colors = array(); // status_id => '#rrggbb'
@@ -773,7 +774,7 @@ if ($mode === 'journee') {
 			}
 		}
 
-		$default_dt = date('Y-m-d\TH:i', dol_now());
+		$default_dt = date('Y-m-d', dol_now());
 		$post_url   = $baseUrl . '?mode=atelier&date=' . urlencode($date_str);
 
 		// Modal CSS + JS
@@ -843,11 +844,11 @@ if ($mode === 'journee') {
 		print '      <input type="hidden" name="or_id" id="wsOrId" value="">' . "\n";
 		print '      <div class="ws-modal-form-row">';
 		print '<label for="wsDateStartIn">' . dol_escape_htmltag($langs->trans('DateStart')) . '</label>';
-		print '<input type="datetime-local" name="date_start_in" id="wsDateStartIn" value="' . dol_escape_htmltag($default_dt) . '" required>';
+		print '<input type="date" name="date_start_in" id="wsDateStartIn" value="' . dol_escape_htmltag($default_dt) . '" required>';
 		print '</div>' . "\n";
 		print '      <div class="ws-modal-form-row">';
 		print '<label for="wsDateEndIn">' . dol_escape_htmltag($langs->trans('DateEnd')) . '</label>';
-		print '<input type="datetime-local" name="date_end_in" id="wsDateEndIn" value="' . dol_escape_htmltag($default_dt) . '" required>';
+		print '<input type="date" name="date_end_in" id="wsDateEndIn" value="' . dol_escape_htmltag($default_dt) . '" required>';
 		print '</div>' . "\n";
 		print '      <div class="ws-modal-actions">' . "\n";
 		print '        <button type="button" class="butActionDelete" onclick="wsCloseDateModal();">' . dol_escape_htmltag($langs->trans('Cancel')) . '</button>' . "\n";
