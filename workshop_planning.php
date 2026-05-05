@@ -680,6 +680,7 @@ if ($mode === 'journee') {
 	print '  var nbDays = 28;' . "\n";
 	print '  var dayW = Math.max(Math.floor(availW / nbDays), 18);' . "\n";
 	print '  g.setDayColWidth(dayW);' . "\n";
+	print '  g.setUseSort(0);' . "\n";
 	print "\n";
 	// Visible range: 2 weeks (S, S+1) — JSGantt pads ±1 week → displays S-1..S+2
 	print '  g.setMinDate(\'' . dol_escape_js($week_start) . '\');' . "\n";
