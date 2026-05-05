@@ -628,6 +628,22 @@ if ($mode === 'journee') {
 		dol_syslog('workshop_planning atelier SQL error: ' . $db->lasterror(), LOG_ERR);
 	}
 
+	// Load job descriptions for all visible ORs (for tooltips)
+	$gantt_or_jobs = array(); // or_id => array of job labels
+	if (!empty($gantt_or_rows)) {
+		$or_ids = array_map(function ($r) { return (int) $r->rowid; }, $gantt_or_rows);
+		$sql_jobs  = 'SELECT fk_operationorder, label FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder_jobs';
+		$sql_jobs .= ' WHERE fk_operationorder IN (' . implode(',', $or_ids) . ')';
+		$sql_jobs .= ' ORDER BY rang ASC, rowid ASC';
+		$resql_jobs = $db->query($sql_jobs);
+		if ($resql_jobs) {
+			while ($jobj = $db->fetch_object($resql_jobs)) {
+				$gantt_or_jobs[(int) $jobj->fk_operationorder][] = (string) $jobj->label;
+			}
+			$db->free($resql_jobs);
+		}
+	}
+
 	// CSS: narrow task name column, ellipsis on long names + per-status bar colors
 	print '<style type="text/css">' . "\n";
 	print '  #GanttChartDIV .gmainleft  { width: 250px !important; min-width: 200px; max-width: 300px; }' . "\n";
@@ -673,6 +689,8 @@ if ($mode === 'journee') {
 	print '  g.setFormatArr("day");' . "\n";
 	print '  g.setCaptionType(\'Caption\');' . "\n";
 	print '  g.setUseFade(0);' . "\n";
+	print '  g.setUseToolTip(1);' . "\n";
+	print '  g.setTooltipTemplate(function(task) { return task.getNotes(); });' . "\n";
 	print "\n";
 	// Calculate dayColWidth so 28 displayed days fill the available width
 	// (JSGantt adds ~1 week padding on each side: 2 requested weeks → 4 displayed)
@@ -717,31 +735,44 @@ if ($mode === 'journee') {
 			$immat     = trim((string) ($or->immatriculation ?? ''));
 			$soc       = trim((string) ($or->soc_name ?? ''));
 			$start_str = date('Y-m-d', strtotime($or->date_start));
-			// JSGantt day view treats the end date as exclusive midnight – shift it by
-			// +1 day so the bar covers the whole last day instead of stopping at 00:00
 			$end_str   = date('Y-m-d', strtotime($or->date_end) + 86400);
 			$css_class = 'wsorstatus-' . (int) $or->status;
-			// Row header: "IMMAT - REF" (or just REF if no vehicule)
 			$name      = $immat !== '' ? $immat . ' - ' . $or_ref : $or_ref;
 			$link      = $or_card_url . '?id=' . $or_id;
 
+			// Build tooltip HTML
+			$tt  = '<div style="padding:6px;font-size:12px;line-height:1.5;">';
+			$tt .= '<b>' . dol_escape_htmltag($or_ref) . '</b><br>';
+			$tt .= dol_escape_htmltag($langs->trans('Customer')) . ' : ' . dol_escape_htmltag($soc ?: '-') . '<br>';
+			$tt .= dol_escape_htmltag($langs->trans('Immatriculation')) . ' : ' . dol_escape_htmltag($immat ?: '-') . '<br>';
+			$tt .= dol_escape_htmltag($langs->trans('Status')) . ' : ' . dol_escape_htmltag((string) ($or->status_label ?? '')) . '<br>';
+			$tt .= dol_print_date(strtotime($or->date_start), 'day') . ' &rarr; ' . dol_print_date(strtotime($or->date_end), 'day');
+			// Job descriptions
+			if (!empty($gantt_or_jobs[$or_id])) {
+				$tt .= '<hr style="margin:4px 0;border:0;border-top:1px solid #ccc;">';
+				foreach ($gantt_or_jobs[$or_id] as $job_label) {
+					$tt .= dol_escape_htmltag($job_label) . '<br>';
+				}
+			}
+			$tt .= '</div>';
+
 			print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
-			print '    ' . ($task_seq++) . ',' . "\n";                       // Sequential ID (preserves SQL sort order)
-			print '    \'' . dol_escape_js($name) . '\',' . "\n";            // Name
-			print '    \'' . dol_escape_js($start_str) . '\',' . "\n";       // Start
-			print '    \'' . dol_escape_js($end_str)   . '\',' . "\n";       // End
-			print '    \'' . dol_escape_js($css_class) . '\',' . "\n";       // CSS class (per status color)
-			print '    \'' . dol_escape_js($link) . '\',' . "\n";            // Link
-			print '    0,' . "\n";                                           // Milestone
-			print '    \'\',' . "\n";                                        // Resource
-			print '    0,' . "\n";                                           // Percent complete
-			print '    0,' . "\n";                                           // Group
-			print '    0,' . "\n";                                           // Parent
-			print '    1,' . "\n";                                           // Open
-			print '    \'\',' . "\n";                                        // Dependencies
-			print '    \'\',' . "\n";                                        // Caption (none – plain bar)
-			print '    \'\',' . "\n";                                        // Notes
-			print '    g' . "\n";                                            // Chart reference
+			print '    ' . ($task_seq++) . ',' . "\n";
+			print '    \'' . dol_escape_js($name) . '\',' . "\n";
+			print '    \'' . dol_escape_js($start_str) . '\',' . "\n";
+			print '    \'' . dol_escape_js($end_str)   . '\',' . "\n";
+			print '    \'' . dol_escape_js($css_class) . '\',' . "\n";
+			print '    \'' . dol_escape_js($link) . '\',' . "\n";
+			print '    0,' . "\n";
+			print '    \'\',' . "\n";
+			print '    0,' . "\n";
+			print '    0,' . "\n";
+			print '    0,' . "\n";
+			print '    1,' . "\n";
+			print '    \'\',' . "\n";
+			print '    \'\',' . "\n";
+			print '    \'' . dol_escape_js($tt) . '\',' . "\n";
+			print '    g' . "\n";
 			print '  ));' . "\n";
 		}
 	}
