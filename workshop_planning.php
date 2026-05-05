@@ -108,6 +108,56 @@ if (empty($date_str) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_str)) {
 $baseUrl = dol_buildpath('/workshop/workshop_planning.php', 1);
 
 // ---------------------------------------------------------------------------
+// Action handler – schedule an OR (move to "planned" status with new dates)
+// POST: action=plan_or, or_id, date_start_in, date_end_in
+// ---------------------------------------------------------------------------
+$action = GETPOST('action', 'aZ09');
+if ($action === 'plan_or' && $user->hasRight('workshop', 'workshopplanning', 'write')) {
+	$or_id         = GETPOSTINT('or_id');
+	$date_start_in = GETPOST('date_start_in', 'alpha');
+	$date_end_in   = GETPOST('date_end_in', 'alpha');
+	$new_status    = getDolGlobalInt('WORKSHOP_OR_STATUS_ON_PLANNED');
+
+	if ($or_id <= 0 || empty($date_start_in) || empty($date_end_in)) {
+		setEventMessages($langs->trans('ErrorBadValueForParameter', 'or_id/date_start/date_end'), null, 'errors');
+	} elseif ($new_status <= 0) {
+		setEventMessages($langs->trans('WorkshopErrorPlannedStatusNotConfigured'), null, 'errors');
+	} else {
+		$ts_start = strtotime($date_start_in);
+		$ts_end   = strtotime($date_end_in);
+		if ($ts_start === false || $ts_end === false || $ts_end < $ts_start) {
+			setEventMessages($langs->trans('WorkshopErrorInvalidDates'), null, 'errors');
+		} else {
+			dol_include_once('/workshop/class/operationorder.class.php');
+			$or = new Operationorder($db);
+			if ($or->fetch($or_id) > 0) {
+				$or->date_start = $ts_start;
+				$or->date_end   = $ts_end;
+				$db->begin();
+				$res_upd = $or->update($user);
+				if ($res_upd > 0) {
+					$res_sts = $or->setStatus($user, $new_status);
+					if ($res_sts > 0) {
+						$db->commit();
+						setEventMessages($langs->trans('WorkshopORScheduled', $or->ref), null);
+						header('Location: ' . $baseUrl . '?mode=atelier&date=' . urlencode($date_str));
+						exit;
+					} else {
+						$db->rollback();
+						setEventMessages($or->error, $or->errors, 'errors');
+					}
+				} else {
+					$db->rollback();
+					setEventMessages($or->error, $or->errors, 'errors');
+				}
+			} else {
+				setEventMessages($langs->trans('NotFound'), null, 'errors');
+			}
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Load planning groups (configured in WORKSHOP_OR_PLANNING_GROUPS)
 // ---------------------------------------------------------------------------
 $planning_groups    = array();
@@ -448,6 +498,13 @@ if ($fk_user_filter > 0 && $mode === 'pointages') {
 print '<input type="date" name="date" value="' . dol_escape_htmltag($date_str) . '" class="flat" style="padding:3px 6px;" onchange="this.form.submit();">';
 print '</form>';
 
+// "Planifier" button (atelier mode + write right)
+if ($mode === 'atelier' && $user->hasRight('workshop', 'workshopplanning', 'write')) {
+	print '<a class="butAction" href="javascript:void(0);" onclick="wsOpenPlanModal();" style="padding:4px 12px;min-width:auto;margin-left:16px;">';
+	print img_picto('', 'fa-calendar-plus') . ' ' . $langs->trans('WorkshopPlanORAction');
+	print '</a>';
+}
+
 // User filter (Mode Pointages only)
 if ($mode === 'pointages' && !empty($all_users)) {
 	$js_redirect_base = dol_escape_js($baseUrl . '?mode=pointages&date=' . $date_str . '&fk_user=');
@@ -684,6 +741,127 @@ if ($mode === 'journee') {
 	print '  g.Draw(250 + (nbDays * dayW) + 20);' . "\n";
 	print '});' . "\n";
 	print '</script>' . "\n";
+
+	// -----------------------------------------------------------------------
+	// "Planifier" feature – modals to schedule OR (status_create -> status_planned)
+	// -----------------------------------------------------------------------
+	if ($user->hasRight('workshop', 'workshopplanning', 'write')) {
+		// Load all OR currently at the "create" status, ready to be scheduled
+		$or_to_plan       = array();
+		$status_create_id = getDolGlobalInt('WORKSHOP_OR_STATUS_ON_CREATE');
+		if ($status_create_id > 0) {
+			$sql_pl  = 'SELECT o.rowid, o.ref, o.date_planned, v.immatriculation, soc.nom AS soc_name';
+			$sql_pl .= ' FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder o';
+			$sql_pl .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'workshop_vehicule v ON v.rowid = o.fk_vehicule';
+			$sql_pl .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'societe soc ON soc.rowid = o.fk_soc';
+			$sql_pl .= ' WHERE o.entity IN (' . getEntity('workshop') . ')';
+			$sql_pl .= ' AND o.status = ' . (int) $status_create_id;
+			$sql_pl .= ' ORDER BY o.date_planned ASC, o.ref ASC';
+			$resql_pl = $db->query($sql_pl);
+			if ($resql_pl) {
+				while ($obj = $db->fetch_object($resql_pl)) {
+					$or_to_plan[] = $obj;
+				}
+				$db->free($resql_pl);
+			}
+		}
+
+		$default_dt = date('Y-m-d\TH:i', dol_now());
+		$post_url   = $baseUrl . '?mode=atelier&date=' . urlencode($date_str);
+
+		// Modal CSS + JS
+		print '<style type="text/css">' . "\n";
+		print '  .ws-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: none; align-items: center; justify-content: center; }' . "\n";
+		print '  .ws-modal.is-open { display: flex; }' . "\n";
+		print '  .ws-modal-content { background: #fff; border-radius: 8px; padding: 20px; min-width: 600px; max-width: 90vw; max-height: 85vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }' . "\n";
+		print '  .ws-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #e0e0e0; padding-bottom: 8px; }' . "\n";
+		print '  .ws-modal-header h3 { margin: 0; }' . "\n";
+		print '  .ws-modal-close { background: none; border: none; font-size: 24px; cursor: pointer; line-height: 1; padding: 0 8px; }' . "\n";
+		print '  .ws-modal-table { width: 100%; border-collapse: collapse; }' . "\n";
+		print '  .ws-modal-table th, .ws-modal-table td { padding: 6px 8px; border-bottom: 1px solid #eee; text-align: left; }' . "\n";
+		print '  .ws-modal-table tr:hover td { background-color: #f7f7f7; }' . "\n";
+		print '  .ws-modal-form-row { display: flex; align-items: center; gap: 12px; margin: 8px 0; }' . "\n";
+		print '  .ws-modal-form-row label { min-width: 110px; font-weight: bold; }' . "\n";
+		print '  .ws-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }' . "\n";
+		print '</style>' . "\n";
+
+		// Modal #1 – list of OR to schedule
+		print '<div id="wsPlanModal" class="ws-modal" onclick="if(event.target===this)wsClosePlanModal();">' . "\n";
+		print '  <div class="ws-modal-content">' . "\n";
+		print '    <div class="ws-modal-header">' . "\n";
+		print '      <h3>' . dol_escape_htmltag($langs->trans('WorkshopPlanORChooseTitle')) . '</h3>' . "\n";
+		print '      <button type="button" class="ws-modal-close" onclick="wsClosePlanModal();">&times;</button>' . "\n";
+		print '    </div>' . "\n";
+
+		if (empty($or_to_plan)) {
+			print '    <p class="opacitymedium">' . dol_escape_htmltag($langs->trans('WorkshopPlanORNoneToPlan')) . '</p>' . "\n";
+		} else {
+			print '    <table class="ws-modal-table">' . "\n";
+			print '      <thead><tr>';
+			print '<th>' . dol_escape_htmltag($langs->trans('Ref')) . '</th>';
+			print '<th>' . dol_escape_htmltag($langs->trans('immatriculation')) . '</th>';
+			print '<th>' . dol_escape_htmltag($langs->trans('ThirdParty')) . '</th>';
+			print '<th>' . dol_escape_htmltag($langs->trans('DatePlanned')) . '</th>';
+			print '<th></th>';
+			print '</tr></thead>' . "\n";
+			print '      <tbody>' . "\n";
+			foreach ($or_to_plan as $or) {
+				$dp_label = !empty($or->date_planned) ? dol_print_date(strtotime($or->date_planned), 'day') : '-';
+				print '        <tr>';
+				print '<td>' . dol_escape_htmltag($or->ref) . '</td>';
+				print '<td>' . dol_escape_htmltag($or->immatriculation) . '</td>';
+				print '<td>' . dol_escape_htmltag($or->soc_name) . '</td>';
+				print '<td>' . dol_escape_htmltag($dp_label) . '</td>';
+				print '<td><button type="button" class="butAction" style="padding:2px 10px;min-width:auto;"';
+				print ' onclick="wsOpenDateModal(' . (int) $or->rowid . ', \'' . dol_escape_js($or->ref) . '\');">';
+				print dol_escape_htmltag($langs->trans('WorkshopPlanORPick')) . '</button></td>';
+				print '</tr>' . "\n";
+			}
+			print '      </tbody>' . "\n";
+			print '    </table>' . "\n";
+		}
+		print '  </div>' . "\n";
+		print '</div>' . "\n";
+
+		// Modal #2 – date picker form
+		print '<div id="wsDateModal" class="ws-modal" onclick="if(event.target===this)wsCloseDateModal();">' . "\n";
+		print '  <div class="ws-modal-content" style="min-width:420px;">' . "\n";
+		print '    <div class="ws-modal-header">' . "\n";
+		print '      <h3>' . dol_escape_htmltag($langs->trans('WorkshopPlanORDatesTitle')) . ' <span id="wsOrRef" style="color:#888;font-weight:normal;"></span></h3>' . "\n";
+		print '      <button type="button" class="ws-modal-close" onclick="wsCloseDateModal();">&times;</button>' . "\n";
+		print '    </div>' . "\n";
+		print '    <form method="POST" action="' . dol_escape_htmltag($post_url) . '">' . "\n";
+		print '      <input type="hidden" name="token" value="' . newToken() . '">' . "\n";
+		print '      <input type="hidden" name="action" value="plan_or">' . "\n";
+		print '      <input type="hidden" name="or_id" id="wsOrId" value="">' . "\n";
+		print '      <div class="ws-modal-form-row">';
+		print '<label for="wsDateStartIn">' . dol_escape_htmltag($langs->trans('DateStart')) . '</label>';
+		print '<input type="datetime-local" name="date_start_in" id="wsDateStartIn" value="' . dol_escape_htmltag($default_dt) . '" required>';
+		print '</div>' . "\n";
+		print '      <div class="ws-modal-form-row">';
+		print '<label for="wsDateEndIn">' . dol_escape_htmltag($langs->trans('DateEnd')) . '</label>';
+		print '<input type="datetime-local" name="date_end_in" id="wsDateEndIn" value="' . dol_escape_htmltag($default_dt) . '" required>';
+		print '</div>' . "\n";
+		print '      <div class="ws-modal-actions">' . "\n";
+		print '        <button type="button" class="butActionDelete" onclick="wsCloseDateModal();">' . dol_escape_htmltag($langs->trans('Cancel')) . '</button>' . "\n";
+		print '        <button type="submit" class="butAction">' . dol_escape_htmltag($langs->trans('Validate')) . '</button>' . "\n";
+		print '      </div>' . "\n";
+		print '    </form>' . "\n";
+		print '  </div>' . "\n";
+		print '</div>' . "\n";
+
+		print '<script type="text/javascript">' . "\n";
+		print 'function wsOpenPlanModal()  { document.getElementById("wsPlanModal").classList.add("is-open"); }' . "\n";
+		print 'function wsClosePlanModal() { document.getElementById("wsPlanModal").classList.remove("is-open"); }' . "\n";
+		print 'function wsOpenDateModal(orId, orRef) {' . "\n";
+		print '  document.getElementById("wsOrId").value = orId;' . "\n";
+		print '  document.getElementById("wsOrRef").textContent = "(" + orRef + ")";' . "\n";
+		print '  wsClosePlanModal();' . "\n";
+		print '  document.getElementById("wsDateModal").classList.add("is-open");' . "\n";
+		print '}' . "\n";
+		print 'function wsCloseDateModal() { document.getElementById("wsDateModal").classList.remove("is-open"); }' . "\n";
+		print '</script>' . "\n";
+	}
 
 } else {
 	// -----------------------------------------------------------------------
