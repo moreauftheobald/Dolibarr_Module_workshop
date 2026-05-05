@@ -709,6 +709,7 @@ if ($mode === 'journee') {
 		print '  ));' . "\n";
 	} else {
 		$or_card_url = dol_buildpath('/workshop/operationorder/or_card.php', 1);
+		$task_seq = 1;
 		foreach ($gantt_or_rows as $or) {
 			$or_id     = (int) $or->rowid;
 			$or_ref    = (string) ($or->ref ?? '');
@@ -724,7 +725,7 @@ if ($mode === 'journee') {
 			$link      = $or_card_url . '?id=' . $or_id;
 
 			print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
-			print '    ' . $or_id . ',' . "\n";                              // ID
+			print '    ' . ($task_seq++) . ',' . "\n";                       // Sequential ID (preserves SQL sort order)
 			print '    \'' . dol_escape_js($name) . '\',' . "\n";            // Name
 			print '    \'' . dol_escape_js($start_str) . '\',' . "\n";       // Start
 			print '    \'' . dol_escape_js($end_str)   . '\',' . "\n";       // End

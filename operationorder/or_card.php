@@ -1225,6 +1225,16 @@ if ($id > 0) {
 	);
 	print '</td></tr>'."\n";
 
+	// ── Date de clôture (calculé !) ───────────────────────────────────────
+	print '<tr><td class="titlefield">'.$langs->trans('DateCloture').'</td>';
+	print '<td>';
+	if ($object->date_end) {
+		print dol_print_date($object->date_end, 'dayhour');
+	} else {
+		print '<span class="opacitymedium">'.$langs->trans('NA').'</span>';
+	}
+	print '</td></tr>'."\n";
+
 	print '</table>'."\n";
 	print '</div>'; // fichehalfright
 	print '</div>'; // fichecenter
