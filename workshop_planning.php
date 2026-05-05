@@ -688,13 +688,7 @@ if ($mode === 'journee') {
 	print '  g.setFormatArr("day");' . "\n";
 	print '  g.setCaptionType(\'Caption\');' . "\n";
 	print '  g.setUseFade(0);' . "\n";
-	// Tooltip: hide all default fields except Notes (which contains our custom HTML)
-	print '  g.setShowTaskInfoStartDate(0);' . "\n";
-	print '  g.setShowTaskInfoEndDate(0);' . "\n";
-	print '  g.setShowTaskInfoDur(0);' . "\n";
-	print '  g.setShowTaskInfoComp(0);' . "\n";
-	print '  g.setShowTaskInfoRes(0);' . "\n";
-	print '  g.setShowTaskInfoNotes(1);' . "\n";
+	print '  g.setUseToolTip(0);' . "\n";
 	print "\n";
 	// Calculate dayColWidth so 28 displayed days fill the available width
 	// (JSGantt adds ~1 week padding on each side: 2 requested weeks → 4 displayed)
@@ -717,12 +711,7 @@ if ($mode === 'journee') {
 	print "\n";
 
 	// -----------------------------------------------------------------------
-	// -----------------------------------------------------------------------
-	print "\n";
-
-	// -----------------------------------------------------------------------
 	// Output one TaskItem per loaded OR (or a placeholder if none found)
-	// Notes field (15th param) contains the tooltip HTML for each OR.
 	// -----------------------------------------------------------------------
 	if (empty($gantt_or_rows)) {
 		print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
@@ -737,6 +726,7 @@ if ($mode === 'journee') {
 	} else {
 		$or_card_url = dol_buildpath('/workshop/operationorder/or_card.php', 1);
 		$task_seq = 1;
+		$tooltip_html_array = array();
 		foreach ($gantt_or_rows as $or) {
 			$or_id     = (int) $or->rowid;
 			$or_ref    = (string) ($or->ref ?? '');
@@ -748,7 +738,7 @@ if ($mode === 'journee') {
 			$name      = $immat !== '' ? $immat . ' - ' . $or_ref : $or_ref;
 			$link      = $or_card_url . '?id=' . $or_id;
 
-			// Tooltip HTML for the Notes field
+			// Tooltip HTML
 			$tt  = '<b>' . dol_escape_htmltag($or_ref) . '</b><br>';
 			$tt .= dol_escape_htmltag($langs->trans('Customer')) . ' : ' . dol_escape_htmltag($soc ?: '-') . '<br>';
 			$tt .= dol_escape_htmltag($langs->trans('Immatriculation')) . ' : ' . dol_escape_htmltag($immat ?: '-') . '<br>';
@@ -760,6 +750,7 @@ if ($mode === 'journee') {
 					$tt .= dol_escape_htmltag($job_label) . '<br>';
 				}
 			}
+			$tooltip_html_array[] = $tt;
 
 			print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
 			print '    ' . ($task_seq++) . ',' . "\n";
@@ -776,7 +767,7 @@ if ($mode === 'journee') {
 			print '    1,' . "\n";
 			print '    \'\',' . "\n";
 			print '    \'\',' . "\n";
-			print '    \'' . dol_escape_js($tt) . '\',' . "\n";  // Notes = tooltip HTML
+			print '    \'\',' . "\n";
 			print '    g' . "\n";
 			print '  ));' . "\n";
 		}
@@ -785,6 +776,40 @@ if ($mode === 'journee') {
 
 	// Draw the chart
 	print '  g.Draw(250 + (nbDays * dayW) + 20);' . "\n";
+	print "\n";
+
+	// Custom tooltip system – JSGantt strips HTML from Notes, so we handle it ourselves
+	if (!empty($tooltip_html_array)) {
+		print '  var wsTT = [' . "\n";
+		foreach ($tooltip_html_array as $i => $html) {
+			print '    ' . ($i > 0 ? ',' : '') . '\'' . dol_escape_js($html) . '\'' . "\n";
+		}
+		print '  ];' . "\n";
+		print '  var ttEl = document.createElement("div");' . "\n";
+		print '  ttEl.style.cssText = "display:none;position:fixed;z-index:99999;background:#fff;border:1px solid #999;border-radius:4px;padding:8px 10px;box-shadow:2px 2px 8px rgba(0,0,0,.25);max-width:360px;font-size:12px;line-height:1.6;";' . "\n";
+		print '  document.body.appendChild(ttEl);' . "\n";
+		// After Draw + setUseSort(0), DOM order of bars matches insertion order
+		print '  var allBars = ganttEl.querySelectorAll(\'div[class^="wsorstatus-"]\');' . "\n";
+		print '  for (var i = 0; i < allBars.length; i++) {' . "\n";
+		print '    (function(idx) {' . "\n";
+		print '      allBars[idx].addEventListener("mouseenter", function(ev) {' . "\n";
+		print '        if (idx < wsTT.length) {' . "\n";
+		print '          ttEl.innerHTML = wsTT[idx];' . "\n";
+		print '          ttEl.style.display = "block";' . "\n";
+		print '          ttEl.style.left = (ev.clientX + 14) + "px";' . "\n";
+		print '          ttEl.style.top = (ev.clientY - 10) + "px";' . "\n";
+		print '        }' . "\n";
+		print '      });' . "\n";
+		print '      allBars[idx].addEventListener("mousemove", function(ev) {' . "\n";
+		print '        ttEl.style.left = (ev.clientX + 14) + "px";' . "\n";
+		print '        ttEl.style.top = (ev.clientY - 10) + "px";' . "\n";
+		print '      });' . "\n";
+		print '      allBars[idx].addEventListener("mouseleave", function() {' . "\n";
+		print '        ttEl.style.display = "none";' . "\n";
+		print '      });' . "\n";
+		print '    })(i);' . "\n";
+		print '  }' . "\n";
+	}
 
 	print '});' . "\n";
 	print '</script>' . "\n";
