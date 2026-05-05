@@ -108,6 +108,57 @@ if (empty($date_str) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_str)) {
 $baseUrl = dol_buildpath('/workshop/workshop_planning.php', 1);
 
 // ---------------------------------------------------------------------------
+// Action handler – schedule an OR (move to "planned" status with new dates)
+// POST: action=plan_or, or_id, date_start_in, date_end_in
+// ---------------------------------------------------------------------------
+$action = GETPOST('action', 'aZ09');
+if ($action === 'plan_or' && $user->hasRight('workshop', 'workshopplanning', 'write')) {
+	$or_id         = GETPOSTINT('or_id');
+	$date_start_in = GETPOST('date_start_in', 'alpha');
+	$date_end_in   = GETPOST('date_end_in', 'alpha');
+	$new_status    = getDolGlobalInt('WORKSHOP_OR_STATUS_ON_PLANNED');
+
+	if ($or_id <= 0 || empty($date_start_in) || empty($date_end_in)) {
+		setEventMessages($langs->trans('ErrorBadValueForParameter', 'or_id/date_start/date_end'), null, 'errors');
+	} elseif ($new_status <= 0) {
+		setEventMessages($langs->trans('WorkshopErrorPlannedStatusNotConfigured'), null, 'errors');
+	} else {
+		$ts_start = strtotime($date_start_in);
+		$ts_end   = strtotime($date_end_in);
+		if ($ts_start === false || $ts_end === false || $ts_end < $ts_start) {
+			setEventMessages($langs->trans('WorkshopErrorInvalidDates'), null, 'errors');
+		} else {
+			dol_include_once('/workshop/class/operationorder.class.php');
+			$or = new Operationorder($db);
+			if ($or->fetch($or_id) > 0) {
+				// Date-only storage: snap both to 00:00:00 of the chosen day
+				$or->date_start = mktime(0, 0, 0, (int) date('n', $ts_start), (int) date('j', $ts_start), (int) date('Y', $ts_start));
+				$or->date_end   = mktime(0, 0, 0, (int) date('n', $ts_end),   (int) date('j', $ts_end),   (int) date('Y', $ts_end));
+				$db->begin();
+				$res_upd = $or->update($user);
+				if ($res_upd > 0) {
+					$res_sts = $or->setStatus($user, $new_status);
+					if ($res_sts > 0) {
+						$db->commit();
+						setEventMessages($langs->trans('WorkshopORScheduled', $or->ref), null);
+						header('Location: ' . $baseUrl . '?mode=atelier&date=' . urlencode($date_str));
+						exit;
+					} else {
+						$db->rollback();
+						setEventMessages($or->error, $or->errors, 'errors');
+					}
+				} else {
+					$db->rollback();
+					setEventMessages($or->error, $or->errors, 'errors');
+				}
+			} else {
+				setEventMessages($langs->trans('NotFound'), null, 'errors');
+			}
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
 // Load planning groups (configured in WORKSHOP_OR_PLANNING_GROUPS)
 // ---------------------------------------------------------------------------
 $planning_groups    = array();
@@ -448,6 +499,13 @@ if ($fk_user_filter > 0 && $mode === 'pointages') {
 print '<input type="date" name="date" value="' . dol_escape_htmltag($date_str) . '" class="flat" style="padding:3px 6px;" onchange="this.form.submit();">';
 print '</form>';
 
+// "Planifier" button (atelier mode + write right)
+if ($mode === 'atelier' && $user->hasRight('workshop', 'workshopplanning', 'write')) {
+	print '<a class="butAction" href="javascript:void(0);" onclick="wsOpenPlanModal();" style="padding:4px 12px;min-width:auto;margin-left:16px;">';
+	print img_picto('', 'fa-calendar-plus') . ' ' . $langs->trans('WorkshopPlanORAction');
+	print '</a>';
+}
+
 // User filter (Mode Pointages only)
 if ($mode === 'pointages' && !empty($all_users)) {
 	$js_redirect_base = dol_escape_js($baseUrl . '?mode=pointages&date=' . $date_str . '&fk_user=');
@@ -533,10 +591,70 @@ if ($mode === 'journee') {
 	// Date format for JSGantt input (matches Dolibarr date output)
 	$dateformatinput = 'yyyy-mm-dd';
 
-	// CSS: narrow task name column, ellipsis on long names
+	// -----------------------------------------------------------------------
+	// Load OR data for the visible period (week_start ± 1 week pad on each side)
+	// -----------------------------------------------------------------------
+	$visible_start = date('Y-m-d', strtotime($week_start)  - 7 * 86400);
+	$visible_end   = date('Y-m-d', strtotime($period_end)  + 7 * 86400);
+
+	$sql  = 'SELECT o.rowid, o.ref, o.date_start, o.date_end, o.status,';
+	$sql .= ' s.color AS status_color, s.label AS status_label,';
+	$sql .= ' v.immatriculation,';
+	$sql .= ' soc.nom AS soc_name';
+	$sql .= ' FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder o';
+	$sql .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder_status s ON s.rowid = o.status AND s.display_on_planning = 1';
+	$sql .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'workshop_vehicule v ON v.rowid = o.fk_vehicule';
+	$sql .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'societe soc ON soc.rowid = o.fk_soc';
+	$sql .= ' WHERE o.entity IN (' . getEntity('workshop') . ')';
+	$sql .= ' AND o.date_start IS NOT NULL AND o.date_end IS NOT NULL';
+	// Either date_start or date_end must fall inside the displayed interval
+	$sql .= " AND ((o.date_start BETWEEN '" . $db->escape($visible_start) . " 00:00:00' AND '" . $db->escape($visible_end) . " 23:59:59')";
+	$sql .= "  OR  (o.date_end   BETWEEN '" . $db->escape($visible_start) . " 00:00:00' AND '" . $db->escape($visible_end) . " 23:59:59'))";
+	// Newest OR first (highest date_start at top of the Gantt)
+	$sql .= ' ORDER BY o.date_start DESC, v.immatriculation ASC';
+
+	$gantt_or_rows       = array();
+	$gantt_status_colors = array(); // status_id => '#rrggbb'
+	$resql = $db->query($sql);
+	if ($resql) {
+		while ($obj = $db->fetch_object($resql)) {
+			$gantt_or_rows[] = $obj;
+			if (!empty($obj->status) && !empty($obj->status_color)) {
+				$gantt_status_colors[(int) $obj->status] = $obj->status_color;
+			}
+		}
+		$db->free($resql);
+	} else {
+		dol_syslog('workshop_planning atelier SQL error: ' . $db->lasterror(), LOG_ERR);
+	}
+
+	// Load job descriptions for all visible ORs (for tooltips)
+	$gantt_or_jobs = array(); // or_id => array of job labels
+	if (!empty($gantt_or_rows)) {
+		$or_ids = array_map(function ($r) { return (int) $r->rowid; }, $gantt_or_rows);
+		$sql_jobs  = 'SELECT fk_operationorder, label FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder_jobs';
+		$sql_jobs .= ' WHERE fk_operationorder IN (' . implode(',', $or_ids) . ')';
+		$sql_jobs .= ' ORDER BY rang ASC, rowid ASC';
+		$resql_jobs = $db->query($sql_jobs);
+		if ($resql_jobs) {
+			while ($jobj = $db->fetch_object($resql_jobs)) {
+				$gantt_or_jobs[(int) $jobj->fk_operationorder][] = (string) $jobj->label;
+			}
+			$db->free($resql_jobs);
+		}
+	}
+
+	// CSS: narrow task name column, ellipsis on long names + per-status bar colors
 	print '<style type="text/css">' . "\n";
 	print '  #GanttChartDIV .gmainleft  { width: 250px !important; min-width: 200px; max-width: 300px; }' . "\n";
-	print '  #GanttChartDIV .gname      { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' . "\n";
+	print '  #GanttChartDIV .gname      { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' . "\n";
+	// Match JSGantt default task bar metrics so the bar is actually visible
+	// (passing a custom itemClass replaces .gtaskblue / .gtaskred entirely)
+	print '  #GanttChartDIV [class^="wsorstatus-"] { height: 13px; opacity: 0.9; margin-top: 1px; border: 1px solid rgba(0,0,0,0.2); cursor: pointer; }' . "\n";
+	foreach ($gantt_status_colors as $stid => $col) {
+		$col_safe = preg_match('/^#[0-9a-fA-F]{3,8}$/', $col) ? $col : '#3c8dbc';
+		print '  #GanttChartDIV .wsorstatus-' . (int) $stid . ' { background-color: ' . $col_safe . ' !important; }' . "\n";
+	}
 	print '</style>' . "\n";
 
 	print '<div style="margin-top:4px;">' . "\n";
@@ -570,13 +688,15 @@ if ($mode === 'journee') {
 	print '  g.setFormatArr("day");' . "\n";
 	print '  g.setCaptionType(\'Caption\');' . "\n";
 	print '  g.setUseFade(0);' . "\n";
+	print '  g.setUseToolTip(0);' . "\n";
 	print "\n";
 	// Calculate dayColWidth so 28 displayed days fill the available width
 	// (JSGantt adds ~1 week padding on each side: 2 requested weeks → 4 displayed)
-	print '  var availW = (jQuery(".fiche").width() || document.body.clientWidth) - 250 -80;' . "\n";
+	print '  var availW = (jQuery(".fiche").width() || document.body.clientWidth) - 250 - 80;' . "\n";
 	print '  var nbDays = 28;' . "\n";
 	print '  var dayW = Math.max(Math.floor(availW / nbDays), 18);' . "\n";
 	print '  g.setDayColWidth(dayW);' . "\n";
+	print '  g.setUseSort(0);' . "\n";
 	print "\n";
 	// Visible range: 2 weeks (S, S+1) — JSGantt pads ±1 week → displays S-1..S+2
 	print '  g.setMinDate(\'' . dol_escape_js($week_start) . '\');' . "\n";
@@ -591,42 +711,266 @@ if ($mode === 'journee') {
 	print "\n";
 
 	// -----------------------------------------------------------------------
-	// Load OR data for the displayed week
+	// Output one TaskItem per loaded OR (or a placeholder if none found)
 	// -----------------------------------------------------------------------
-	// TODO: Load real OR data via AJAX or PHP query. For now, show an empty
-	// Gantt with a placeholder message when no data is available.
-	//
-	// Future data loading pattern:
-	// - Query llx_workshop_operationorder WHERE date_planned BETWEEN week_start AND week_end
-	// - For each OR: g.AddTaskItem(new JSGantt.TaskItem(id, name, start, end, ...))
-	// -----------------------------------------------------------------------
+	if (empty($gantt_or_rows)) {
+		print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
+		print '    0,' . "\n";
+		print '    \'' . dol_escape_js($langs->trans('WorkshopPlanningNoOR')) . '\',' . "\n";
+		print '    \'' . dol_escape_js($week_start) . '\',' . "\n";
+		print '    \'' . dol_escape_js($period_end) . '\',' . "\n";
+		print '    \'ggroupblack\',' . "\n";
+		print '    \'\', 0, \'\', 0, 0, 0, 1, \'\', \'\', \'\',' . "\n";
+		print '    g' . "\n";
+		print '  ));' . "\n";
+	} else {
+		$or_card_url = dol_buildpath('/workshop/operationorder/or_card.php', 1);
+		$task_seq = 1;
+		$tooltip_html_array = array();
+		$tooltip_links_array = array();
+		foreach ($gantt_or_rows as $or) {
+			$or_id     = (int) $or->rowid;
+			$or_ref    = (string) ($or->ref ?? '');
+			$immat     = trim((string) ($or->immatriculation ?? ''));
+			$soc       = trim((string) ($or->soc_name ?? ''));
+			$start_str = date('Y-m-d', strtotime($or->date_start));
+			$end_str   = date('Y-m-d', strtotime($or->date_end) + 86400);
+			$css_class = 'wsorstatus-' . (int) $or->status;
+			$name      = $immat !== '' ? $immat . ' - ' . $or_ref : $or_ref;
+			$link      = $or_card_url . '?id=' . $or_id;
 
-	// Add a placeholder task so the Gantt renders its timeline structure
-	// even when no real OR data is loaded yet
-	print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
-	print '    0,' . "\n";                                                          // ID
-	print '    \'' . dol_escape_js($langs->trans('WorkshopPlanningNoOR')) . '\',' . "\n"; // Name
-	print '    \'' . dol_escape_js($week_start) . '\',' . "\n";                     // Start
-	print '    \'' . dol_escape_js($period_end) . '\',' . "\n";                    // End
-	print '    \'ggroupblack\',' . "\n";                                            // CSS class
-	print '    \'\',' . "\n";                                                       // Link
-	print '    0,' . "\n";                                                          // Milestone
-	print '    \'\',' . "\n";                                                       // Resource
-	print '    0,' . "\n";                                                          // Percent complete
-	print '    0,' . "\n";                                                          // Group
-	print '    0,' . "\n";                                                          // Parent
-	print '    1,' . "\n";                                                          // Open
-	print '    \'\',' . "\n";                                                       // Dependencies
-	print '    \'\',' . "\n";                                                       // Caption
-	print '    \'\',' . "\n";                                                       // Notes
-	print '    g' . "\n";                                                           // Chart reference
-	print '  ));' . "\n";
+			// Tooltip HTML
+			$tt  = '<b>' . dol_escape_htmltag($or_ref) . '</b><br>';
+			$tt .= dol_escape_htmltag($langs->trans('Customer')) . ' : ' . dol_escape_htmltag($soc ?: '-') . '<br>';
+			$tt .= dol_escape_htmltag($langs->trans('Immatriculation')) . ' : ' . dol_escape_htmltag($immat ?: '-') . '<br>';
+			$tt .= dol_escape_htmltag($langs->trans('Status')) . ' : ' . dol_escape_htmltag((string) ($or->status_label ?? '')) . '<br>';
+			$tt .= dol_print_date(strtotime($or->date_start), 'day') . ' &#8594; ' . dol_print_date(strtotime($or->date_end), 'day');
+			if (!empty($gantt_or_jobs[$or_id])) {
+				$tt .= '<hr style="margin:4px 0;border:0;border-top:1px solid #ccc;">';
+				foreach ($gantt_or_jobs[$or_id] as $job_label) {
+					$tt .= dol_escape_htmltag($job_label) . '<br>';
+				}
+			}
+			$tooltip_html_array[] = $tt;
+			$tooltip_links_array[] = $link;
+
+			print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
+			print '    ' . ($task_seq++) . ',' . "\n";
+			print '    \'' . dol_escape_js($name) . '\',' . "\n";
+			print '    \'' . dol_escape_js($start_str) . '\',' . "\n";
+			print '    \'' . dol_escape_js($end_str)   . '\',' . "\n";
+			print '    \'' . dol_escape_js($css_class) . '\',' . "\n";
+			print '    \'' . dol_escape_js($link) . '\',' . "\n";
+			print '    0,' . "\n";
+			print '    \'\',' . "\n";
+			print '    0,' . "\n";
+			print '    0,' . "\n";
+			print '    0,' . "\n";
+			print '    1,' . "\n";
+			print '    \'\',' . "\n";
+			print '    \'\',' . "\n";
+			print '    \'\',' . "\n";
+			print '    g' . "\n";
+			print '  ));' . "\n";
+		}
+	}
 	print "\n";
 
-	// Draw the chart – width = left panel + (nbDays * dayColWidth)
-	print '  g.Draw(150 + (nbDays * dayW) + 20);' . "\n";
+	// Draw the chart
+	print '  g.Draw(250 + (nbDays * dayW) + 20);' . "\n";
+	print "\n";
+
+	// Custom tooltip + click-to-navigate on bars
+	if (!empty($tooltip_html_array)) {
+		print '  var wsTT = [' . "\n";
+		foreach ($tooltip_html_array as $i => $html) {
+			print '    ' . ($i > 0 ? ',' : '') . '\'' . dol_escape_js($html) . '\'' . "\n";
+		}
+		print '  ];' . "\n";
+		print '  var wsLinks = [' . "\n";
+		foreach ($tooltip_links_array as $i => $lnk) {
+			print '    ' . ($i > 0 ? ',' : '') . '\'' . dol_escape_js($lnk) . '\'' . "\n";
+		}
+		print '  ];' . "\n";
+		print "\n";
+		print '  var ttEl = document.createElement("div");' . "\n";
+		print '  ttEl.style.cssText = "display:none;position:fixed;z-index:99999;background:#fff;border:1px solid #999;border-radius:4px;padding:8px 10px;box-shadow:2px 2px 8px rgba(0,0,0,.25);max-width:360px;font-size:12px;line-height:1.6;";' . "\n";
+		print '  document.body.appendChild(ttEl);' . "\n";
+		print "\n";
+		// Helper: find bar index from a target element
+		print '  function wsGetBarIdx(t) {' . "\n";
+		print '    if (!t) return -1;' . "\n";
+		print '    if ((t.className || "").indexOf("wsorstatus-") === -1) {' . "\n";
+		print '      t = t.closest ? t.closest("[class*=wsorstatus-]") : null;' . "\n";
+		print '    }' . "\n";
+		print '    if (!t) return -1;' . "\n";
+		print '    var row = t.closest("tr");' . "\n";
+		print '    if (!row) return -1;' . "\n";
+		print '    var rows = row.parentElement.querySelectorAll("tr");' . "\n";
+		print '    var idx = -1;' . "\n";
+		print '    for (var i = 0; i < rows.length; i++) {' . "\n";
+		print '      if (rows[i].querySelector("[class*=wsorstatus-]")) {' . "\n";
+		print '        idx++;' . "\n";
+		print '        if (rows[i] === row) return idx;' . "\n";
+		print '      }' . "\n";
+		print '    }' . "\n";
+		print '    return -1;' . "\n";
+		print '  }' . "\n";
+		print "\n";
+		// Tooltip on hover
+		print '  ganttEl.addEventListener("mouseover", function(ev) {' . "\n";
+		print '    var idx = wsGetBarIdx(ev.target);' . "\n";
+		print '    if (idx >= 0 && idx < wsTT.length) {' . "\n";
+		print '      ttEl.innerHTML = wsTT[idx];' . "\n";
+		print '      ttEl.style.display = "block";' . "\n";
+		print '      ttEl.style.left = (ev.clientX + 14) + "px";' . "\n";
+		print '      ttEl.style.top = (ev.clientY - 10) + "px";' . "\n";
+		print '    }' . "\n";
+		print '  });' . "\n";
+		print '  ganttEl.addEventListener("mousemove", function(ev) {' . "\n";
+		print '    if (ttEl.style.display === "block") {' . "\n";
+		print '      ttEl.style.left = (ev.clientX + 14) + "px";' . "\n";
+		print '      ttEl.style.top = (ev.clientY - 10) + "px";' . "\n";
+		print '    }' . "\n";
+		print '  });' . "\n";
+		print '  ganttEl.addEventListener("mouseout", function(ev) {' . "\n";
+		print '    var to = ev.relatedTarget;' . "\n";
+		print '    if (!to || (!to.closest || !to.closest("[class*=wsorstatus-]"))) {' . "\n";
+		print '      ttEl.style.display = "none";' . "\n";
+		print '    }' . "\n";
+		print '  });' . "\n";
+		// Click on bar navigates to OR card
+		print '  ganttEl.addEventListener("click", function(ev) {' . "\n";
+		print '    var idx = wsGetBarIdx(ev.target);' . "\n";
+		print '    if (idx >= 0 && idx < wsLinks.length) {' . "\n";
+		print '      window.location.href = wsLinks[idx];' . "\n";
+		print '    }' . "\n";
+		print '  });' . "\n";
+	}
+
 	print '});' . "\n";
 	print '</script>' . "\n";
+
+	// -----------------------------------------------------------------------
+	// "Planifier" feature – modals to schedule OR (status_create -> status_planned)
+	// -----------------------------------------------------------------------
+	if ($user->hasRight('workshop', 'workshopplanning', 'write')) {
+		// Load all OR currently at the "create" status, ready to be scheduled
+		$or_to_plan       = array();
+		$status_create_id = getDolGlobalInt('WORKSHOP_OR_STATUS_ON_CREATE');
+		if ($status_create_id > 0) {
+			$sql_pl  = 'SELECT o.rowid, o.ref, o.date_planned, v.immatriculation, soc.nom AS soc_name';
+			$sql_pl .= ' FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder o';
+			$sql_pl .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'workshop_vehicule v ON v.rowid = o.fk_vehicule';
+			$sql_pl .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'societe soc ON soc.rowid = o.fk_soc';
+			$sql_pl .= ' WHERE o.entity IN (' . getEntity('workshop') . ')';
+			$sql_pl .= ' AND o.status = ' . (int) $status_create_id;
+			$sql_pl .= ' ORDER BY o.date_planned ASC, o.ref ASC';
+			$resql_pl = $db->query($sql_pl);
+			if ($resql_pl) {
+				while ($obj = $db->fetch_object($resql_pl)) {
+					$or_to_plan[] = $obj;
+				}
+				$db->free($resql_pl);
+			}
+		}
+
+		$default_dt = date('Y-m-d', dol_now());
+		$post_url   = $baseUrl . '?mode=atelier&date=' . urlencode($date_str);
+
+		// Modal CSS + JS
+		print '<style type="text/css">' . "\n";
+		print '  .ws-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: none; align-items: center; justify-content: center; }' . "\n";
+		print '  .ws-modal.is-open { display: flex; }' . "\n";
+		print '  .ws-modal-content { background: #fff; border-radius: 8px; padding: 20px; min-width: 600px; max-width: 90vw; max-height: 85vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }' . "\n";
+		print '  .ws-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #e0e0e0; padding-bottom: 8px; }' . "\n";
+		print '  .ws-modal-header h3 { margin: 0; }' . "\n";
+		print '  .ws-modal-close { background: none; border: none; font-size: 24px; cursor: pointer; line-height: 1; padding: 0 8px; }' . "\n";
+		print '  .ws-modal-table { width: 100%; border-collapse: collapse; }' . "\n";
+		print '  .ws-modal-table th, .ws-modal-table td { padding: 6px 8px; border-bottom: 1px solid #eee; text-align: left; }' . "\n";
+		print '  .ws-modal-table tr:hover td { background-color: #f7f7f7; }' . "\n";
+		print '  .ws-modal-form-row { display: flex; align-items: center; gap: 12px; margin: 8px 0; }' . "\n";
+		print '  .ws-modal-form-row label { min-width: 110px; font-weight: bold; }' . "\n";
+		print '  .ws-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }' . "\n";
+		print '</style>' . "\n";
+
+		// Modal #1 – list of OR to schedule
+		print '<div id="wsPlanModal" class="ws-modal" onclick="if(event.target===this)wsClosePlanModal();">' . "\n";
+		print '  <div class="ws-modal-content">' . "\n";
+		print '    <div class="ws-modal-header">' . "\n";
+		print '      <h3>' . dol_escape_htmltag($langs->trans('WorkshopPlanORChooseTitle')) . '</h3>' . "\n";
+		print '      <button type="button" class="ws-modal-close" onclick="wsClosePlanModal();">&times;</button>' . "\n";
+		print '    </div>' . "\n";
+
+		if (empty($or_to_plan)) {
+			print '    <p class="opacitymedium">' . dol_escape_htmltag($langs->trans('WorkshopPlanORNoneToPlan')) . '</p>' . "\n";
+		} else {
+			print '    <table class="ws-modal-table">' . "\n";
+			print '      <thead><tr>';
+			print '<th>' . dol_escape_htmltag($langs->trans('Ref')) . '</th>';
+			print '<th>' . dol_escape_htmltag($langs->trans('immatriculation')) . '</th>';
+			print '<th>' . dol_escape_htmltag($langs->trans('ThirdParty')) . '</th>';
+			print '<th>' . dol_escape_htmltag($langs->trans('DatePlanned')) . '</th>';
+			print '<th></th>';
+			print '</tr></thead>' . "\n";
+			print '      <tbody>' . "\n";
+			foreach ($or_to_plan as $or) {
+				$dp_label = !empty($or->date_planned) ? dol_print_date(strtotime($or->date_planned), 'day') : '-';
+				print '        <tr>';
+				print '<td>' . dol_escape_htmltag($or->ref) . '</td>';
+				print '<td>' . dol_escape_htmltag($or->immatriculation) . '</td>';
+				print '<td>' . dol_escape_htmltag($or->soc_name) . '</td>';
+				print '<td>' . dol_escape_htmltag($dp_label) . '</td>';
+				print '<td><button type="button" class="butAction" style="padding:2px 10px;min-width:auto;"';
+				print ' onclick="wsOpenDateModal(' . (int) $or->rowid . ', \'' . dol_escape_js($or->ref) . '\');">';
+				print dol_escape_htmltag($langs->trans('WorkshopPlanORPick')) . '</button></td>';
+				print '</tr>' . "\n";
+			}
+			print '      </tbody>' . "\n";
+			print '    </table>' . "\n";
+		}
+		print '  </div>' . "\n";
+		print '</div>' . "\n";
+
+		// Modal #2 – date picker form
+		print '<div id="wsDateModal" class="ws-modal" onclick="if(event.target===this)wsCloseDateModal();">' . "\n";
+		print '  <div class="ws-modal-content" style="min-width:420px;">' . "\n";
+		print '    <div class="ws-modal-header">' . "\n";
+		print '      <h3>' . dol_escape_htmltag($langs->trans('WorkshopPlanORDatesTitle')) . ' <span id="wsOrRef" style="color:#888;font-weight:normal;"></span></h3>' . "\n";
+		print '      <button type="button" class="ws-modal-close" onclick="wsCloseDateModal();">&times;</button>' . "\n";
+		print '    </div>' . "\n";
+		print '    <form method="POST" action="' . dol_escape_htmltag($post_url) . '">' . "\n";
+		print '      <input type="hidden" name="token" value="' . newToken() . '">' . "\n";
+		print '      <input type="hidden" name="action" value="plan_or">' . "\n";
+		print '      <input type="hidden" name="or_id" id="wsOrId" value="">' . "\n";
+		print '      <div class="ws-modal-form-row">';
+		print '<label for="wsDateStartIn">' . dol_escape_htmltag($langs->trans('DateStart')) . '</label>';
+		print '<input type="date" name="date_start_in" id="wsDateStartIn" value="' . dol_escape_htmltag($default_dt) . '" required>';
+		print '</div>' . "\n";
+		print '      <div class="ws-modal-form-row">';
+		print '<label for="wsDateEndIn">' . dol_escape_htmltag($langs->trans('DateEnd')) . '</label>';
+		print '<input type="date" name="date_end_in" id="wsDateEndIn" value="' . dol_escape_htmltag($default_dt) . '" required>';
+		print '</div>' . "\n";
+		print '      <div class="ws-modal-actions">' . "\n";
+		print '        <button type="button" class="butActionDelete" onclick="wsCloseDateModal();">' . dol_escape_htmltag($langs->trans('Cancel')) . '</button>' . "\n";
+		print '        <button type="submit" class="butAction">' . dol_escape_htmltag($langs->trans('Validate')) . '</button>' . "\n";
+		print '      </div>' . "\n";
+		print '    </form>' . "\n";
+		print '  </div>' . "\n";
+		print '</div>' . "\n";
+
+		print '<script type="text/javascript">' . "\n";
+		print 'function wsOpenPlanModal()  { document.getElementById("wsPlanModal").classList.add("is-open"); }' . "\n";
+		print 'function wsClosePlanModal() { document.getElementById("wsPlanModal").classList.remove("is-open"); }' . "\n";
+		print 'function wsOpenDateModal(orId, orRef) {' . "\n";
+		print '  document.getElementById("wsOrId").value = orId;' . "\n";
+		print '  document.getElementById("wsOrRef").textContent = "(" + orRef + ")";' . "\n";
+		print '  wsClosePlanModal();' . "\n";
+		print '  document.getElementById("wsDateModal").classList.add("is-open");' . "\n";
+		print '}' . "\n";
+		print 'function wsCloseDateModal() { document.getElementById("wsDateModal").classList.remove("is-open"); }' . "\n";
+		print '</script>' . "\n";
+	}
 
 } else {
 	// -----------------------------------------------------------------------

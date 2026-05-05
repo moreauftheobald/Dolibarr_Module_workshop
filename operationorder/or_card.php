@@ -296,6 +296,8 @@ if (empty($reshook)) {
 		'save_ref_client'    => array('field' => 'ref_client',    'getpost' => array('ref_client', 'alphanohtml')),
 		'save_date_or'       => array('field' => 'date_valid',    'type' => 'date', 'dateprefix' => 'date_or'),
 		'save_date_planned'  => array('field' => 'date_planned',  'type' => 'date', 'dateprefix' => 'date_planned'),
+		'save_date_start'    => array('field' => 'date_start',    'type' => 'date', 'dateprefix' => 'date_start'),
+		'save_date_end'      => array('field' => 'date_end',      'type' => 'date', 'dateprefix' => 'date_end'),
 		'save_fk_conducteur' => array('field' => 'fk_conducteur', 'getpost' => array('fk_conducteur', 'int'), 'nullifempty' => true),
 		'save_km'            => array('field' => 'km',            'type' => 'price', 'getpost' => array('km', 'alpha')),
 		'save_check_or'      => array('field' => 'check_or',     'getpost' => array('check_or', 'int'), 'perm' => 'admin'),
@@ -1025,26 +1027,28 @@ if ($id > 0) {
 	);
 	print '</td></tr>'."\n";
 
-	// ── Date planification — éditable * ───────────────────────────────────
+	// ── Date début — éditable (jour) ──────────────────────────────────────
 	print '<tr><td>';
-	print $form->editfieldkey($langs->trans('DatePlanned'), 'date_planned', $object->date_planned, $object, $permissiontoadd);
+	print $form->editfieldkey($langs->trans('DateStart'), 'date_start', $object->date_start, $object, $permissiontoadd);
 	print '</td><td>';
 	print orCardInlineEditTd(
-		$action, 'date_planned', 'save_date_planned', $object->id,
-		$form->selectDate($object->date_planned ?: -1, 'date_planned', 1, 1, 0, '', 1, 1),
-		$form->editfieldval($langs->trans('DatePlanned'), 'date_planned', $object->date_planned, $object, $permissiontoadd, 'dayhour'),
+		$action, 'date_start', 'save_date_start', $object->id,
+		$form->selectDate($object->date_start ?: -1, 'date_start', 0, 0, 1, '', 1, 1),
+		$form->editfieldval($langs->trans('DateStart'), 'date_start', $object->date_start, $object, $permissiontoadd, 'day'),
 		$permissiontoadd
 	);
 	print '</td></tr>'."\n";
 
-	// ── Temps d'immobilisation théorique (calculé !) ───────────────────────
-	print '<tr><td class="titlefield">'.$langs->trans('TempsImmobilisationTheo').'</td>';
-	print '<td>';
-	if (!empty($object->temps_immobilisation)) {
-		print number_format((float) $object->temps_immobilisation, 2).' '.$langs->trans('Hours');
-	} else {
-		print '<span class="opacitymedium">'.$langs->trans('NA').'</span>';
-	}
+	// ── Date fin — éditable (jour) ────────────────────────────────────────
+	print '<tr><td>';
+	print $form->editfieldkey($langs->trans('DateEnd'), 'date_end', $object->date_end, $object, $permissiontoadd);
+	print '</td><td>';
+	print orCardInlineEditTd(
+		$action, 'date_end', 'save_date_end', $object->id,
+		$form->selectDate($object->date_end ?: -1, 'date_end', 0, 0, 1, '', 1, 1),
+		$form->editfieldval($langs->trans('DateEnd'), 'date_end', $object->date_end, $object, $permissiontoadd, 'day'),
+		$permissiontoadd
+	);
 	print '</td></tr>'."\n";
 
 	// ── Mécanicien (calculé !) ────────────────────────────────────────────
