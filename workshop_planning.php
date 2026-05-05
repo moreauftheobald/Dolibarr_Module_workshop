@@ -606,8 +606,9 @@ if ($mode === 'journee') {
 	$sql .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'societe soc ON soc.rowid = o.fk_soc';
 	$sql .= ' WHERE o.entity IN (' . getEntity('workshop') . ')';
 	$sql .= ' AND o.date_start IS NOT NULL AND o.date_end IS NOT NULL';
-	$sql .= " AND o.date_start <= '" . $db->escape($visible_end)   . " 23:59:59'";
-	$sql .= " AND o.date_end   >= '" . $db->escape($visible_start) . " 00:00:00'";
+	// Either date_start or date_end must fall inside the displayed interval
+	$sql .= " AND ((o.date_start BETWEEN '" . $db->escape($visible_start) . " 00:00:00' AND '" . $db->escape($visible_end) . " 23:59:59')";
+	$sql .= "  OR  (o.date_end   BETWEEN '" . $db->escape($visible_start) . " 00:00:00' AND '" . $db->escape($visible_end) . " 23:59:59'))";
 	$sql .= ' ORDER BY v.immatriculation ASC, o.date_start ASC';
 
 	$gantt_or_rows       = array();
@@ -629,10 +630,13 @@ if ($mode === 'journee') {
 	print '<style type="text/css">' . "\n";
 	print '  #GanttChartDIV .gmainleft  { width: 250px !important; min-width: 200px; max-width: 300px; }' . "\n";
 	print '  #GanttChartDIV .gname      { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' . "\n";
+	// Match JSGantt default task bar metrics so the bar is actually visible
+	// (passing a custom itemClass replaces .gtaskblue / .gtaskred entirely)
+	print '  #GanttChartDIV [class^="wsorstatus-"] { height: 13px; opacity: 0.9; margin-top: 1px; border: 1px solid rgba(0,0,0,0.2); }' . "\n";
 	foreach ($gantt_status_colors as $stid => $col) {
 		// Whitelist hex colors (#RGB, #RRGGBB, #RRGGBBAA) – fallback to default blue
 		$col_safe = preg_match('/^#[0-9a-fA-F]{3,8}$/', $col) ? $col : '#3c8dbc';
-		print '  #GanttChartDIV .wsorstatus-' . (int) $stid . ' { background-color: ' . $col_safe . ' !important; border-color: ' . $col_safe . ' !important; }' . "\n";
+		print '  #GanttChartDIV .wsorstatus-' . (int) $stid . ' { background-color: ' . $col_safe . ' !important; }' . "\n";
 	}
 	print '</style>' . "\n";
 
