@@ -324,3 +324,33 @@ Le script doit être idempotent (pouvoir être relancé sans dupliquer les donn�
 - Chaque nouvelle classe doit déclarer ses `$fields` complets (pattern ModuleBuilder)
 - Poids PHP min requis dans `modWorkshop.class.php` : `$this->phpmin = array(8, 0)`
 - Version Dolibarr min requise : `$this->need_dolibarr_version = array(21, 0)`
+
+## 11. Workflow de développement (directives Claude Code)
+
+### Mode plan
+Entrer en mode plan pour toute tâche impliquant :
+- Une modification du schéma SQL (impact migration)
+- Un nouveau workflow de statuts OR
+- Une refonte de méthode de planning ou de calcul de créneaux
+
+### Fichiers de suivi de session
+- `tasks/todo.md` : plan de la session en cours, cases à cocher
+- `tasks/lessons.md` : erreurs rencontrées et règles apprises — relire en début de session
+
+### Vérification avant "terminé"
+Ne jamais marquer une tâche comme terminée sans avoir vérifié :
+- Les droits (`$user->hasRight('workshop', ...)`)
+- La cohérence SQL avec le script de migration
+- L'absence de statuts hardcodés
+
+### Correction de bugs
+Corriger de manière autonome SAUF pour :
+- La logique de facturation (risque de bord sur Dolibarr natif)
+- Les transitions de statuts OR (logique paramétrée, non codée)
+- Toute requête SQL touchant plusieurs tables Workshop simultanément
+  → Dans ces cas : proposer le plan et attendre validation.
+
+### Principes
+- Simplicité d'abord : impact minimal sur le code existant
+- Pas de correctif temporaire : trouver la cause racine
+- Relire la section 8 (éléments abandonnés) avant toute nouvelle implémentation
