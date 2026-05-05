@@ -689,8 +689,7 @@ if ($mode === 'journee') {
 	print '  g.setFormatArr("day");' . "\n";
 	print '  g.setCaptionType(\'Caption\');' . "\n";
 	print '  g.setUseFade(0);' . "\n";
-	print '  g.setUseToolTip(1);' . "\n";
-	print '  g.setTooltipTemplate(function(task) { return task.getNotes(); });' . "\n";
+	print '  g.setUseToolTip(0);' . "\n";
 	print "\n";
 	// Calculate dayColWidth so 28 displayed days fill the available width
 	// (JSGantt adds ~1 week padding on each side: 2 requested weeks → 4 displayed)
@@ -729,6 +728,9 @@ if ($mode === 'journee') {
 	} else {
 		$or_card_url = dol_buildpath('/workshop/operationorder/or_card.php', 1);
 		$task_seq = 1;
+
+		// Build tooltip data as a JS object (task_seq => HTML)
+		$tooltip_data = array();
 		foreach ($gantt_or_rows as $or) {
 			$or_id     = (int) $or->rowid;
 			$or_ref    = (string) ($or->ref ?? '');
@@ -740,24 +742,24 @@ if ($mode === 'journee') {
 			$name      = $immat !== '' ? $immat . ' - ' . $or_ref : $or_ref;
 			$link      = $or_card_url . '?id=' . $or_id;
 
-			// Build tooltip HTML
-			$tt  = '<div style="padding:6px;font-size:12px;line-height:1.5;">';
-			$tt .= '<b>' . dol_escape_htmltag($or_ref) . '</b><br>';
+			$seq = $task_seq++;
+
+			// Tooltip HTML
+			$tt  = '<b>' . dol_escape_htmltag($or_ref) . '</b><br>';
 			$tt .= dol_escape_htmltag($langs->trans('Customer')) . ' : ' . dol_escape_htmltag($soc ?: '-') . '<br>';
 			$tt .= dol_escape_htmltag($langs->trans('Immatriculation')) . ' : ' . dol_escape_htmltag($immat ?: '-') . '<br>';
 			$tt .= dol_escape_htmltag($langs->trans('Status')) . ' : ' . dol_escape_htmltag((string) ($or->status_label ?? '')) . '<br>';
-			$tt .= dol_print_date(strtotime($or->date_start), 'day') . ' &rarr; ' . dol_print_date(strtotime($or->date_end), 'day');
-			// Job descriptions
+			$tt .= dol_print_date(strtotime($or->date_start), 'day') . ' &#8594; ' . dol_print_date(strtotime($or->date_end), 'day');
 			if (!empty($gantt_or_jobs[$or_id])) {
 				$tt .= '<hr style="margin:4px 0;border:0;border-top:1px solid #ccc;">';
 				foreach ($gantt_or_jobs[$or_id] as $job_label) {
 					$tt .= dol_escape_htmltag($job_label) . '<br>';
 				}
 			}
-			$tt .= '</div>';
+			$tooltip_data[$seq] = $tt;
 
 			print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
-			print '    ' . ($task_seq++) . ',' . "\n";
+			print '    ' . $seq . ',' . "\n";
 			print '    \'' . dol_escape_js($name) . '\',' . "\n";
 			print '    \'' . dol_escape_js($start_str) . '\',' . "\n";
 			print '    \'' . dol_escape_js($end_str)   . '\',' . "\n";
@@ -771,15 +773,52 @@ if ($mode === 'journee') {
 			print '    1,' . "\n";
 			print '    \'\',' . "\n";
 			print '    \'\',' . "\n";
-			print '    \'' . dol_escape_js($tt) . '\',' . "\n";
+			print '    \'\',' . "\n";
 			print '    g' . "\n";
 			print '  ));' . "\n";
 		}
 	}
 	print "\n";
 
-	// Draw the chart – width = left panel (250px) + (nbDays * dayColWidth) + margin
+	// Draw the chart
 	print '  g.Draw(250 + (nbDays * dayW) + 20);' . "\n";
+	print "\n";
+
+	// Custom tooltip system (independent of JSGantt tooltip which may not exist)
+	print '  var wsTooltips = {' . "\n";
+	$first = true;
+	foreach (($tooltip_data ?? array()) as $tid => $html) {
+		print '    ' . ($first ? '' : ',') . $tid . ': \'' . dol_escape_js($html) . '\'' . "\n";
+		$first = false;
+	}
+	print '  };' . "\n";
+	print "\n";
+	print '  var ttDiv = document.createElement("div");' . "\n";
+	print '  ttDiv.id = "wsGanttTooltip";' . "\n";
+	print '  ttDiv.style.cssText = "display:none;position:absolute;z-index:9999;background:#fff;border:1px solid #aaa;border-radius:4px;padding:8px;box-shadow:2px 2px 6px rgba(0,0,0,.2);max-width:350px;font-size:12px;line-height:1.5;pointer-events:none;";' . "\n";
+	print '  document.body.appendChild(ttDiv);' . "\n";
+	print "\n";
+	// Attach events to each task bar row — JSGantt renders rows with id "childrow_N"
+	print '  Object.keys(wsTooltips).forEach(function(tid) {' . "\n";
+	print '    var row = document.getElementById("childrow_" + tid);' . "\n";
+	print '    if (!row) return;' . "\n";
+	print '    var bar = row.querySelector("[class^=\'wsorstatus-\']");' . "\n";
+	print '    if (!bar) return;' . "\n";
+	print '    bar.addEventListener("mouseenter", function(e) {' . "\n";
+	print '      ttDiv.innerHTML = wsTooltips[tid];' . "\n";
+	print '      ttDiv.style.display = "block";' . "\n";
+	print '      ttDiv.style.left = (e.pageX + 12) + "px";' . "\n";
+	print '      ttDiv.style.top = (e.pageY + 12) + "px";' . "\n";
+	print '    });' . "\n";
+	print '    bar.addEventListener("mousemove", function(e) {' . "\n";
+	print '      ttDiv.style.left = (e.pageX + 12) + "px";' . "\n";
+	print '      ttDiv.style.top = (e.pageY + 12) + "px";' . "\n";
+	print '    });' . "\n";
+	print '    bar.addEventListener("mouseleave", function() {' . "\n";
+	print '      ttDiv.style.display = "none";' . "\n";
+	print '    });' . "\n";
+	print '  });' . "\n";
+
 	print '});' . "\n";
 	print '</script>' . "\n";
 
