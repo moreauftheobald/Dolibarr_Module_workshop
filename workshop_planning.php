@@ -785,10 +785,6 @@ if ($mode === 'journee') {
 			print '    ' . ($i > 0 ? ',' : '') . '\'' . dol_escape_js($html) . '\'' . "\n";
 		}
 		print '  ];' . "\n";
-		print '  console.log("WS_TOOLTIP: wsTT has " + wsTT.length + " entries");' . "\n";
-		print '  console.log("WS_TOOLTIP: IDs in gantt:", Array.from(ganttEl.querySelectorAll("[id]")).slice(0,20).map(function(e){return e.id+"("+e.tagName+"."+e.className.substring(0,20)+")";}));' . "\n";
-		print '  console.log("WS_TOOLTIP: elements with wsorstatus:", ganttEl.querySelectorAll("[class*=wsorstatus]").length);' . "\n";
-		print '  console.log("WS_TOOLTIP: gtaskbar elements:", ganttEl.querySelectorAll(".gtaskbar,.gtaskbarcontainer,.gtaskcomplete").length);' . "\n";
 		print "\n";
 		print '  var ttEl = document.createElement("div");' . "\n";
 		print '  ttEl.style.cssText = "display:none;position:fixed;z-index:99999;background:#fff;border:1px solid #999;border-radius:4px;padding:8px 10px;box-shadow:2px 2px 8px rgba(0,0,0,.25);max-width:360px;font-size:12px;line-height:1.6;";' . "\n";
