@@ -754,18 +754,8 @@ if ($mode === 'journee') {
 			$name      = $immat !== '' ? $immat . ' - ' . $or_ref : $or_ref;
 			$link      = $or_card_url . '?id=' . $or_id;
 
-			// Build tooltip HTML for the Notes field
-			$tt  = '<b>' . dol_escape_htmltag($or_ref) . '</b><br>';
-			$tt .= dol_escape_htmltag($langs->trans('Customer')) . ' : ' . dol_escape_htmltag($soc ?: '-') . '<br>';
-			$tt .= dol_escape_htmltag($langs->trans('Immatriculation')) . ' : ' . dol_escape_htmltag($immat ?: '-') . '<br>';
-			$tt .= dol_escape_htmltag($langs->trans('Status')) . ' : ' . dol_escape_htmltag((string) ($or->status_label ?? '')) . '<br>';
-			$tt .= dol_print_date(strtotime($or->date_start), 'day') . ' &#8594; ' . dol_print_date(strtotime($or->date_end), 'day');
-			if (!empty($gantt_or_jobs[$or_id])) {
-				$tt .= '<hr style="margin:4px 0;border:0;border-top:1px solid #ccc;">';
-				foreach ($gantt_or_jobs[$or_id] as $job_label) {
-					$tt .= dol_escape_htmltag($job_label) . '<br>';
-				}
-			}
+			// Tooltip: start with just the OR ref (debug)
+			$tt = $or_ref;
 
 			print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
 			print '    ' . ($task_seq++) . ',' . "\n";
