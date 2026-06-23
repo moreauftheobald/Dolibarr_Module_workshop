@@ -185,6 +185,7 @@ if ($action === 'get_planning_day') {
 					'or_ref'    => $o->ref,
 					'label'     => $o->ref.' · '.$o->label,
 					'start'     => dol_print_date($st, '%H:%M'),
+					'duration_hours' => round(max(0.25, ($en - $st) / 3600), 2),
 					'left_pct'  => round($left, 2),
 					'width_pct' => round(max(1.5, $right - $left), 2),
 				);

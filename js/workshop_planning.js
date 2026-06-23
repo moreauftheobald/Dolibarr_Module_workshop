@@ -99,6 +99,8 @@ var WorkshopPlanning = (function ($) {
 		var attrs = 'style="left:' + b.left_pct + '%;width:' + b.width_pct + '%;"';
 		if (isPlanned) {
 			attrs += ' data-job-id="' + b.job_id + '" data-or-id="' + b.or_id + '"';
+			attrs += ' data-duration="' + (b.duration_hours || 1) + '" data-label="' + esc(b.label) + '"';
+			if (cfg.canWrite) { attrs += ' draggable="true"'; }
 		} else {
 			attrs += ' data-pointage-id="' + b.id + '"';
 		}
@@ -299,13 +301,13 @@ var WorkshopPlanning = (function ($) {
 		});
 	}
 
-	function openAssignModal(jobId, userId, time, jobLabel) {
+	function openAssignModal(jobId, userId, time, jobLabel, duration) {
 		buildModals();
 		$('#wp-as-job').val(jobId);
 		$('#wp-as-user').val(userId);
 		$('#wp-as-joblabel').text(jobLabel || '');
 		$('#wp-as-start').val(time || '');
-		$('#wp-as-duration').val('1');
+		$('#wp-as-duration').val(duration && duration > 0 ? duration : '1');
 		openModal('wp-modal-assign');
 	}
 
@@ -408,7 +410,7 @@ var WorkshopPlanning = (function ($) {
 		});
 		$(document).on('change', '#wp-or-select', function () { loadJobs($(this).val()); });
 
-		// Drag & drop
+		// Drag & drop — unassigned job chips
 		$(document).on('dragstart', '.wp-job-chip', function (e) {
 			e.originalEvent.dataTransfer.setData('text/plain', JSON.stringify({
 				job_id: $(this).data('job-id'),
@@ -418,6 +420,19 @@ var WorkshopPlanning = (function ($) {
 			$(this).addClass('wp-dragging');
 		});
 		$(document).on('dragend', '.wp-job-chip', function () { $(this).removeClass('wp-dragging'); });
+
+		// Drag & drop — already-planned blocks (reschedule / reassign)
+		$(document).on('dragstart', '.wp-block--planned', function (e) {
+			if (!cfg.canWrite) { e.preventDefault(); return; }
+			e.originalEvent.dataTransfer.setData('text/plain', JSON.stringify({
+				job_id: $(this).data('job-id'),
+				or_id: $(this).data('or-id'),
+				label: $(this).data('label'),
+				duration: $(this).data('duration')
+			}));
+			$(this).addClass('wp-dragging');
+		});
+		$(document).on('dragend', '.wp-block--planned', function () { $(this).removeClass('wp-dragging'); });
 		$(document).on('dragover', '.wp-mechanic-lanes', function (e) {
 			e.preventDefault();
 			$(this).closest('.wp-grid-row').addClass('wp-drop-target');
@@ -434,7 +449,7 @@ var WorkshopPlanning = (function ($) {
 			try { payload = JSON.parse(e.originalEvent.dataTransfer.getData('text/plain')); } catch (err) { return; }
 			var userId = row.data('user-id');
 			var time = computeTimeFromX(e.originalEvent.clientX, this);
-			openAssignModal(payload.job_id, userId, time, payload.label);
+			openAssignModal(payload.job_id, userId, time, payload.label, payload.duration);
 		});
 
 		// Mode toggle (Journée / Semaine) — semaine handled by page reload (Phase 3)
