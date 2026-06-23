@@ -9,12 +9,16 @@ var WorkshopPlanning = (function ($) {
 		ajaxUrl: '',
 		pageUrl: '',
 		date: '',
+		submode: 'day',      // 'day' | 'week'
+		weekStart: '',
 		slotMin: '07:00',
 		slotMax: '18:00',
 		refreshRate: 0,      // seconds, 0 = disabled
 		canWrite: false,
+		canWriteOR: false,
 		csrfToken: '',
 		improCodes: [],      // [{code, label}]
+		users: [],           // [{id, name}]
 		lang: {}
 	};
 
@@ -184,6 +188,65 @@ var WorkshopPlanning = (function ($) {
 		$('.wp-now-indicator').css('left', pct.toFixed(2) + '%').show();
 	}
 
+	// ---- Week grid -----------------------------------------------------------
+	function loadWeek() {
+		ajaxGet('get_planning_week', { date: cfg.date }, function (resp) {
+			if (!resp || !resp.success) {
+				$('#workshop-day-grid-container').html('<div class="opacitymedium" style="padding:16px;">' + esc(resp && resp.error ? resp.error : 'Error') + '</div>');
+				return;
+			}
+			renderWeekGrid(resp);
+		});
+	}
+
+	function chargeClass(pct) {
+		if (pct > 75) { return 'wp-charge--high'; }
+		if (pct >= 50) { return 'wp-charge--medium'; }
+		return 'wp-charge--low';
+	}
+
+	function renderWeekGrid(data) {
+		var n = data.days.length;
+		var rowStyle = 'style="--wp-day-count:' + n + ';"';
+		var html = '<div class="workshop-week-grid">';
+
+		// Header
+		html += '<div class="wp-week-row wp-week-head" ' + rowStyle + '>';
+		html += '<div class="wp-week-cell wp-week-namecell">' + esc(t('Mechanics', 'Mécaniciens')) + '</div>';
+		data.days.forEach(function (d, i) {
+			var cls = (d === data.today) ? ' wp-week-cell--today-header' : '';
+			html += '<div class="wp-week-cell' + cls + '">' + esc(data.day_labels[i]) + (d === data.today ? ' ▼' : '') + '</div>';
+		});
+		html += '</div>';
+
+		// Mechanics
+		data.mechanics.forEach(function (m) {
+			html += '<div class="wp-week-row" ' + rowStyle + '>';
+			html += '<div class="wp-week-cell wp-week-namecell">' + esc(m.name) + '</div>';
+			data.days.forEach(function (d) {
+				var cls = (d === data.today) ? ' wp-week-cell--today' : '';
+				html += '<div class="wp-week-cell' + cls + '" data-date="' + d + '">';
+				(m.days[d] || []).forEach(function (tag) {
+					html += '<span class="wp-week-tag ' + tag.cls + '">' + esc(tag.label) + '</span>';
+				});
+				html += '</div>';
+			});
+			html += '</div>';
+		});
+
+		// Charge row
+		html += '<div class="wp-week-row wp-charge-row" ' + rowStyle + '>';
+		html += '<div class="wp-week-cell wp-week-namecell">' + esc(t('Charge', 'Charge %')) + '</div>';
+		data.days.forEach(function (d) {
+			var pct = data.charges[d] || 0;
+			html += '<div class="wp-week-cell ' + chargeClass(pct) + '">' + pct + '%</div>';
+		});
+		html += '</div>';
+
+		html += '</div>';
+		$('#workshop-day-grid-container').html(html);
+	}
+
 	// ---- Modals --------------------------------------------------------------
 	function buildModals() {
 		if ($('#wp-modal-pointage').length) { return; }
@@ -235,6 +298,33 @@ var WorkshopPlanning = (function ($) {
 			'<div class="wp-modal-footer">' +
 				'<span></span>' +
 				'<button type="button" class="button" id="wp-as-save">' + esc(t('Assign', 'Affecter')) + '</button>' +
+			'</div>' +
+		'</div>';
+
+		// Quick OR modal
+		var mecOpts = '<option value="0">--</option>';
+		(cfg.users || []).forEach(function (u) {
+			mecOpts += '<option value="' + u.id + '">' + esc(u.name) + '</option>';
+		});
+		html += '' +
+		'<div class="wp-modal" id="wp-modal-newor">' +
+			'<div class="wp-modal-header"><span>' + esc(t('NewOR', 'Nouvel OR')) + '</span>' +
+				'<button type="button" class="wp-modal-close" data-close>&times;</button></div>' +
+			'<div class="wp-modal-body">' +
+				'<div class="wp-field-row"><label>' + esc(t('ThirdParty', 'Tiers')) + '</label>' +
+					'<input type="text" id="wp-or-soc-search" placeholder="' + esc(t('SearchThirdParty', 'Rechercher un tiers...')) + '">' +
+					'<select id="wp-or-soc"></select></div>' +
+				'<div class="wp-field-row"><label>' + esc(t('Vehicle', 'Véhicule')) + '</label><select id="wp-or-veh"></select></div>' +
+				'<div class="wp-field-row"><label>' + esc(t('Description', 'Description')) + '</label><input type="text" id="wp-or-descr" maxlength="255"></div>' +
+				'<div class="wp-field-row"><label><input type="checkbox" id="wp-or-plannow"> ' + esc(t('PlanNow', 'Planification immédiate')) + '</label></div>' +
+				'<div id="wp-or-plan-block" style="display:none;">' +
+					'<div class="wp-field-row"><label>' + esc(t('Mechanic', 'Mécanicien')) + '</label><select id="wp-or-mec">' + mecOpts + '</select></div>' +
+					'<div class="wp-field-row"><label>' + esc(t('Start', 'Heure début')) + '</label><input type="time" id="wp-or-start"></div>' +
+				'</div>' +
+			'</div>' +
+			'<div class="wp-modal-footer">' +
+				'<span></span>' +
+				'<button type="button" class="button" id="wp-or-create">' + esc(t('CreateAndOpen', 'Créer et ouvrir l\'OR')) + '</button>' +
 			'</div>' +
 		'</div>';
 
@@ -309,6 +399,46 @@ var WorkshopPlanning = (function ($) {
 		$('#wp-as-start').val(time || '');
 		$('#wp-as-duration').val(duration && duration > 0 ? duration : '1');
 		openModal('wp-modal-assign');
+	}
+
+	function openNewOrModal() {
+		buildModals();
+		$('#wp-or-soc-search').val('');
+		$('#wp-or-soc').empty();
+		$('#wp-or-veh').empty();
+		$('#wp-or-descr').val('');
+		$('#wp-or-plannow').prop('checked', false);
+		$('#wp-or-plan-block').hide();
+		$('#wp-or-start').val('');
+		openModal('wp-modal-newor');
+	}
+
+	function loadVehicules(socId) {
+		ajaxGet('get_vehicules_for_soc', { fk_soc: socId }, function (resp) {
+			var sel = $('#wp-or-veh').empty();
+			sel.append('<option value="0">--</option>');
+			if (resp && resp.success) {
+				resp.results.forEach(function (v) { sel.append('<option value="' + v.id + '">' + esc(v.label) + '</option>'); });
+			}
+		});
+	}
+
+	function saveNewOr() {
+		var data = {
+			fk_soc: $('#wp-or-soc').val() || 0,
+			fk_vehicule: $('#wp-or-veh').val() || 0,
+			description: $('#wp-or-descr').val(),
+			date: cfg.date
+		};
+		if (!data.fk_soc || data.fk_soc === '0') { alert(t('ThirdPartyRequired', 'Tiers obligatoire')); return; }
+		if ($('#wp-or-plannow').is(':checked')) {
+			data.fk_user_assign = $('#wp-or-mec').val() || 0;
+			data.start = $('#wp-or-start').val();
+		}
+		ajaxPost('create_or_quick', data, function (resp) {
+			if (!resp || !resp.success) { alert(resp && resp.error ? resp.error : 'Error'); return; }
+			window.location = resp.url;
+		});
 	}
 
 	// ---- Save handlers -------------------------------------------------------
@@ -452,24 +582,50 @@ var WorkshopPlanning = (function ($) {
 			openAssignModal(payload.job_id, userId, time, payload.label, payload.duration);
 		});
 
-		// Mode toggle (Journée / Semaine) — semaine handled by page reload (Phase 3)
-		$(document).on('click', '.wp-mode-btn', function () {
-			var mode = $(this).data('mode');
-			if (mode === 'week') {
-				window.location = cfg.pageUrl + '?mode=mecaniciens&submode=week&date=' + cfg.date;
-			}
+		// Week cell click → jump to the day view of that date
+		$(document).on('click', '.wp-week-cell[data-date]', function () {
+			var d = $(this).data('date');
+			if (d) { window.location = cfg.pageUrl + '?mode=mecaniciens&submode=day&date=' + d; }
+		});
+
+		// "Nouvel OR" button
+		$(document).on('click', '#btn-new-or-planning', function (e) {
+			e.preventDefault();
+			if (cfg.canWriteOR) { openNewOrModal(); }
+		});
+		$(document).on('click', '#wp-or-create', saveNewOr);
+		$(document).on('change', '#wp-or-plannow', function () {
+			$('#wp-or-plan-block').toggle($(this).is(':checked'));
+		});
+		$(document).on('change', '#wp-or-soc', function () { loadVehicules($(this).val()); });
+		$(document).on('input', '#wp-or-soc-search', function () {
+			var term = $(this).val();
+			clearTimeout(orSearchTimer);
+			orSearchTimer = setTimeout(function () {
+				ajaxGet('search_thirdparty', { term: term }, function (resp) {
+					var sel = $('#wp-or-soc').empty();
+					if (resp && resp.success) {
+						resp.results.forEach(function (s) { sel.append('<option value="' + s.id + '">' + esc(s.name) + '</option>'); });
+						if (resp.results.length) { sel.val(resp.results[0].id); loadVehicules(resp.results[0].id); }
+					}
+				});
+			}, 300);
 		});
 	}
 
 	// ---- Init ----------------------------------------------------------------
+	function reload() {
+		if (cfg.submode === 'week') { loadWeek(); } else { loadDay(); }
+	}
+
 	function init(options) {
 		$.extend(cfg, options || {});
 		buildModals();
 		bindEvents();
-		loadDay();
+		reload();
 		setInterval(renderNowIndicator, 60000);
 		if (cfg.refreshRate > 0) {
-			setInterval(loadDay, cfg.refreshRate * 1000);
+			setInterval(reload, cfg.refreshRate * 1000);
 		}
 	}
 

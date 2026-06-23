@@ -109,6 +109,7 @@ if (in_array($mode, array('pointages', 'journee'), true)) {
 // Validate mode: only expose modes the user has rights for
 $valid_modes = array();
 if ($canSeeAtelier) {
+	$valid_modes[] = 'dashboard';
 	$valid_modes[] = 'atelier';
 }
 if ($canSeePointages) {
@@ -382,7 +383,10 @@ $dow        = (int) date('N', $date_ts); // 1=Mon … 7=Sun (ISO-8601)
 $week_start = date('Y-m-d', $date_ts - ($dow - 1) * 86400);
 
 // Prev / Next targets differ per mode
-if ($mode === 'mecaniciens') {
+if ($mode === 'dashboard') {
+	$prev_date = date('Y-m-d', $date_ts - 86400);
+	$next_date = date('Y-m-d', $date_ts + 86400);
+} elseif ($mode === 'mecaniciens') {
 	if ($submode === 'week') {
 		$prev_date = date('Y-m-d', strtotime($week_start) - 7 * 86400);
 		$next_date = date('Y-m-d', strtotime($week_start) + 7 * 86400);
@@ -422,15 +426,15 @@ $title = $langs->trans('WorkshopPlanningView');
 $TIncludeCSS = array();
 $TIncludeJS  = array();
 
+// Native workshop planning assets (dashboard + mecaniciens views)
+$TIncludeCSS[] = dol_buildpath('/workshop/css/workshop.css', 1);
+$TIncludeJS[]  = dol_buildpath('/workshop/js/workshop_planning.js', 1);
+
 if ($mode === 'atelier') {
-	// JSGantt – included in Dolibarr core
+	// JSGantt – included in Dolibarr core (kept temporarily for the Gantt view)
 	$TIncludeCSS[] = '/includes/jsgantt/jsgantt.css';
 	$TIncludeJS[]  = '/includes/jsgantt/jsgantt.js';
 	$TIncludeJS[]  = '/projet/jsgantt_language.js.php?lang=' . $langs->defaultlang;
-} else {
-	// Mechanics planning — native HTML/CSS/JS grid (Phase 2)
-	$TIncludeCSS[] = dol_buildpath('/workshop/css/workshop.css', 1);
-	$TIncludeJS[]  = dol_buildpath('/workshop/js/workshop_planning.js', 1);
 }
 
 llxHeader('', $title, '', '', 0, 0, $TIncludeJS, $TIncludeCSS, '', 'mod-workshop page-planning');
@@ -444,6 +448,11 @@ $head = array();
 $h    = 0;
 
 if ($canSeeAtelier) {
+	$head[$h][0] = $baseUrl . '?mode=dashboard&date=' . urlencode($date_str);
+	$head[$h][1] = $langs->trans('WorkshopPlanningModeDashboard');
+	$head[$h][2] = 'dashboard';
+	$h++;
+
 	$head[$h][0] = $baseUrl . '?mode=atelier&date=' . urlencode($date_str);
 	$head[$h][1] = $langs->trans('WorkshopPlanningModeAtelier');
 	$head[$h][2] = 'atelier';
@@ -481,7 +490,11 @@ print img_picto($langs->trans('Previous'), 'fa-chevron-left');
 print '</a>';
 
 // Period label (different format per mode)
-if ($mode === 'mecaniciens') {
+if ($mode === 'dashboard') {
+	print '<span class="wp-period-label">';
+	print $langs->trans('WorkshopPlanningDayOf') . ' ' . dol_print_date($date_ts, 'day');
+	print '</span>';
+} elseif ($mode === 'mecaniciens') {
 	print '<span class="wp-period-label">';
 	if ($submode === 'week') {
 		print $langs->trans('WorkshopPlanningWeekOf') . ' ' . dol_print_date(strtotime($week_start), 'day');
@@ -535,6 +548,13 @@ if ($mode === 'mecaniciens') {
 	print '</div>';
 }
 
+// "Nouvel OR" button (mecaniciens mode + OR write right)
+if ($mode === 'mecaniciens' && $user->hasRight('workshop', 'operationorders', 'write')) {
+	print '<a class="butActionNew" href="javascript:void(0);" id="btn-new-or-planning" style="margin-left:16px;">';
+	print img_picto('', 'fa-plus-circle') . ' ' . $langs->trans('WorkshopNewOR');
+	print '</a>';
+}
+
 // "Planifier" button (atelier mode + write right)
 if ($mode === 'atelier' && $user->hasRight('workshop', 'workshopplanning', 'write')) {
 	print '<a class="butAction" href="javascript:void(0);" onclick="wsOpenPlanModal();" style="padding:4px 12px;min-width:auto;margin-left:16px;">';
@@ -563,81 +583,203 @@ print '</div>'; // .workshop-planning-nav
 // Main content – switches on $mode
 // ---------------------------------------------------------------------------
 
-if ($mode === 'mecaniciens') {
+if ($mode === 'dashboard') {
+	// -----------------------------------------------------------------------
+	// Mode Tableau de bord – synthèse "tour de contrôle" (Phase 3)
+	// -----------------------------------------------------------------------
+	$day_lo = $date_str . ' 00:00:00';
+	$day_hi = $date_str . ' 23:59:59';
+	$ent    = getEntity('workshop');
+
+	// Metric 1: vehicles present (active OR overlapping the day, with a vehicle)
+	$nb_vehicules = 0;
+	$sqlm = 'SELECT COUNT(DISTINCT o.fk_vehicule) AS nb FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder o';
+	$sqlm .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder_status s ON s.rowid = o.status AND s.display_on_planning = 1';
+	$sqlm .= ' WHERE o.entity IN (' . $ent . ') AND o.fk_vehicule > 0';
+	$sqlm .= " AND o.date_start IS NOT NULL AND o.date_start <= '" . $db->escape($day_hi) . "'";
+	$sqlm .= " AND (o.date_end IS NULL OR o.date_end >= '" . $db->escape($day_lo) . "')";
+	$resm = $db->query($sqlm);
+	if ($resm && ($o = $db->fetch_object($resm))) { $nb_vehicules = (int) $o->nb; }
+
+	// Metric 2: unplanned ORs (no date_planned, visible on planning)
+	$nb_unplanned = 0;
+	$sqlm = 'SELECT COUNT(*) AS nb FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder o';
+	$sqlm .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder_status s ON s.rowid = o.status AND s.display_on_planning = 1';
+	$sqlm .= ' WHERE o.entity IN (' . $ent . ') AND (o.date_planned IS NULL OR o.date_planned = 0)';
+	$resm = $db->query($sqlm);
+	if ($resm && ($o = $db->fetch_object($resm))) { $nb_unplanned = (int) $o->nb; }
+
+	// Metric 3: jobs without a mechanic on plannable ORs
+	$nb_jobs_nomec = 0;
+	$sqlm = 'SELECT COUNT(*) AS nb FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder_jobs j';
+	$sqlm .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder o ON o.rowid = j.fk_operationorder';
+	$sqlm .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder_status s ON s.rowid = o.status AND s.display_on_planning = 1';
+	$sqlm .= ' WHERE o.entity IN (' . $ent . ') AND (j.fk_user_assign IS NULL OR j.fk_user_assign = 0)';
+	$resm = $db->query($sqlm);
+	if ($resm && ($o = $db->fetch_object($resm))) { $nb_jobs_nomec = (int) $o->nb; }
+
+	// Metric 4: workshop load = planned time of the day / capacity
+	$sum_planned = 0;
+	$sqlm = 'SELECT SUM(j.time_planned) AS tot FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder_jobs j';
+	$sqlm .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder o ON o.rowid = j.fk_operationorder';
+	$sqlm .= ' WHERE o.entity IN (' . $ent . ')';
+	$sqlm .= " AND j.date_start IS NOT NULL AND j.date_start >= '" . $db->escape($day_lo) . "' AND j.date_start <= '" . $db->escape($day_hi) . "'";
+	$resm = $db->query($sqlm);
+	if ($resm && ($o = $db->fetch_object($resm))) { $sum_planned = (int) $o->tot; }
+
+	$mecs    = workshop_get_mechanics($db, $conf->entity);
+	$nb_mec  = count($mecs);
+	$drange  = workshop_get_day_slot_range($db, $date_ts, $conf->entity);
+	$day_h   = (strtotime('2000-01-01 ' . $drange['max']) - strtotime('2000-01-01 ' . $drange['min'])) / 3600;
+	$capacity = $nb_mec * $day_h * 3600;
+	$charge   = $capacity > 0 ? min(100, round($sum_planned / $capacity * 100)) : 0;
+
+	// --- Metric cards ---
+	print '<div class="wp-dash-cards">';
+	print '<div class="wp-card wp-card--blue"><div class="wp-card-label">' . $langs->trans('WorkshopDashVehiclesPresent') . '</div><div class="wp-card-value">' . $nb_vehicules . '</div></div>';
+	print '<div class="wp-card wp-card--amber"><div class="wp-card-label">' . $langs->trans('WorkshopDashUnplannedOR') . '</div><div class="wp-card-value">' . $nb_unplanned . '</div></div>';
+	print '<div class="wp-card wp-card--coral"><div class="wp-card-label">' . $langs->trans('WorkshopDashJobsNoMechanic') . '</div><div class="wp-card-value">' . $nb_jobs_nomec . '</div></div>';
+	print '<div class="wp-card wp-card--green"><div class="wp-card-label">' . $langs->trans('WorkshopDashWorkshopLoad') . '</div><div class="wp-card-value">' . $charge . '&nbsp;%</div></div>';
+	print '</div>';
+
+	// --- OR of the day ---
+	print '<div class="wp-dash-title">' . $langs->trans('WorkshopDashORofDay') . '</div>';
+
+	$sqlo  = 'SELECT o.rowid, o.ref, o.status, s.label AS status_label, s.color AS status_color,';
+	$sqlo .= ' v.immatriculation, soc.nom AS soc_name,';
+	$sqlo .= ' (SELECT SUM(time_spent) FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder_jobs WHERE fk_operationorder = o.rowid) AS spent,';
+	$sqlo .= ' (SELECT SUM(time_planned) FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder_jobs WHERE fk_operationorder = o.rowid) AS planned';
+	$sqlo .= ' FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder o';
+	$sqlo .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder_status s ON s.rowid = o.status AND s.display_on_planning = 1';
+	$sqlo .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'workshop_vehicule v ON v.rowid = o.fk_vehicule';
+	$sqlo .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'societe soc ON soc.rowid = o.fk_soc';
+	$sqlo .= ' WHERE o.entity IN (' . $ent . ')';
+	$sqlo .= " AND ((o.date_planned >= '" . $db->escape($day_lo) . "' AND o.date_planned <= '" . $db->escape($day_hi) . "')";
+	$sqlo .= "   OR (o.date_start IS NOT NULL AND o.date_start <= '" . $db->escape($day_hi) . "' AND (o.date_end IS NULL OR o.date_end >= '" . $db->escape($day_lo) . "')))";
+	$sqlo .= ' ORDER BY o.ref ASC';
+	$sqlo .= $db->plimit(200);
+
+	print '<div class="div-table-responsive" style="margin-top:6px;">';
+	print '<table class="noborder centpercent">';
+	print '<tr class="liste_titre">';
+	print '<th>' . $langs->trans('Ref') . '</th>';
+	print '<th>' . $langs->trans('immatriculation') . '</th>';
+	print '<th>' . $langs->trans('ThirdParty') . '</th>';
+	print '<th>' . $langs->trans('Status') . '</th>';
+	print '<th>' . $langs->trans('WorkshopDashProgress') . '</th>';
+	print '</tr>';
+
+	$reso = $db->query($sqlo);
+	$nb_lines = 0;
+	if ($reso) {
+		while ($o = $db->fetch_object($reso)) {
+			$nb_lines++;
+			$prog = (!empty($o->planned) && $o->planned > 0) ? min(100, round($o->spent / $o->planned * 100)) : 0;
+			$col  = preg_match('/^#?[0-9a-fA-F]{3,8}$/', (string) $o->status_color) ? ('#' . ltrim((string) $o->status_color, '#')) : '#888780';
+			$or_url = dol_buildpath('/workshop/operationorder/or_card.php', 1) . '?id=' . (int) $o->rowid;
+			print '<tr class="oddeven">';
+			print '<td><a href="' . dol_escape_htmltag($or_url) . '">' . dol_escape_htmltag($o->ref) . '</a></td>';
+			print '<td>' . dol_escape_htmltag($o->immatriculation) . '</td>';
+			print '<td>' . dol_escape_htmltag($o->soc_name) . '</td>';
+			print '<td><span class="wp-status-badge" style="background:' . $col . ';">' . dol_escape_htmltag($o->status_label) . '</span></td>';
+			print '<td><div class="wp-progress"><div class="wp-progress-bar" style="width:' . $prog . '%;"></div><span class="wp-progress-text">' . $prog . '%</span></div></td>';
+			print '</tr>';
+		}
+		$db->free($reso);
+	}
+	if (!$nb_lines) {
+		print '<tr><td colspan="5" class="center opacitymedium" style="padding:18px;">' . $langs->trans('WorkshopDashNoOR') . '</td></tr>';
+	}
+	print '</table></div>';
+
+} elseif ($mode === 'mecaniciens') {
 	// -----------------------------------------------------------------------
 	// Mode Mécaniciens – native HTML/CSS/JS grid (Phase 2: day sub-mode)
 	// -----------------------------------------------------------------------
 	$canWritePointage = $user->hasRight('workshop', 'workshopmecanicsplanning', 'write');
+	$canWriteOR       = $user->hasRight('workshop', 'operationorders', 'write');
 
 	if (!getDolGlobalInt('WORKSHOP_MECHANIC_GROUP')) {
 		print info_admin($langs->trans('WorkshopPlanningNoMechanicGroup'), 0, 0, 'warning');
 	}
 
-	if ($submode === 'week') {
-		// Week sub-mode is delivered in Phase 3.
-		print '<div class="opacitymedium" style="padding:24px;text-align:center;">';
-		print img_picto('', 'fa-calendar-week') . ' ' . $langs->trans('WorkshopPlanningWeekComingSoon');
-		print '</div>';
-	} else {
-		// Day grid container — populated by AJAX (get_planning_day).
-		print '<div id="workshop-day-grid-container" style="margin-top:4px;">';
-		print '<div class="opacitymedium" style="padding:16px;">' . $langs->trans('Loading') . '...</div>';
-		print '</div>';
+	// Grid container — populated by AJAX (get_planning_day or get_planning_week).
+	print '<div id="workshop-day-grid-container" style="margin-top:4px;">';
+	print '<div class="opacitymedium" style="padding:16px;">' . $langs->trans('Loading') . '...</div>';
+	print '</div>';
 
-		// Improductive codes (incl. reserved) for the pointage modal.
-		$improObj  = new WorkshopImpro($db);
-		$improMap  = $improObj->getSelectList(1);
-		$improList = array();
-		foreach ($improMap as $code => $lbl) {
-			$improList[] = array('code' => $code, 'label' => $lbl);
-		}
-
-		// Translation strings passed to the JS layer.
-		$wpLang = array(
-			'Mechanics'     => $langs->trans('WorkshopPlanningModeMecaniciens'),
-			'NoMechanics'   => $langs->trans('WorkshopPlanningNoMechanicsConfigured'),
-			'Planned'       => $langs->trans('WorkshopPlanningPlanned'),
-			'Clocked'       => $langs->trans('WorkshopPlanningClocked'),
-			'Unassigned'    => $langs->trans('WorkshopPlanningUnassigned'),
-			'NoUnassigned'  => $langs->trans('None'),
-			'NewPointage'   => $langs->trans('WorkshopNewPointage'),
-			'EditPointage'  => $langs->trans('WorkshopEditPointage'),
-			'OnJob'         => $langs->trans('WorkshopPointageOnJob'),
-			'Improductive'  => $langs->trans('WorkshopImproductive'),
-			'OR'            => $langs->trans('WorkshopOR'),
-			'SearchOR'      => $langs->trans('WorkshopSearchOR'),
-			'Job'           => $langs->trans('WorkshopJob'),
-			'ImproCode'     => $langs->trans('WorkshopImproCode'),
-			'Start'         => $langs->trans('WorkshopStartHour'),
-			'End'           => $langs->trans('WorkshopEndHour'),
-			'EmptyOpen'     => $langs->trans('WorkshopEmptyOpen'),
-			'Note'          => $langs->trans('Note'),
-			'Delete'        => $langs->trans('Delete'),
-			'Save'          => $langs->trans('Save'),
-			'AssignJob'     => $langs->trans('WorkshopAssignJob'),
-			'DurationHours' => $langs->trans('WorkshopDurationHours'),
-			'Assign'        => $langs->trans('WorkshopAssignAction'),
-			'Pointage'      => $langs->trans('Pointage'),
-			'ConfirmDelete' => $langs->trans('WorkshopConfirmDeletePointage'),
-			'StartRequired' => $langs->trans('WorkshopStartRequired'),
-			'NetworkError'  => $langs->trans('WorkshopNetworkError'),
-		);
-
-		print '<script type="text/javascript">' . "\n";
-		print 'jQuery(function(){ WorkshopPlanning.init({' . "\n";
-		print '  ajaxUrl: ' . json_encode(dol_buildpath('/workshop/ajax/planning_ajax.php', 1)) . ',' . "\n";
-		print '  pageUrl: ' . json_encode($baseUrl) . ',' . "\n";
-		print '  date: ' . json_encode($date_str) . ',' . "\n";
-		print '  slotMin: ' . json_encode($slot_min) . ',' . "\n";
-		print '  slotMax: ' . json_encode($slot_max) . ',' . "\n";
-		print '  canWrite: ' . ($canWritePointage ? 'true' : 'false') . ',' . "\n";
-		print '  refreshRate: ' . (int) getDolGlobalInt('WORKSHOP_OR_PLANNING_REFRESH_RATE', 0) . ',' . "\n";
-		print '  csrfToken: ' . json_encode(newToken()) . ',' . "\n";
-		print '  improCodes: ' . json_encode($improList, JSON_UNESCAPED_UNICODE) . ',' . "\n";
-		print '  lang: ' . json_encode($wpLang, JSON_UNESCAPED_UNICODE) . "\n";
-		print '}); });' . "\n";
-		print '</script>' . "\n";
+	// Improductive codes (incl. reserved) for the pointage modal.
+	$improObj  = new WorkshopImpro($db);
+	$improMap  = $improObj->getSelectList(1);
+	$improList = array();
+	foreach ($improMap as $code => $lbl) {
+		$improList[] = array('code' => $code, 'label' => $lbl);
 	}
+
+	// Mechanics list for the "quick OR" modal.
+	$mecList = array();
+	foreach (workshop_get_mechanics($db, $conf->entity) as $muid => $mobj) {
+		$mecList[] = array('id' => $muid, 'name' => $mobj->fullname);
+	}
+
+	// Translation strings passed to the JS layer.
+	$wpLang = array(
+		'Mechanics'     => $langs->trans('WorkshopPlanningModeMecaniciens'),
+		'NoMechanics'   => $langs->trans('WorkshopPlanningNoMechanicsConfigured'),
+		'Planned'       => $langs->trans('WorkshopPlanningPlanned'),
+		'Clocked'       => $langs->trans('WorkshopPlanningClocked'),
+		'Unassigned'    => $langs->trans('WorkshopPlanningUnassigned'),
+		'NoUnassigned'  => $langs->trans('None'),
+		'NewPointage'   => $langs->trans('WorkshopNewPointage'),
+		'EditPointage'  => $langs->trans('WorkshopEditPointage'),
+		'OnJob'         => $langs->trans('WorkshopPointageOnJob'),
+		'Improductive'  => $langs->trans('WorkshopImproductive'),
+		'OR'            => $langs->trans('WorkshopOR'),
+		'SearchOR'      => $langs->trans('WorkshopSearchOR'),
+		'Job'           => $langs->trans('WorkshopJob'),
+		'ImproCode'     => $langs->trans('WorkshopImproCode'),
+		'Start'         => $langs->trans('WorkshopStartHour'),
+		'End'           => $langs->trans('WorkshopEndHour'),
+		'EmptyOpen'     => $langs->trans('WorkshopEmptyOpen'),
+		'Note'          => $langs->trans('Note'),
+		'Delete'        => $langs->trans('Delete'),
+		'Save'          => $langs->trans('Save'),
+		'AssignJob'     => $langs->trans('WorkshopAssignJob'),
+		'DurationHours' => $langs->trans('WorkshopDurationHours'),
+		'Assign'        => $langs->trans('WorkshopAssignAction'),
+		'Pointage'      => $langs->trans('Pointage'),
+		'ConfirmDelete' => $langs->trans('WorkshopConfirmDeletePointage'),
+		'StartRequired' => $langs->trans('WorkshopStartRequired'),
+		'NetworkError'  => $langs->trans('WorkshopNetworkError'),
+		'Charge'        => $langs->trans('WorkshopWeekCharge'),
+		'NewOR'         => $langs->trans('WorkshopNewOR'),
+		'ThirdParty'    => $langs->trans('ThirdParty'),
+		'SearchThirdParty' => $langs->trans('WorkshopSearchThirdParty'),
+		'Vehicle'       => $langs->trans('Vehicle'),
+		'Description'   => $langs->trans('Description'),
+		'PlanNow'       => $langs->trans('WorkshopPlanNow'),
+		'Mechanic'      => $langs->trans('WorkshopMechanic'),
+		'CreateAndOpen' => $langs->trans('WorkshopCreateAndOpenOR'),
+	);
+
+	print '<script type="text/javascript">' . "\n";
+	print 'jQuery(function(){ WorkshopPlanning.init({' . "\n";
+	print '  ajaxUrl: ' . json_encode(dol_buildpath('/workshop/ajax/planning_ajax.php', 1)) . ',' . "\n";
+	print '  pageUrl: ' . json_encode($baseUrl) . ',' . "\n";
+	print '  date: ' . json_encode($date_str) . ',' . "\n";
+	print '  submode: ' . json_encode($submode) . ',' . "\n";
+	print '  weekStart: ' . json_encode($week_start) . ',' . "\n";
+	print '  slotMin: ' . json_encode($slot_min) . ',' . "\n";
+	print '  slotMax: ' . json_encode($slot_max) . ',' . "\n";
+	print '  canWrite: ' . ($canWritePointage ? 'true' : 'false') . ',' . "\n";
+	print '  canWriteOR: ' . ($canWriteOR ? 'true' : 'false') . ',' . "\n";
+	print '  refreshRate: ' . (int) getDolGlobalInt('WORKSHOP_OR_PLANNING_REFRESH_RATE', 0) . ',' . "\n";
+	print '  csrfToken: ' . json_encode(newToken()) . ',' . "\n";
+	print '  improCodes: ' . json_encode($improList, JSON_UNESCAPED_UNICODE) . ',' . "\n";
+	print '  users: ' . json_encode($mecList, JSON_UNESCAPED_UNICODE) . ',' . "\n";
+	print '  lang: ' . json_encode($wpLang, JSON_UNESCAPED_UNICODE) . "\n";
+	print '}); });' . "\n";
+	print '</script>' . "\n";
 
 } elseif ($mode === 'atelier') {
 	// -----------------------------------------------------------------------

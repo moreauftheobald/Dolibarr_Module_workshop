@@ -550,6 +550,249 @@ if ($action === 'get_jobs_for_or') {
 	wp_json(array('success' => true, 'results' => $list));
 }
 
+// ---------------------------------------------------------------------------
+// get_planning_week — weekly recap grid (mechanics x days)
+// ---------------------------------------------------------------------------
+if ($action === 'get_planning_week') {
+	$date = GETPOST('date', 'alpha');
+	if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+		$date = date('Y-m-d');
+	}
+	$date_ts = strtotime($date);
+	$dow     = (int) date('N', $date_ts); // 1=Mon..7=Sun
+	$mon_ts  = $date_ts - ($dow - 1) * 86400;
+
+	// Display Monday..Saturday (6 days)
+	$days       = array();
+	$day_labels = array();
+	for ($d = 0; $d < 6; $d++) {
+		$ts = $mon_ts + $d * 86400;
+		$days[]       = date('Y-m-d', $ts);
+		$day_labels[] = dol_print_date($ts, '%a %d');
+	}
+	$week_lo = date('Y-m-d', $mon_ts) . ' 00:00:00';
+	$week_hi = date('Y-m-d', $mon_ts + 5 * 86400) . ' 23:59:59';
+
+	// Improductive absence flags
+	$impro        = new WorkshopImpro($db);
+	$improlist    = $impro->fetchAll('ASC', 'code', 0);
+	$improlabels  = array();
+	$improabsence = array();
+	if (is_array($improlist)) {
+		foreach ($improlist as $ic) {
+			$improlabels[$ic->code]  = $ic->label;
+			$improabsence[$ic->code] = (int) $ic->is_absence;
+		}
+	}
+	$improlabels[WorkshopImpro::CODE_FIN_JOURNEE] = $langs->trans('WorkshopImproFinJournee');
+	$improlabels[WorkshopImpro::CODE_ANNULATION]  = $langs->trans('WorkshopImproAnnulation');
+
+	$mechanics = workshop_get_mechanics($db, $entity);
+	$nb_mec    = count($mechanics);
+
+	// Init per-mechanic per-day buckets + charge accumulators
+	$out      = array();
+	$idxByUid = array();
+	foreach ($mechanics as $uid => $m) {
+		$idxByUid[$uid] = count($out);
+		$daymap = array();
+		foreach ($days as $dd) { $daymap[$dd] = array(); }
+		$out[] = array('id' => $uid, 'name' => $m->fullname, 'days' => $daymap);
+	}
+	$charge_sec = array();
+	foreach ($days as $dd) { $charge_sec[$dd] = 0; }
+
+	// Load all pointages of the week, resolve OR ref
+	$sqlw  = 'SELECT p.fk_user, p.type, p.impro_code, p.date_start, p.date_end, o.ref';
+	$sqlw .= ' FROM '.$db->prefix().'workshop_pointage as p';
+	$sqlw .= ' LEFT JOIN '.$db->prefix().'workshop_operationorder_jobs as j ON j.rowid = p.fk_job';
+	$sqlw .= ' LEFT JOIN '.$db->prefix().'workshop_operationorder as o ON o.rowid = j.fk_operationorder';
+	$sqlw .= ' WHERE p.entity = '.((int) $entity);
+	$sqlw .= " AND p.date_start >= '".$db->escape($week_lo)."' AND p.date_start <= '".$db->escape($week_hi)."'";
+	$sqlw .= ' ORDER BY p.fk_user, p.date_start';
+	$resw = $db->query($sqlw);
+	$seen = array(); // dedup uid|day|key
+	if ($resw) {
+		while ($p = $db->fetch_object($resw)) {
+			$uid = (int) $p->fk_user;
+			if (!isset($idxByUid[$uid])) { continue; }
+			$dd = date('Y-m-d', $db->jdate($p->date_start));
+			if (!isset($charge_sec[$dd])) { continue; }
+
+			// Accumulate charge (closed entries only)
+			if (!empty($p->date_end)) {
+				$charge_sec[$dd] += max(0, $db->jdate($p->date_end) - $db->jdate($p->date_start));
+			}
+
+			if ($p->type === WorkshopPointage::TYPE_IMPRO) {
+				$isabs = isset($improabsence[$p->impro_code]) ? $improabsence[$p->impro_code] : 0;
+				$lbl   = isset($improlabels[$p->impro_code]) ? $improlabels[$p->impro_code] : $p->impro_code;
+				$key   = ($isabs ? 'abs:' : 'imp:').$p->impro_code;
+				$cls   = $isabs ? 'wp-week-tag--absent' : 'wp-week-tag--impro';
+			} else {
+				$lbl = $p->ref ?: $langs->trans('WorkshopJob');
+				$key = 'job:'.$lbl;
+				$cls = 'wp-week-tag--job';
+			}
+			$dedup = $uid.'|'.$dd.'|'.$key;
+			if (isset($seen[$dedup])) { continue; }
+			$seen[$dedup] = 1;
+			$out[$idxByUid[$uid]]['days'][$dd][] = array('label' => $lbl, 'cls' => $cls);
+		}
+		$db->free($resw);
+	}
+
+	// Charge percentage per day
+	$charges = array();
+	foreach ($days as $dd) {
+		$rng   = workshop_get_day_slot_range($db, strtotime($dd), $entity);
+		$day_h = (strtotime('2000-01-01 '.$rng['max']) - strtotime('2000-01-01 '.$rng['min'])) / 3600;
+		$cap   = $nb_mec * $day_h * 3600;
+		$charges[$dd] = $cap > 0 ? min(100, (int) round($charge_sec[$dd] / $cap * 100)) : 0;
+	}
+
+	wp_json(array(
+		'success'    => true,
+		'week_start' => date('Y-m-d', $mon_ts),
+		'days'       => $days,
+		'day_labels' => $day_labels,
+		'mechanics'  => $out,
+		'charges'    => $charges,
+		'today'      => date('Y-m-d'),
+	));
+}
+
+// ---------------------------------------------------------------------------
+// search_thirdparty — autocomplete companies by name
+// ---------------------------------------------------------------------------
+if ($action === 'search_thirdparty') {
+	$term = GETPOST('term', 'alphanohtml');
+	$list = array();
+	$sql  = 'SELECT rowid, nom FROM '.$db->prefix().'societe';
+	$sql .= ' WHERE entity IN ('.getEntity('societe').')';
+	if ($term !== '') {
+		$sql .= " AND nom LIKE '%".$db->escape($db->escapeforlike($term))."%'";
+	}
+	$sql .= ' ORDER BY nom ASC';
+	$sql .= $db->plimit(20);
+	$resql = $db->query($sql);
+	if ($resql) {
+		while ($o = $db->fetch_object($resql)) {
+			$list[] = array('id' => (int) $o->rowid, 'name' => $o->nom);
+		}
+		$db->free($resql);
+	}
+	wp_json(array('success' => true, 'results' => $list));
+}
+
+// ---------------------------------------------------------------------------
+// get_vehicules_for_soc — vehicles of a given third party
+// ---------------------------------------------------------------------------
+if ($action === 'get_vehicules_for_soc') {
+	$fk_soc = GETPOSTINT('fk_soc');
+	$list   = array();
+	if ($fk_soc > 0) {
+		$sql  = 'SELECT rowid, immatriculation FROM '.$db->prefix().'workshop_vehicule';
+		$sql .= ' WHERE fk_soc = '.((int) $fk_soc);
+		$sql .= ' AND entity IN ('.getEntity('workshop').')';
+		$sql .= ' ORDER BY immatriculation ASC';
+		$resql = $db->query($sql);
+		if ($resql) {
+			while ($o = $db->fetch_object($resql)) {
+				$list[] = array('id' => (int) $o->rowid, 'label' => $o->immatriculation);
+			}
+			$db->free($resql);
+		}
+	}
+	wp_json(array('success' => true, 'results' => $list));
+}
+
+// ---------------------------------------------------------------------------
+// create_or_quick — quick repair order creation from the planning
+// ---------------------------------------------------------------------------
+if ($action === 'create_or_quick') {
+	if (!$user->hasRight('workshop', 'operationorders', 'write')) {
+		http_response_code(403);
+		wp_json(array('success' => false, 'error' => $langs->trans('NotEnoughPermissions')));
+	}
+
+	dol_include_once('/workshop/class/operationorder.class.php');
+	dol_include_once('/workshop/class/operationorder_jobs.class.php');
+	dol_include_once('/workshop/class/Vehicule.class.php');
+
+	$fk_soc      = GETPOSTINT('fk_soc');
+	$fk_vehicule = GETPOSTINT('fk_vehicule');
+	$descr       = GETPOST('description', 'alphanohtml');
+	$fk_user_a   = GETPOSTINT('fk_user_assign');
+	$date        = GETPOST('date', 'alpha');
+	$start       = GETPOST('start', 'alpha');
+
+	// Derive third party from the vehicle when provided
+	if ($fk_vehicule > 0) {
+		$veh = new Vehicule($db);
+		if ($veh->fetch($fk_vehicule) > 0 && !empty($veh->fk_soc)) {
+			$fk_soc = (int) $veh->fk_soc;
+		}
+	}
+	if ($fk_soc <= 0) {
+		wp_json(array('success' => false, 'error' => $langs->trans('ErrInvalidSocid')));
+	}
+
+	$db->begin();
+
+	$or = new Operationorder($db);
+	$or->entity        = $conf->entity;
+	$or->fk_soc        = $fk_soc;
+	$or->fk_vehicule   = $fk_vehicule ?: null;
+	$or->fk_user_creat = $user->id;
+	$statusOnCreate    = getDolGlobalInt('WORKSHOP_OR_STATUS_ON_CREATE');
+	$or->status        = $statusOnCreate > 0 ? $statusOnCreate : Operationorder::STATUS_DRAFT;
+	$or->total_ht          = 0;
+	$or->total_ht_part     = 0;
+	$or->total_ht_mo       = 0;
+	$or->total_ht_service  = 0;
+	$or->total_ht_external = 0;
+	$or->total_ht_refund   = 0;
+	$or->date_planned = null;
+	$or->date_start   = null;
+	$or->date_end     = null;
+	$nextRef = $or->getNextNumRef();
+	if (!empty($nextRef)) {
+		$or->ref = $nextRef;
+	}
+
+	$or_id = $or->create($user);
+	if ($or_id <= 0) {
+		$db->rollback();
+		wp_json(array('success' => false, 'error' => $or->error ?: $langs->trans('Error')));
+	}
+
+	// Optional first job (carries the description and the immediate planning)
+	if (trim($descr) !== '' || $fk_user_a > 0) {
+		$job = new Operationorder_jobs($db);
+		$job->fk_operationorder = $or_id;
+		$job->label             = (trim($descr) !== '') ? $descr : $langs->trans('WorkshopJob');
+		$job->rang              = 1;
+		if ($fk_user_a > 0) {
+			$job->fk_user_assign = $fk_user_a;
+			$ts = wp_build_ts($date, $start);
+			if ($ts !== false) {
+				$job->date_start = $ts;
+				$job->date_end   = $ts + 3600;
+			}
+		}
+		if ($job->create($user) <= 0) {
+			$db->rollback();
+			wp_json(array('success' => false, 'error' => $job->error ?: $langs->trans('Error')));
+		}
+	}
+
+	$db->commit();
+
+	$or_url = dol_buildpath('/workshop/operationorder/or_card.php', 1).'?id='.((int) $or_id);
+	wp_json(array('success' => true, 'or_id' => (int) $or_id, 'url' => $or_url));
+}
+
 // Unknown action
 http_response_code(400);
 wp_json(array('success' => false, 'error' => 'Unknown action'));

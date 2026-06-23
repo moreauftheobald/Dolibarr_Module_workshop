@@ -617,3 +617,19 @@ WorkshopAssignAction=Assign
 WorkshopConfirmDeletePointage=Delete this time entry?
 WorkshopStartRequired=Start time is required
 WorkshopNetworkError=Network error
+
+# Planning - Dashboard, week view, quick OR (Phase 3)
+WorkshopPlanningModeDashboard=Dashboard
+WorkshopDashVehiclesPresent=Vehicles present
+WorkshopDashUnplannedOR=Unplanned ROs
+WorkshopDashJobsNoMechanic=Jobs without mechanic
+WorkshopDashWorkshopLoad=Workshop load
+WorkshopDashORofDay=Repair orders of the day
+WorkshopDashProgress=Progress
+WorkshopDashNoOR=No repair order for this day.
+WorkshopWeekCharge=Load %
+WorkshopNewOR=New RO
+WorkshopSearchThirdParty=Search a third party...
+WorkshopPlanNow=Immediate planning
+WorkshopCreateAndOpenOR=Create and open the RO
+Vehicle=Vehicle

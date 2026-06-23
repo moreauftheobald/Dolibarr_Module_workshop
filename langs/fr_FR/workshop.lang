@@ -677,3 +677,19 @@ WorkshopAssignAction=Affecter
 WorkshopConfirmDeletePointage=Supprimer ce pointage ?
 WorkshopStartRequired=L'heure de début est obligatoire
 WorkshopNetworkError=Erreur réseau
+
+# Planning - Tableau de bord, vue semaine, OR rapide (Phase 3)
+WorkshopPlanningModeDashboard=Tableau de bord
+WorkshopDashVehiclesPresent=Véhicules présents
+WorkshopDashUnplannedOR=OR non planifiés
+WorkshopDashJobsNoMechanic=Jobs sans mécanicien
+WorkshopDashWorkshopLoad=Charge atelier
+WorkshopDashORofDay=Ordres de réparation du jour
+WorkshopDashProgress=Avancement
+WorkshopDashNoOR=Aucun ordre de réparation pour cette journée.
+WorkshopWeekCharge=Charge %
+WorkshopNewOR=Nouvel OR
+WorkshopSearchThirdParty=Rechercher un tiers...
+WorkshopPlanNow=Planification immédiate
+WorkshopCreateAndOpenOR=Créer et ouvrir l'OR
+Vehicle=Véhicule
