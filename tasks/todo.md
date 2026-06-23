@@ -7,17 +7,23 @@
 
 ## A. Décisions de cadrage validées (session du 2026-06-23)
 
-1. **Mécaniciens** = membres d'un **groupe utilisateur dédié**, défini dans l'admin du module.
-   → nouvelle constante `WORKSHOP_MECANICS_GROUP` + champ de setup (sélecteur de UserGroup).
+1. **Mécaniciens** = membres du **groupe utilisateur déjà paramétré** dans l'admin via la constante
+   **`WORKSHOP_MECHANIC_GROUP`** (`admin/setup_or.php`, sélecteur de UserGroup existant).
+   → **réutiliser tel quel**, aucune nouvelle constante ni champ de setup à créer.
+   → NB : `WORKSHOP_OR_PLANNING_GROUPS` (multi-groupes) est un paramètre distinct (horaires planning),
+     à ne pas confondre avec le groupe mécaniciens.
 2. **Grille journée = 2 sous-lignes par mécanicien** :
    - sous-ligne **haut** = créneaux **planifiés** (jobs affectés : `fk_user_assign` + `date_start`/`date_end`)
    - sous-ligne **bas** = **pointages réels** (table `llx_workshop_pointage`)
    → adapte la structure CSS de la spec §9 (prévue pour 1 ligne).
 3. **`time_spent`** du job = recalculé depuis la somme des pointages `type='job'`,
    **sans déclencher aucune action de facturation** (pas de recalcul `total_ht`).
-4. **Improductifs** = **nouveau dictionnaire dédié** `llx_workshop_c_impro` + page admin.
-   - 2 codes **réservés gérés en dur** : `FIN_JOURNEE` (clôture le pointage en cours sans réouverture)
-     et `ANNULATION`.
+4. **Improductifs** = liste de codes gérée dans l'admin, **reprise du modèle legacy `operationorder`**
+   (table `llx_operationorderbarcode` : `label` + `code` auto `IMP00001`…), page admin de CRUD.
+   - 2 codes **réservés codés en dur** (hors table, comme le legacy) :
+     `IMPFin` = « Fin de journée » (clôture le pointage en cours sans réouverture)
+     et `IMPAnnul` = « Annulation ».
+   - Génération de **code-barres** (scan atelier) du legacy = **hors-scope**, reportée (optionnel).
 
 ## A bis. Écarts spec / existant à acter
 
@@ -32,9 +38,9 @@
 - [ ] **Type `absence`** : source des types d'absence non figée (constante module ? réutilisation
       du module Congés/Holiday natif ?). Proposition par défaut : liste via constante module,
       intégration Holiday repoussée en phase 2. **À confirmer.**
-- [ ] **Comportement exact du code réservé `ANNULATION`** : annule/supprime le pointage en cours,
-      ou marque un bloc « interrompu » ? Proposition : clôture le pointage en cours en le marquant
-      annulé (non comptabilisé dans `time_spent`). **À confirmer.**
+- [ ] **Comportement exact du code réservé `IMPAnnul` (Annulation)** : dans le legacy c'est un code
+      improductif « Annuler ». Proposition : clôture le pointage en cours en le marquant annulé
+      (non comptabilisé dans `time_spent`). **À confirmer.**
 - [ ] **Migration legacy** : vérifier si des données de temps/pointage des anciens modules
       (`operationorder`) doivent alimenter `llx_workshop_pointage` (cf. CLAUDE.md §9). À ce stade
       le script de migration n'existe pas encore dans `script/migration/`.
@@ -56,19 +62,22 @@ Index : `(fk_user, date_start)`, `(fk_job)`, `(fk_user, date_end)` (pointage ouv
   (`$module='workshop'`, `$element='workshoppointage'`, `$table_element='workshop_pointage'`,
   `$ismultientitymanaged=1`, `$fields` complets, constantes `TYPE_JOB/TYPE_IMPRO/TYPE_ABSENCE`).
 
-### B.2 Nouveau dictionnaire `llx_workshop_c_impro`
-Champs : `rowid, code (varchar unique), label, color, rang, active, entity`.
-Codes réservés seedés (data.sql) et/ou interceptés en code : `FIN_JOURNEE`, `ANNULATION`.
-- Fichiers : `sql/llx_workshop_c_impro.sql` + `.key.sql`, classe légère ou dictionnaire standard
-  (suivre le pattern `ServiceType` / dictionnaires existants).
-- Page admin : `admin/setup_impro.php` (CRUD dictionnaire) + entrée de menu setup.
+### B.2 Codes improductifs — `llx_workshop_c_impro` (modèle legacy `llx_operationorderbarcode`)
+Champs : `rowid, date_creation, tms, label, code (varchar, auto 'IMP00001'…), entity`.
+(option future : `color`, données code-barres pour scan atelier.)
+- 2 codes **réservés codés en dur** dans le code (non stockés) : `IMPFin` (Fin de journée),
+  `IMPAnnul` (Annulation). Constantes de classe `CODE_FIN_JOURNEE='IMPFin'`, `CODE_ANNULATION='IMPAnnul'`.
+- `impro_code` de la table pointage référence ce `code`.
+- Fichiers : `sql/llx_workshop_c_impro.sql` + `.key.sql` (index unique `(code, entity)`),
+  classe `class/workshopimpro.class.php` (CRUD, génération du prochain code `IMP…`).
+- Page admin : `admin/setup_impro.php` — CRUD calqué sur `legacy/operationorder/admin/barcode_setup.php`
+  (ajout par label → code auto, suppression), **sans** la partie génération/PDF code-barres pour l'instant.
+- Entrée de menu setup à ajouter (cf. `core/modules/modWorkshop.class.php`).
 
-### B.3 Setup — groupe mécaniciens
-- Constante `WORKSHOP_MECANICS_GROUP` (id de UserGroup).
-- Champ ajouté à une page de setup existante (`admin/setup.php` ou `setup_divers.php`)
-  via `Form::select_dolgroups()`.
-- Helper PHP `workshop_get_mechanics($entity)` → liste des users du groupe, actifs, triés.
-  (lib `lib/workshop_planning.lib.php` à créer)
+### B.3 Groupe mécaniciens — RÉUTILISER L'EXISTANT (rien à créer)
+- Constante existante **`WORKSHOP_MECHANIC_GROUP`** (déjà saisie via `admin/setup_or.php`).
+- Helper PHP `workshop_get_mechanics($entity)` → users actifs du groupe `WORKSHOP_MECHANIC_GROUP`,
+  triés. (lib `lib/workshop_planning.lib.php` à créer)
 
 ---
 
@@ -119,7 +128,7 @@ Actions :
 ## F. modWorkshop.class.php
 
 - Déclarer la table `llx_workshop_pointage` et le dictionnaire `llx_workshop_c_impro`.
-- Déclarer la constante `WORKSHOP_MECANICS_GROUP`.
+- (Constante `WORKSHOP_MECHANIC_GROUP` déjà déclarée/gérée → rien à ajouter.)
 - Déclarer le hook `planningView`.
 - (Aucun nouveau droit requis : `workshopplanning` / `workshopmecanicsplanning` / `operationorders`
   couvrent les besoins ; à confirmer pour l'écriture de pointage → `workshopmecanicsplanning:write`.)
@@ -136,8 +145,8 @@ Ajouter les clés planning manquantes dans `langs/fr_FR/workshop.lang` et `langs
 
 **Phase 1 — Socle données**
 1. SQL `llx_workshop_pointage` + classe `WorkshopPointage` (CRUD + règles métier C).
-2. SQL/dico `llx_workshop_c_impro` + page admin + codes réservés.
-3. Setup groupe mécaniciens + helper `workshop_get_mechanics()`.
+2. SQL/dico `llx_workshop_c_impro` + classe + page admin `setup_impro.php` + codes réservés (IMPFin/IMPAnnul).
+3. Helper `workshop_get_mechanics()` basé sur `WORKSHOP_MECHANIC_GROUP` (groupe déjà paramétré).
 
 **Phase 2 — Vue mécaniciens journée (cœur)**
 4. CSS `workshop.css` (base + grille double sous-ligne).
