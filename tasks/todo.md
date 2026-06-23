@@ -20,10 +20,15 @@
    **sans déclencher aucune action de facturation** (pas de recalcul `total_ht`).
 4. **Improductifs** = liste de codes gérée dans l'admin, **reprise du modèle legacy `operationorder`**
    (table `llx_operationorderbarcode` : `label` + `code` auto `IMP00001`…), page admin de CRUD.
+   - Les **absences sont des codes improductifs** (pas de type `absence` séparé). Flag `is_absence`
+     sur le code → rendu grisé/rayé pleine journée dans la grille.
    - 2 codes **réservés codés en dur** (hors table, comme le legacy) :
      `IMPFin` = « Fin de journée » (clôture le pointage en cours sans réouverture)
-     et `IMPAnnul` = « Annulation ».
+     et `IMPAnnul` = « Annulation » → **supprime le dernier pointage** du mécanicien s'il date de
+     moins de **X minutes** ; X = constante `WORKSHOP_IMPRO_CANCEL_DELAY` (minutes), réglée
+     **sur le même écran admin** que les codes improductifs.
    - Génération de **code-barres** (scan atelier) du legacy = **hors-scope**, reportée (optionnel).
+5. **Livraison phasée** (cf. §H), pas d'un seul bloc.
 
 ## A bis. Écarts spec / existant à acter
 
@@ -33,29 +38,25 @@
   remplacés par grille CSS native. (autorisé par spec §1)
 - `css/workshop.css` **n'existe pas** (seul `css/or_card.css`) → à créer + charger via `$TIncludeCSS`.
 
-## A ter. Points ouverts à trancher avant / pendant le dev
+## A ter. Points tranchés / restant
 
-- [ ] **Type `absence`** : source des types d'absence non figée (constante module ? réutilisation
-      du module Congés/Holiday natif ?). Proposition par défaut : liste via constante module,
-      intégration Holiday repoussée en phase 2. **À confirmer.**
-- [ ] **Comportement exact du code réservé `IMPAnnul` (Annulation)** : dans le legacy c'est un code
-      improductif « Annuler ». Proposition : clôture le pointage en cours en le marquant annulé
-      (non comptabilisé dans `time_spent`). **À confirmer.**
-- [ ] **Migration legacy** : vérifier si des données de temps/pointage des anciens modules
-      (`operationorder`) doivent alimenter `llx_workshop_pointage` (cf. CLAUDE.md §9). À ce stade
-      le script de migration n'existe pas encore dans `script/migration/`.
-- [ ] **Phasage** : livrer un MVP d'abord (Phase 1+2 : table/classe + vue mécaniciens journée +
-      pointage) puis le reste, ou tout d'un bloc ? **Préférence à confirmer.**
+- [x] **Absences** : gérées comme des **codes improductifs** (flag `is_absence`). Pas de type séparé.
+- [x] **`IMPAnnul`** : supprime le dernier pointage si < `WORKSHOP_IMPRO_CANCEL_DELAY` min.
+- [x] **Phasage** : livraison **par phases** (cf. §H).
+- [ ] **Migration legacy** (non bloquant pour démarrer) : vérifier ultérieurement si des données de
+      temps des anciens modules (`operationorder`) doivent alimenter `llx_workshop_pointage`
+      (cf. CLAUDE.md §9). Le script de migration n'existe pas encore dans `script/migration/`.
 
 ---
 
 ## B. Modèle de données
 
 ### B.1 Nouvelle table `llx_workshop_pointage`
-Champs conformes spec §2 :
+Champs (spec §2, simplifiés — absence = code impro) :
 `rowid, date_creation, tms, fk_user, fk_job, fk_operationorder (dénormalisé),
-type ('job'|'impro'|'absence'), impro_code, date_start, date_end (NULL = en cours),
+type ('job'|'impro'), impro_code, date_start, date_end (NULL = en cours),
 note, fk_user_creat, fk_user_modif, entity`.
+Une absence = pointage `type='impro'` avec un `impro_code` marqué `is_absence`.
 Index : `(fk_user, date_start)`, `(fk_job)`, `(fk_user, date_end)` (pointage ouvert).
 - Fichiers : `sql/llx_workshop_pointage.sql` + `.key.sql`
 - Classe : `class/workshoppointage.class.php` → `WorkshopPointage extends CommonObject`
@@ -63,15 +64,17 @@ Index : `(fk_user, date_start)`, `(fk_job)`, `(fk_user, date_end)` (pointage ouv
   `$ismultientitymanaged=1`, `$fields` complets, constantes `TYPE_JOB/TYPE_IMPRO/TYPE_ABSENCE`).
 
 ### B.2 Codes improductifs — `llx_workshop_c_impro` (modèle legacy `llx_operationorderbarcode`)
-Champs : `rowid, date_creation, tms, label, code (varchar, auto 'IMP00001'…), entity`.
+Champs : `rowid, date_creation, tms, label, code (varchar, auto 'IMP00001'…),
+is_absence (bool, défaut 0), entity`.
 (option future : `color`, données code-barres pour scan atelier.)
 - 2 codes **réservés codés en dur** dans le code (non stockés) : `IMPFin` (Fin de journée),
   `IMPAnnul` (Annulation). Constantes de classe `CODE_FIN_JOURNEE='IMPFin'`, `CODE_ANNULATION='IMPAnnul'`.
-- `impro_code` de la table pointage référence ce `code`.
+- `impro_code` de la table pointage référence ce `code`. Absence = code avec `is_absence=1`.
 - Fichiers : `sql/llx_workshop_c_impro.sql` + `.key.sql` (index unique `(code, entity)`),
   classe `class/workshopimpro.class.php` (CRUD, génération du prochain code `IMP…`).
 - Page admin : `admin/setup_impro.php` — CRUD calqué sur `legacy/operationorder/admin/barcode_setup.php`
-  (ajout par label → code auto, suppression), **sans** la partie génération/PDF code-barres pour l'instant.
+  (ajout par label + case `is_absence` → code auto, suppression), **sans** la partie génération/PDF
+  code-barres pour l'instant. **Inclut le champ `WORKSHOP_IMPRO_CANCEL_DELAY`** (minutes) sur cet écran.
 - Entrée de menu setup à ajouter (cf. `core/modules/modWorkshop.class.php`).
 
 ### B.3 Groupe mécaniciens — RÉUTILISER L'EXISTANT (rien à créer)
@@ -87,7 +90,9 @@ Champs : `rowid, date_creation, tms, label, code (varchar, auto 'IMP00001'…), 
 sous **transaction** :
 1. Création pointage → si un pointage ouvert existe pour le user, le clôturer
    `date_end = H - 1 min` avant d'ouvrir le nouveau.
-2. `FIN_JOURNEE` → clôture le pointage en cours (`date_end = H`), **sans** réouverture.
+2. `IMPFin` (Fin de journée) → clôture le pointage en cours (`date_end = H`), **sans** réouverture.
+2bis. `IMPAnnul` (Annulation) → **supprime** le dernier pointage du mécanicien si
+   `NOW() - date_start < WORKSHOP_IMPRO_CANCEL_DELAY` min ; sinon refus (message). Recalc `time_spent`.
 3. Aucun pointage ouvert → simple démarrage.
 4. Modification / suppression d'un pointage existant (recalc `time_spent` après coup).
 5. Après tout create/update/delete touchant un pointage `type='job'` :
