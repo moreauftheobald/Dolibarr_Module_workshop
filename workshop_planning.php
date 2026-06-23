@@ -18,13 +18,15 @@
 /**
  * \file    workshop/workshop_planning.php
  * \ingroup workshop
- * \brief   Workshop planning view - three display modes:
- *            - atelier:   JSGantt Gantt chart showing planned repair orders
- *                         on a weekly timeline (Mon–Sun).
- *            - pointages: FullCalendar timeGrid showing user time entries,
- *                         filterable by user.
- *            - journee:   Custom day table with one column per user showing
- *                         their time entries for a specific day.
+ * \brief   Workshop planning view - display modes:
+ *            - atelier:     JSGantt Gantt chart showing planned repair orders
+ *                           on a weekly timeline (Mon–Sun). [Phase 3]
+ *            - mecaniciens: Native HTML/CSS/JS grid of mechanics with two
+ *                           lanes each (planned slots / real clocking).
+ *                           Sub-modes: day (Phase 2), week (Phase 3).
+ *
+ * The legacy 'pointages' and 'journee' modes are superseded by the
+ * 'mecaniciens' view and redirect to it.
  *
  * Business hours (slot min/max times) are computed as the union of the
  * workshop-level planning and all configured group plannings:
@@ -64,7 +66,9 @@ if (!$res) {
 // ---------------------------------------------------------------------------
 require_once DOL_DOCUMENT_ROOT . '/user/class/usergroup.class.php';
 require_once 'lib/workshop.lib.php';
+require_once 'lib/workshop_planning.lib.php';
 dol_include_once('/workshop/class/workshopplanning.class.php');
+dol_include_once('/workshop/class/workshopimpro.class.php');
 
 $langs->loadLangs(array('workshop@workshop', 'users'));
 
@@ -84,21 +88,9 @@ $hookmanager->initHooks(array('workshopplanningview', 'globalcard'));
 // Parameters
 // ---------------------------------------------------------------------------
 $mode           = GETPOST('mode', 'aZ09');
+$submode        = GETPOST('submode', 'aZ09');
 $date_str       = GETPOST('date', 'alpha');
 $fk_user_filter = GETPOSTINT('fk_user');
-
-// Validate mode: only expose modes the user has rights for
-$valid_modes = array();
-if ($canSeeAtelier) {
-	$valid_modes[] = 'atelier';
-}
-if ($canSeePointages) {
-	$valid_modes[] = 'pointages';
-	$valid_modes[] = 'journee';
-}
-if (!in_array($mode, $valid_modes)) {
-	$mode = $valid_modes[0];
-}
 
 // Validate date: must be YYYY-MM-DD, default to today
 if (empty($date_str) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_str)) {
@@ -106,6 +98,30 @@ if (empty($date_str) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_str)) {
 }
 
 $baseUrl = dol_buildpath('/workshop/workshop_planning.php', 1);
+
+// Legacy modes (pointages/journee) are now served by the unified
+// "mecaniciens" day view.
+if (in_array($mode, array('pointages', 'journee'), true)) {
+	header('Location: '.$baseUrl.'?mode=mecaniciens&date='.urlencode($date_str));
+	exit;
+}
+
+// Validate mode: only expose modes the user has rights for
+$valid_modes = array();
+if ($canSeeAtelier) {
+	$valid_modes[] = 'atelier';
+}
+if ($canSeePointages) {
+	$valid_modes[] = 'mecaniciens';
+}
+if (!in_array($mode, $valid_modes, true)) {
+	$mode = $valid_modes[0];
+}
+
+// Mechanics view has two sub-modes: day (default) and week (Phase 3).
+if ($submode !== 'week') {
+	$submode = 'day';
+}
 
 // ---------------------------------------------------------------------------
 // Action handler – schedule an OR (move to "planned" status with new dates)
@@ -366,7 +382,15 @@ $dow        = (int) date('N', $date_ts); // 1=Mon … 7=Sun (ISO-8601)
 $week_start = date('Y-m-d', $date_ts - ($dow - 1) * 86400);
 
 // Prev / Next targets differ per mode
-if ($mode === 'journee') {
+if ($mode === 'mecaniciens') {
+	if ($submode === 'week') {
+		$prev_date = date('Y-m-d', strtotime($week_start) - 7 * 86400);
+		$next_date = date('Y-m-d', strtotime($week_start) + 7 * 86400);
+	} else {
+		$prev_date = date('Y-m-d', $date_ts - 86400);
+		$next_date = date('Y-m-d', $date_ts + 86400);
+	}
+} elseif ($mode === 'journee') {
 	$prev_date = date('Y-m-d', $date_ts - 86400);
 	$next_date = date('Y-m-d', $date_ts + 86400);
 } elseif ($mode === 'atelier') {
@@ -404,10 +428,9 @@ if ($mode === 'atelier') {
 	$TIncludeJS[]  = '/includes/jsgantt/jsgantt.js';
 	$TIncludeJS[]  = '/projet/jsgantt_language.js.php?lang=' . $langs->defaultlang;
 } else {
-	// FullCalendar 5 for pointages/journee modes
-	$TIncludeCSS[] = 'https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css';
-	$TIncludeJS[]  = 'https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js';
-	$TIncludeJS[]  = 'https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales-all.min.js';
+	// Mechanics planning — native HTML/CSS/JS grid (Phase 2)
+	$TIncludeCSS[] = dol_buildpath('/workshop/css/workshop.css', 1);
+	$TIncludeJS[]  = dol_buildpath('/workshop/js/workshop_planning.js', 1);
 }
 
 llxHeader('', $title, '', '', 0, 0, $TIncludeJS, $TIncludeCSS, '', 'mod-workshop page-planning');
@@ -427,21 +450,17 @@ if ($canSeeAtelier) {
 	$h++;
 }
 if ($canSeePointages) {
-	$head[$h][0] = $baseUrl . '?mode=pointages&date=' . urlencode($date_str);
-	$head[$h][1] = $langs->trans('WorkshopPlanningModePointages');
-	$head[$h][2] = 'pointages';
-	$h++;
-
-	$head[$h][0] = $baseUrl . '?mode=journee&date=' . urlencode($date_str);
-	$head[$h][1] = $langs->trans('WorkshopPlanningModeJournee');
-	$head[$h][2] = 'journee';
+	$head[$h][0] = $baseUrl . '?mode=mecaniciens&date=' . urlencode($date_str);
+	$head[$h][1] = $langs->trans('WorkshopPlanningModeMecaniciens');
+	$head[$h][2] = 'mecaniciens';
 	$h++;
 }
 
 print dol_get_fiche_head($head, $mode, '', -1, 'fa-calendar-alt');
 
-// Warning when no planning groups are configured
-if (empty($planning_groups)) {
+// Warning when no planning groups are configured (atelier mode only;
+// the mecaniciens view has its own mechanic-group warning)
+if (empty($planning_groups) && $mode !== 'mecaniciens') {
 	print info_admin($langs->trans('WorkshopNoGroupDefined'), 0, 0, 'warning');
 }
 
@@ -450,8 +469,8 @@ if (empty($planning_groups)) {
 // ---------------------------------------------------------------------------
 // Base URL fragment shared by Prev and Next links
 $nav_base = $baseUrl . '?mode=' . urlencode($mode);
-if ($fk_user_filter > 0 && $mode === 'pointages') {
-	$nav_base .= '&fk_user=' . (int) $fk_user_filter;
+if ($mode === 'mecaniciens') {
+	$nav_base .= '&submode=' . urlencode($submode);
 }
 
 print '<div class="workshop-planning-nav" style="display:flex;align-items:center;gap:8px;margin:12px 0 8px 0;flex-wrap:wrap;">';
@@ -462,7 +481,15 @@ print img_picto($langs->trans('Previous'), 'fa-chevron-left');
 print '</a>';
 
 // Period label (different format per mode)
-if ($mode === 'atelier') {
+if ($mode === 'mecaniciens') {
+	print '<span class="wp-period-label">';
+	if ($submode === 'week') {
+		print $langs->trans('WorkshopPlanningWeekOf') . ' ' . dol_print_date(strtotime($week_start), 'day');
+	} else {
+		print $langs->trans('WorkshopPlanningDayOf') . ' ' . dol_print_date($date_ts, 'day');
+	}
+	print '</span>';
+} elseif ($mode === 'atelier') {
 	// "Semaine du xx/xx/xxxx au xx/xx/xxxx" (4-week period)
 	$period_start_label = dol_print_date(strtotime($week_start), 'day');
 	$period_end_label   = dol_print_date(strtotime($period_end), 'day');
@@ -493,11 +520,20 @@ print '</a>';
 // Date picker (submits form on change)
 print '<form method="GET" action="' . dol_escape_htmltag($baseUrl) . '" style="margin:0;margin-left:8px;">';
 print '<input type="hidden" name="mode" value="' . dol_escape_htmltag($mode) . '">';
-if ($fk_user_filter > 0 && $mode === 'pointages') {
-	print '<input type="hidden" name="fk_user" value="' . (int) $fk_user_filter . '">';
+if ($mode === 'mecaniciens') {
+	print '<input type="hidden" name="submode" value="' . dol_escape_htmltag($submode) . '">';
 }
 print '<input type="date" name="date" value="' . dol_escape_htmltag($date_str) . '" class="flat" style="padding:3px 6px;" onchange="this.form.submit();">';
 print '</form>';
+
+// Toggle Journée / Semaine (mecaniciens mode)
+if ($mode === 'mecaniciens') {
+	$toggle_base = $baseUrl . '?mode=mecaniciens&date=' . urlencode($date_str);
+	print '<div class="wp-mode-toggle" style="margin-left:8px;">';
+	print '<a class="wp-mode-btn' . ($submode === 'day' ? ' active' : '') . '" href="' . dol_escape_htmltag($toggle_base . '&submode=day') . '">' . $langs->trans('WorkshopPlanningSubDay') . '</a>';
+	print '<a class="wp-mode-btn' . ($submode === 'week' ? ' active' : '') . '" href="' . dol_escape_htmltag($toggle_base . '&submode=week') . '">' . $langs->trans('WorkshopPlanningSubWeek') . '</a>';
+	print '</div>';
+}
 
 // "Planifier" button (atelier mode + write right)
 if ($mode === 'atelier' && $user->hasRight('workshop', 'workshopplanning', 'write')) {
@@ -527,60 +563,80 @@ print '</div>'; // .workshop-planning-nav
 // Main content – switches on $mode
 // ---------------------------------------------------------------------------
 
-if ($mode === 'journee') {
+if ($mode === 'mecaniciens') {
 	// -----------------------------------------------------------------------
-	// Mode Journée – custom table: one column per user, one row per time slot
+	// Mode Mécaniciens – native HTML/CSS/JS grid (Phase 2: day sub-mode)
 	// -----------------------------------------------------------------------
-	if (empty($all_users)) {
-		print '<p class="opacitymedium">' . $langs->trans('WorkshopPlanningNoUsers') . '</p>';
-	} else {
-		print '<div class="div-table-responsive" style="overflow-x:auto;margin-top:4px;">';
-		print '<table class="noborder workshop-day-table" style="border-collapse:collapse;min-width:100%;">';
+	$canWritePointage = $user->hasRight('workshop', 'workshopmecanicsplanning', 'write');
 
-		// Header row: "Heure" + one column per user
-		print '<tr class="liste_titre">';
-		print '<th style="width:55px;min-width:55px;text-align:center;">' . $langs->trans('Hour') . '</th>';
-		foreach ($all_users as $uid => $usr) {
-			print '<th class="center" style="min-width:130px;">';
-			print dol_escape_htmltag(dolGetFirstLastname($usr->firstname, $usr->lastname));
-			print '</th>';
-		}
-		print '</tr>';
+	if (!getDolGlobalInt('WORKSHOP_MECHANIC_GROUP')) {
+		print info_admin($langs->trans('WorkshopPlanningNoMechanicGroup'), 0, 0, 'warning');
+	}
 
-		// One row per 30-minute time slot
-		$slot_idx = 0;
-		foreach ($time_slots as $slot) {
-			$row_class = ($slot_idx % 2 === 0) ? 'even' : 'odd';
-			print '<tr class="oddeven ' . $row_class . '" style="height:28px;">';
-
-			// Time label cell
-			print '<td class="center" style="font-size:0.82em;font-weight:bold;white-space:nowrap;background-color:var(--colorbackgrey, #f4f4f4);border-right:1px solid #ddd;">';
-			print dol_escape_htmltag($slot);
-			print '</td>';
-
-			// One data cell per user (content filled by AJAX in a future iteration)
-			foreach ($all_users as $uid => $usr) {
-				print '<td class="center workshop-day-cell"';
-				print ' data-user="' . $uid . '"';
-				print ' data-slot="' . dol_escape_htmltag($slot) . '"';
-				print ' data-date="' . dol_escape_htmltag($date_str) . '"';
-				print ' style="border:1px solid #ebebeb;"></td>';
-			}
-
-			print '</tr>';
-			$slot_idx++;
-		}
-
-		// Empty state when no slots could be computed
-		if (empty($time_slots)) {
-			$colspan = count($all_users) + 1;
-			print '<tr><td colspan="' . $colspan . '" class="center opacitymedium" style="padding:20px;">';
-			print $langs->trans('WorkshopPlanningNoTimeSlots');
-			print '</td></tr>';
-		}
-
-		print '</table>';
+	if ($submode === 'week') {
+		// Week sub-mode is delivered in Phase 3.
+		print '<div class="opacitymedium" style="padding:24px;text-align:center;">';
+		print img_picto('', 'fa-calendar-week') . ' ' . $langs->trans('WorkshopPlanningWeekComingSoon');
 		print '</div>';
+	} else {
+		// Day grid container — populated by AJAX (get_planning_day).
+		print '<div id="workshop-day-grid-container" style="margin-top:4px;">';
+		print '<div class="opacitymedium" style="padding:16px;">' . $langs->trans('Loading') . '...</div>';
+		print '</div>';
+
+		// Improductive codes (incl. reserved) for the pointage modal.
+		$improObj  = new WorkshopImpro($db);
+		$improMap  = $improObj->getSelectList(1);
+		$improList = array();
+		foreach ($improMap as $code => $lbl) {
+			$improList[] = array('code' => $code, 'label' => $lbl);
+		}
+
+		// Translation strings passed to the JS layer.
+		$wpLang = array(
+			'Mechanics'     => $langs->trans('WorkshopPlanningModeMecaniciens'),
+			'NoMechanics'   => $langs->trans('WorkshopPlanningNoMechanicsConfigured'),
+			'Planned'       => $langs->trans('WorkshopPlanningPlanned'),
+			'Clocked'       => $langs->trans('WorkshopPlanningClocked'),
+			'Unassigned'    => $langs->trans('WorkshopPlanningUnassigned'),
+			'NoUnassigned'  => $langs->trans('None'),
+			'NewPointage'   => $langs->trans('WorkshopNewPointage'),
+			'EditPointage'  => $langs->trans('WorkshopEditPointage'),
+			'OnJob'         => $langs->trans('WorkshopPointageOnJob'),
+			'Improductive'  => $langs->trans('WorkshopImproductive'),
+			'OR'            => $langs->trans('WorkshopOR'),
+			'SearchOR'      => $langs->trans('WorkshopSearchOR'),
+			'Job'           => $langs->trans('WorkshopJob'),
+			'ImproCode'     => $langs->trans('WorkshopImproCode'),
+			'Start'         => $langs->trans('WorkshopStartHour'),
+			'End'           => $langs->trans('WorkshopEndHour'),
+			'EmptyOpen'     => $langs->trans('WorkshopEmptyOpen'),
+			'Note'          => $langs->trans('Note'),
+			'Delete'        => $langs->trans('Delete'),
+			'Save'          => $langs->trans('Save'),
+			'AssignJob'     => $langs->trans('WorkshopAssignJob'),
+			'DurationHours' => $langs->trans('WorkshopDurationHours'),
+			'Assign'        => $langs->trans('WorkshopAssignAction'),
+			'Pointage'      => $langs->trans('Pointage'),
+			'ConfirmDelete' => $langs->trans('WorkshopConfirmDeletePointage'),
+			'StartRequired' => $langs->trans('WorkshopStartRequired'),
+			'NetworkError'  => $langs->trans('WorkshopNetworkError'),
+		);
+
+		print '<script type="text/javascript">' . "\n";
+		print 'jQuery(function(){ WorkshopPlanning.init({' . "\n";
+		print '  ajaxUrl: ' . json_encode(dol_buildpath('/workshop/ajax/planning_ajax.php', 1)) . ',' . "\n";
+		print '  pageUrl: ' . json_encode($baseUrl) . ',' . "\n";
+		print '  date: ' . json_encode($date_str) . ',' . "\n";
+		print '  slotMin: ' . json_encode($slot_min) . ',' . "\n";
+		print '  slotMax: ' . json_encode($slot_max) . ',' . "\n";
+		print '  canWrite: ' . ($canWritePointage ? 'true' : 'false') . ',' . "\n";
+		print '  refreshRate: ' . (int) getDolGlobalInt('WORKSHOP_OR_PLANNING_REFRESH_RATE', 0) . ',' . "\n";
+		print '  csrfToken: ' . json_encode(newToken()) . ',' . "\n";
+		print '  improCodes: ' . json_encode($improList, JSON_UNESCAPED_UNICODE) . ',' . "\n";
+		print '  lang: ' . json_encode($wpLang, JSON_UNESCAPED_UNICODE) . "\n";
+		print '}); });' . "\n";
+		print '</script>' . "\n";
 	}
 
 } elseif ($mode === 'atelier') {

@@ -157,12 +157,20 @@ Ajouter les clés planning manquantes dans `langs/fr_FR/workshop.lang` et `langs
 3. [x] Helper `workshop_get_mechanics()` (`lib/workshop_planning.lib.php`) basé sur `WORKSHOP_MECHANIC_GROUP`.
 4. [x] Clés de langue FR/EN.
 
-**Phase 2 — Vue mécaniciens journée (cœur)**
-4. CSS `workshop.css` (base + grille double sous-ligne).
-5. `ajax/planning_ajax.php` : `get_planning_day`.
-6. `renderDayGrid` + indicateur « maintenant ».
-7. Création/modif pointage (modale + endpoints + recalc `time_spent`).
-8. Drag&drop affectation job (`assign_job` + modale).
+**Phase 2 — Vue mécaniciens journée (cœur)** ✅ LIVRÉE
+4. [x] CSS `css/workshop.css` (variables `--workshop-*`, grille double sous-ligne, blocs,
+       zone non-affectés, indicateur « maintenant », modales).
+5. [x] `ajax/planning_ajax.php` : `get_planning_day`, `create/update/delete_pointage`,
+       `assign_job`, `search_or`, `get_jobs_for_or` (JSON, CSRF, droits, entity).
+6. [x] `js/workshop_planning.js` : `renderDayGrid` (2 sous-lignes), indicateur « maintenant »,
+       modales pointage/affectation, drag&drop HTML5.
+7. [x] Création/modif/suppression pointage (modale + endpoints + recalc `time_spent` isolé).
+8. [x] Drag&drop affectation job (`assign_job` → maj `fk_user_assign`/dates, sans facturation).
+9. [x] Intégration `workshop_planning.php` : nouveau mode `mecaniciens` (remplace `pointages`+`journee`,
+       redirigés), onglet unique, toggle Journée/Semaine, retrait FullCalendar des modes mécaniciens.
+
+> Remplace les écrans : `?mode=pointages` et `?mode=journee` (redirigés vers `?mode=mecaniciens`).
+> Le mode `atelier` (Gantt) et le dashboard restent en Phase 3.
 
 **Phase 3 — Semaine + Gantt + Dashboard**
 9. Vue semaine mécaniciens + switch de mode.

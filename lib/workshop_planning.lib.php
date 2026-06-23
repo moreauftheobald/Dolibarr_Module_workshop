@@ -72,3 +72,57 @@ function workshop_get_mechanics($db, $entity = null)
 
 	return $mechanics;
 }
+
+/**
+ * Compute the time slot range (start/end) of a given day, as the union of all
+ * active workshop / usergroup / user planning records for that weekday.
+ *
+ * @param  DoliDB $db      Database handler
+ * @param  int    $date_ts Timestamp of the day to evaluate
+ * @param  int    $entity  Entity (default: current entity)
+ * @return array           array('min'=>'HH:MM', 'max'=>'HH:MM'); fallback 07:00–18:00
+ */
+function workshop_get_day_slot_range($db, $date_ts, $entity = null)
+{
+	global $conf;
+
+	if ($entity === null) {
+		$entity = $conf->entity;
+	}
+
+	// ISO weekday (1=Mon … 7=Sun) → French day key used in llx_workshop_planning.
+	$daykeys = array(1 => 'lundi', 2 => 'mardi', 3 => 'mercredi', 4 => 'jeudi', 5 => 'vendredi', 6 => 'samedi', 7 => 'dimanche');
+	$dow     = (int) date('N', $date_ts);
+	$daykey  = isset($daykeys[$dow]) ? $daykeys[$dow] : 'lundi';
+
+	$colstart = $daykey.'_heuredam';
+	$colend   = $daykey.'_heurefpm';
+
+	$sql  = 'SELECT MIN('.$colstart.') as mindam, MAX('.$colend.') as maxfpm';
+	$sql .= ' FROM '.$db->prefix().'workshop_planning';
+	$sql .= ' WHERE entity = '.((int) $entity);
+	$sql .= ' AND active = 1';
+	$sql .= " AND ".$colstart." IS NOT NULL AND ".$colstart." <> ''";
+
+	$min = '07:00';
+	$max = '18:00';
+
+	$resql = $db->query($sql);
+	if ($resql) {
+		$obj = $db->fetch_object($resql);
+		if ($obj && !empty($obj->mindam) && !empty($obj->maxfpm)) {
+			$min = substr($obj->mindam, 0, 5);
+			$max = substr($obj->maxfpm, 0, 5);
+		}
+		$db->free($resql);
+	}
+
+	// Safety: ensure max > min, otherwise fall back to defaults.
+	if (strtotime('2000-01-01 '.$max) <= strtotime('2000-01-01 '.$min)) {
+		$min = '07:00';
+		$max = '18:00';
+	}
+
+	return array('min' => $min, 'max' => $max);
+}
+

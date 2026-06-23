@@ -649,3 +649,31 @@ WorkshopImproCancelDelay=Délai d'annulation d'un pointage
 WorkshopImproCancelDelayHelp=Durée maximale (en minutes) durant laquelle le code « Annulation » peut supprimer le dernier pointage d'un mécanicien. Au-delà, l'annulation est refusée.
 WorkshopMinutes=minutes
 WorkshopORDisabledEnableFirst=Les ordres de réparation doivent d'abord être activés dans l'onglet Général.
+
+# Planning mécaniciens - vue journée (Phase 2)
+WorkshopPlanningModeMecaniciens=Mécaniciens
+WorkshopPlanningSubDay=Journée
+WorkshopPlanningSubWeek=Semaine
+WorkshopPlanningNoMechanicGroup=Aucun groupe de mécaniciens n'est configuré. Définissez-le dans la configuration du module (onglet Ordres de réparation).
+WorkshopPlanningNoMechanicsConfigured=Aucun mécanicien configuré.
+WorkshopPlanningWeekComingSoon=La vue semaine sera disponible dans une prochaine version.
+WorkshopPlanningPlanned=Prévu
+WorkshopPlanningClocked=Pointé
+WorkshopPlanningUnassigned=Non affectés
+WorkshopNewPointage=Nouveau pointage
+WorkshopEditPointage=Modifier le pointage
+WorkshopPointageOnJob=Sur OR / Travail
+WorkshopImproductive=Improductif
+WorkshopOR=OR
+WorkshopSearchOR=Rechercher un OR...
+WorkshopJob=Travail
+WorkshopMechanic=Mécanicien
+WorkshopStartHour=Heure de début
+WorkshopEndHour=Heure de fin
+WorkshopEmptyOpen=vide = en cours
+WorkshopAssignJob=Affecter le travail
+WorkshopDurationHours=Durée estimée (h)
+WorkshopAssignAction=Affecter
+WorkshopConfirmDeletePointage=Supprimer ce pointage ?
+WorkshopStartRequired=L'heure de début est obligatoire
+WorkshopNetworkError=Erreur réseau

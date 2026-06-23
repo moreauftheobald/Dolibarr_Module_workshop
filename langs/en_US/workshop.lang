@@ -589,3 +589,31 @@ WorkshopImproCancelDelay=Pointage cancellation delay
 WorkshopImproCancelDelayHelp=Maximum time (in minutes) during which the "Cancellation" code can delete a mechanic's last pointage. Beyond that, cancellation is refused.
 WorkshopMinutes=minutes
 WorkshopORDisabledEnableFirst=Repair orders must first be enabled in the General tab.
+
+# Mechanics planning - day view (Phase 2)
+WorkshopPlanningModeMecaniciens=Mechanics
+WorkshopPlanningSubDay=Day
+WorkshopPlanningSubWeek=Week
+WorkshopPlanningNoMechanicGroup=No mechanics group is configured. Set it in the module configuration (Repair orders tab).
+WorkshopPlanningNoMechanicsConfigured=No mechanic configured.
+WorkshopPlanningWeekComingSoon=The week view will be available in a future release.
+WorkshopPlanningPlanned=Planned
+WorkshopPlanningClocked=Clocked
+WorkshopPlanningUnassigned=Unassigned
+WorkshopNewPointage=New time entry
+WorkshopEditPointage=Edit time entry
+WorkshopPointageOnJob=On RO / Job
+WorkshopImproductive=Improductive
+WorkshopOR=RO
+WorkshopSearchOR=Search a RO...
+WorkshopJob=Job
+WorkshopMechanic=Mechanic
+WorkshopStartHour=Start time
+WorkshopEndHour=End time
+WorkshopEmptyOpen=empty = in progress
+WorkshopAssignJob=Assign job
+WorkshopDurationHours=Estimated duration (h)
+WorkshopAssignAction=Assign
+WorkshopConfirmDeletePointage=Delete this time entry?
+WorkshopStartRequired=Start time is required
+WorkshopNetworkError=Network error

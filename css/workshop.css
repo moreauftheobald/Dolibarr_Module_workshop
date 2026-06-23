@@ -1,0 +1,297 @@
+/* Copyright (C) 2024 T-SERVICES <contact@theobald-groupe.com>
+ *
+ * Workshop module — planning styles (mechanics day grid, Phase 2).
+ * Pure HTML/CSS/JS, no external library.
+ */
+
+:root {
+	--workshop-blue:   #378ADD;
+	--workshop-teal:   #1D9E75;
+	--workshop-green:  #639922;
+	--workshop-amber:  #BA7517;
+	--workshop-coral:  #D85A30;
+	--workshop-purple: #7F77DD;
+	--workshop-gray:   #888780;
+	--workshop-row-height: 30px;
+	--workshop-header-height: 32px;
+}
+
+/* === Barre de navigation planning === */
+.workshop-planning-nav {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin: 12px 0 8px 0;
+	flex-wrap: wrap;
+}
+.wp-period-label {
+	font-weight: 600;
+	font-size: 14px;
+	margin: 0 4px;
+}
+.wp-mode-toggle {
+	display: inline-flex;
+	border: 1px solid var(--inputbordercolor, #ccc);
+	border-radius: 4px;
+	overflow: hidden;
+}
+.wp-mode-btn {
+	padding: 4px 14px;
+	font-size: 13px;
+	border: none;
+	background: transparent;
+	cursor: pointer;
+	color: var(--colortext, #333);
+}
+.wp-mode-btn.active {
+	background: var(--workshop-blue);
+	color: #fff;
+}
+
+/* === Grille mécaniciens (journée) === */
+.workshop-day-grid {
+	border: 1px solid var(--inputbordercolor, #ccc);
+	border-radius: 4px;
+	overflow: hidden;
+	margin-top: 8px;
+}
+.wp-grid-header {
+	display: grid;
+	grid-template-columns: 150px 1fr;
+	background: var(--colorbacktitle1, #f0f0f0);
+	border-bottom: 1px solid var(--inputbordercolor, #ccc);
+	min-height: var(--workshop-header-height);
+}
+.wp-grid-header-name {
+	display: flex;
+	align-items: center;
+	padding: 0 8px;
+	font-weight: 600;
+	font-size: 12px;
+	border-right: 1px solid var(--inputbordercolor, #ccc);
+}
+.wp-grid-header-timeline {
+	position: relative;
+	height: var(--workshop-header-height);
+	overflow: hidden;
+}
+.wp-hour-tick {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	border-left: 1px solid rgba(0, 0, 0, 0.08);
+	font-size: 10px;
+	color: var(--workshop-gray);
+	padding-left: 2px;
+	line-height: var(--workshop-header-height);
+}
+
+.wp-grid-row {
+	display: grid;
+	grid-template-columns: 150px 1fr;
+	border-bottom: 1px solid var(--inputbordercolor, #ccc);
+}
+.wp-grid-row:last-child { border-bottom: none; }
+.wp-grid-row:hover { background: rgba(0, 0, 0, 0.015); }
+
+.wp-mechanic-name {
+	display: flex;
+	align-items: center;
+	padding: 0 8px;
+	font-size: 13px;
+	font-weight: 500;
+	border-right: 1px solid var(--inputbordercolor, #ccc);
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+/* Deux sous-lignes : planifié (haut) + pointé (bas) */
+.wp-mechanic-lanes {
+	position: relative;
+}
+.wp-lane {
+	position: relative;
+	height: var(--workshop-row-height);
+	overflow: hidden;
+}
+.wp-lane--planned {
+	border-bottom: 1px dashed rgba(0, 0, 0, 0.12);
+	background: rgba(0, 0, 0, 0.012);
+}
+.wp-lane-tag {
+	position: absolute;
+	left: 2px;
+	top: 1px;
+	font-size: 9px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--workshop-gray);
+	pointer-events: none;
+	z-index: 1;
+}
+
+/* === Blocs (planifié / pointage) === */
+.wp-block {
+	position: absolute;
+	top: 3px;
+	height: calc(100% - 6px);
+	border-radius: 3px;
+	cursor: pointer;
+	overflow: hidden;
+	white-space: nowrap;
+	font-size: 11px;
+	display: flex;
+	align-items: center;
+	padding: 0 4px;
+	gap: 4px;
+	transition: opacity 0.15s;
+	border: 1px solid rgba(0, 0, 0, 0.15);
+	box-sizing: border-box;
+}
+.wp-block:hover { opacity: 0.85; }
+.wp-block--planned   { background: #DCE9F8; color: #0C447C; border-style: dashed; }
+.wp-block--job       { background: #B5D4F4; color: #0C447C; }
+.wp-block--impro     { background: #F5C4B3; color: #712B13; }
+.wp-block--absence   { background: repeating-linear-gradient(45deg, #e0e0e0, #e0e0e0 4px, #f5f5f5 4px, #f5f5f5 8px); color: #5F5E5A; }
+.wp-block--inprogress {
+	background: #85B7EB; color: #042C53;
+	animation: wp-pulse-border 2s ease-in-out infinite;
+}
+@keyframes wp-pulse-border {
+	0%, 100% { box-shadow: 0 0 0 1px rgba(55, 138, 221, 0.4); }
+	50%      { box-shadow: 0 0 0 2px rgba(55, 138, 221, 0.8); }
+}
+.wp-block-label { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.wp-block-time  { font-size: 10px; opacity: 0.75; flex-shrink: 0; }
+
+/* === Ligne "non affectés" === */
+.wp-unassigned-row {
+	background: #FAEEDA;
+	border-top: 1.5px dashed var(--workshop-amber);
+	min-height: 38px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 5px 8px;
+	flex-wrap: wrap;
+}
+.wp-unassigned-label {
+	font-size: 12px;
+	color: #633806;
+	font-weight: 600;
+	white-space: nowrap;
+}
+.wp-job-chip {
+	background: #FAC775;
+	color: #412402;
+	border-radius: 3px;
+	padding: 3px 8px;
+	font-size: 12px;
+	cursor: grab;
+	border: 1px solid var(--workshop-amber);
+}
+.wp-job-chip:active { cursor: grabbing; }
+.wp-job-chip.wp-dragging { opacity: 0.5; }
+
+/* === Drop target === */
+.wp-drop-target .wp-mechanic-lanes {
+	background: rgba(55, 138, 221, 0.08);
+	outline: 1.5px dashed var(--workshop-blue);
+	outline-offset: -2px;
+}
+
+/* === Indicateur "maintenant" === */
+.wp-now-indicator {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 2px;
+	background: #E24B4A;
+	z-index: 10;
+	pointer-events: none;
+}
+
+/* === Modale === */
+.wp-modal-backdrop {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.4);
+	z-index: 1000;
+	display: none;
+}
+.wp-modal-backdrop.wp-open { display: block; }
+.wp-modal {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	background: var(--colorbackbody, #fff);
+	border-radius: 6px;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+	z-index: 1001;
+	width: 460px;
+	max-width: 94vw;
+	max-height: 90vh;
+	overflow: auto;
+	display: none;
+}
+.wp-modal.wp-open { display: block; }
+.wp-modal-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 12px 16px;
+	border-bottom: 1px solid var(--inputbordercolor, #ccc);
+	font-weight: 600;
+}
+.wp-modal-close {
+	cursor: pointer;
+	border: none;
+	background: transparent;
+	font-size: 20px;
+	line-height: 1;
+	color: var(--workshop-gray);
+}
+.wp-modal-body { padding: 16px; }
+.wp-modal-footer {
+	padding: 12px 16px;
+	border-top: 1px solid var(--inputbordercolor, #ccc);
+	display: flex;
+	justify-content: space-between;
+	gap: 8px;
+}
+.wp-modal-tabs {
+	display: flex;
+	gap: 4px;
+	margin-bottom: 12px;
+	border-bottom: 1px solid var(--inputbordercolor, #ccc);
+}
+.wp-modal-tab {
+	padding: 6px 12px;
+	cursor: pointer;
+	border: none;
+	background: transparent;
+	font-size: 13px;
+	border-bottom: 2px solid transparent;
+	color: var(--colortext, #333);
+}
+.wp-modal-tab.active {
+	border-bottom-color: var(--workshop-blue);
+	font-weight: 600;
+}
+.wp-modal-pane { display: none; }
+.wp-modal-pane.active { display: block; }
+.wp-field-row { margin-bottom: 10px; }
+.wp-field-row label {
+	display: block;
+	font-size: 12px;
+	font-weight: 600;
+	margin-bottom: 3px;
+}
+.wp-field-row input,
+.wp-field-row select,
+.wp-field-row textarea {
+	width: 100%;
+	box-sizing: border-box;
+}
