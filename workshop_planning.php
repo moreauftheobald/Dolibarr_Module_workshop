@@ -19,14 +19,15 @@
  * \file    workshop/workshop_planning.php
  * \ingroup workshop
  * \brief   Workshop planning view - display modes:
- *            - atelier:     JSGantt Gantt chart showing planned repair orders
- *                           on a weekly timeline (Mon–Sun). [Phase 3]
+ *            - dashboard:   "Control tower" overview (KPI cards + OR of the day).
+ *            - atelier:     Native CSS Gantt grid of planned repair orders over
+ *                           a 7-day week (replaces the former JSGantt view).
  *            - mecaniciens: Native HTML/CSS/JS grid of mechanics with two
  *                           lanes each (planned slots / real clocking).
- *                           Sub-modes: day (Phase 2), week (Phase 3).
+ *                           Sub-modes: day and week.
  *
  * The legacy 'pointages' and 'journee' modes are superseded by the
- * 'mecaniciens' view and redirect to it.
+ * 'mecaniciens' view and redirect to it. No external calendar library is used.
  *
  * Business hours (slot min/max times) are computed as the union of the
  * workshop-level planning and all configured group plannings:
@@ -426,16 +427,9 @@ $title = $langs->trans('WorkshopPlanningView');
 $TIncludeCSS = array();
 $TIncludeJS  = array();
 
-// Native workshop planning assets (dashboard + mecaniciens views)
+// Native workshop planning assets (all views — no external calendar library)
 $TIncludeCSS[] = dol_buildpath('/workshop/css/workshop.css', 1);
 $TIncludeJS[]  = dol_buildpath('/workshop/js/workshop_planning.js', 1);
-
-if ($mode === 'atelier') {
-	// JSGantt – included in Dolibarr core (kept temporarily for the Gantt view)
-	$TIncludeCSS[] = '/includes/jsgantt/jsgantt.css';
-	$TIncludeJS[]  = '/includes/jsgantt/jsgantt.js';
-	$TIncludeJS[]  = '/projet/jsgantt_language.js.php?lang=' . $langs->defaultlang;
-}
 
 llxHeader('', $title, '', '', 0, 0, $TIncludeJS, $TIncludeCSS, '', 'mod-workshop page-planning');
 
@@ -505,8 +499,8 @@ if ($mode === 'dashboard') {
 } elseif ($mode === 'atelier') {
 	// "Semaine du xx/xx/xxxx au xx/xx/xxxx" (4-week period)
 	$period_start_label = dol_print_date(strtotime($week_start), 'day');
-	$period_end_label   = dol_print_date(strtotime($period_end), 'day');
-	print '<span style="font-weight:bold;margin:0 4px;">';
+	$period_end_label   = dol_print_date(strtotime($week_end), 'day');
+	print '<span class="wp-period-label">';
 	print $langs->trans('WorkshopPlanningWeekFromTo', $period_start_label, $period_end_label);
 	print '</span>';
 } elseif ($mode === 'journee') {
@@ -783,11 +777,8 @@ if ($mode === 'dashboard') {
 
 } elseif ($mode === 'atelier') {
 	// -----------------------------------------------------------------------
-	// Mode Atelier – JSGantt Gantt chart showing planned repair orders
+	// Mode Atelier – native CSS Gantt grid of planned repair orders (7-day week)
 	// -----------------------------------------------------------------------
-
-	// Date format for JSGantt input (matches Dolibarr date output)
-	$dateformatinput = 'yyyy-mm-dd';
 
 	// -----------------------------------------------------------------------
 	// Load OR data for the visible period (week_start ± 1 week pad on each side)
@@ -842,212 +833,80 @@ if ($mode === 'dashboard') {
 		}
 	}
 
-	// CSS: narrow task name column, ellipsis on long names + per-status bar colors
-	print '<style type="text/css">' . "\n";
-	print '  #GanttChartDIV .gmainleft  { width: 250px !important; min-width: 200px; max-width: 300px; }' . "\n";
-	print '  #GanttChartDIV .gname      { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' . "\n";
-	// Match JSGantt default task bar metrics so the bar is actually visible
-	// (passing a custom itemClass replaces .gtaskblue / .gtaskred entirely)
-	print '  #GanttChartDIV [class^="wsorstatus-"] { height: 13px; opacity: 0.9; margin-top: 1px; border: 1px solid rgba(0,0,0,0.2); cursor: pointer; }' . "\n";
-	foreach ($gantt_status_colors as $stid => $col) {
-		$col_safe = preg_match('/^#[0-9a-fA-F]{3,8}$/', $col) ? $col : '#3c8dbc';
-		print '  #GanttChartDIV .wsorstatus-' . (int) $stid . ' { background-color: ' . $col_safe . ' !important; }' . "\n";
-	}
-	print '</style>' . "\n";
-
-	print '<div style="margin-top:4px;">' . "\n";
-	print '<div style="position:relative;" class="gantt" id="GanttChartDIV"></div>' . "\n";
-	print '</div>' . "\n";
-
-	print '<script type="text/javascript">' . "\n";
-	print 'document.addEventListener(\'DOMContentLoaded\', function () {' . "\n";
-	print '  var ganttEl = document.getElementById(\'GanttChartDIV\');' . "\n";
-	print '  if (!ganttEl) { return; }' . "\n";
-	print "\n";
-
-	// Initialize JSGantt chart
-	print '  var g = new JSGantt.GanttChart(ganttEl, \'day\');' . "\n";
-	print "\n";
-
-	// Date format configuration
-	print '  g.setDateInputFormat(\'' . dol_escape_js($dateformatinput) . '\');' . "\n";
-	print '  g.setDateTaskTableDisplayFormat(\'dd/mm/yyyy\');' . "\n";
-	print '  g.setDateTaskDisplayFormat(\'dd mon yyyy\');' . "\n";
-	print '  g.setDayMajorDateDisplayFormat(\'dd mon\');' . "\n";
-	print "\n";
-
-	// Display options – keep only task name column, hide all others
-	print '  g.setShowRes(0);' . "\n";
-	print '  g.setShowDur(0);' . "\n";
-	print '  g.setShowComp(0);' . "\n";
-	print '  g.setShowStartDate(0);' . "\n";
-	print '  g.setShowEndDate(0);' . "\n";
-	print '  g.setShowTaskInfoLink(0);' . "\n";
-	print '  g.setFormatArr("day");' . "\n";
-	print '  g.setCaptionType(\'Caption\');' . "\n";
-	print '  g.setUseFade(0);' . "\n";
-	print '  g.setUseToolTip(0);' . "\n";
-	print "\n";
-	// Calculate dayColWidth so 28 displayed days fill the available width
-	// (JSGantt adds ~1 week padding on each side: 2 requested weeks → 4 displayed)
-	print '  var availW = (jQuery(".fiche").width() || document.body.clientWidth) - 250 - 80;' . "\n";
-	print '  var nbDays = 28;' . "\n";
-	print '  var dayW = Math.max(Math.floor(availW / nbDays), 18);' . "\n";
-	print '  g.setDayColWidth(dayW);' . "\n";
-	print '  g.setUseSort(0);' . "\n";
-	print "\n";
-	// Visible range: 2 weeks (S, S+1) — JSGantt pads ±1 week → displays S-1..S+2
-	print '  g.setMinDate(\'' . dol_escape_js($week_start) . '\');' . "\n";
-	print '  g.setMaxDate(\'' . dol_escape_js($period_end) . '\');' . "\n";
-	print '  g.setScrollTo(\'' . dol_escape_js($week_start) . '\');' . "\n";
-
-	// Language – uses the jsgantt_language.js.php bridge from Dolibarr core
-	print '  if (typeof vLangs !== \'undefined\') {' . "\n";
-	print '    g.addLang(vLang, vLangs);' . "\n";
-	print '    g.setLang(vLang);' . "\n";
-	print '  }' . "\n";
-	print "\n";
-
 	// -----------------------------------------------------------------------
-	// Output one TaskItem per loaded OR (or a placeholder if none found)
+	// Native CSS Gantt grid (7-day week window) — replaces JSGantt
 	// -----------------------------------------------------------------------
-	if (empty($gantt_or_rows)) {
-		print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
-		print '    0,' . "\n";
-		print '    \'' . dol_escape_js($langs->trans('WorkshopPlanningNoOR')) . '\',' . "\n";
-		print '    \'' . dol_escape_js($week_start) . '\',' . "\n";
-		print '    \'' . dol_escape_js($period_end) . '\',' . "\n";
-		print '    \'ggroupblack\',' . "\n";
-		print '    \'\', 0, \'\', 0, 0, 0, 1, \'\', \'\', \'\',' . "\n";
-		print '    g' . "\n";
-		print '  ));' . "\n";
-	} else {
-		$or_card_url = dol_buildpath('/workshop/operationorder/or_card.php', 1);
-		$task_seq = 1;
-		$tooltip_html_array = array();
-		$tooltip_links_array = array();
-		foreach ($gantt_or_rows as $or) {
-			$or_id     = (int) $or->rowid;
-			$or_ref    = (string) ($or->ref ?? '');
-			$immat     = trim((string) ($or->immatriculation ?? ''));
-			$soc       = trim((string) ($or->soc_name ?? ''));
-			$start_str = date('Y-m-d', strtotime($or->date_start));
-			$end_str   = date('Y-m-d', strtotime($or->date_end) + 86400);
-			$css_class = 'wsorstatus-' . (int) $or->status;
-			$name      = $immat !== '' ? $immat . ' - ' . $or_ref : $or_ref;
-			$link      = $or_card_url . '?id=' . $or_id;
+	$g_days   = 7;
+	$g_start   = strtotime($week_start . ' 00:00:00');
+	$g_end     = $g_start + $g_days * 86400; // exclusive
+	$today_ts0 = strtotime(date('Y-m-d') . ' 00:00:00');
 
-			// Tooltip HTML
-			$tt  = '<b>' . dol_escape_htmltag($or_ref) . '</b><br>';
-			$tt .= dol_escape_htmltag($langs->trans('Customer')) . ' : ' . dol_escape_htmltag($soc ?: '-') . '<br>';
-			$tt .= dol_escape_htmltag($langs->trans('Immatriculation')) . ' : ' . dol_escape_htmltag($immat ?: '-') . '<br>';
-			$tt .= dol_escape_htmltag($langs->trans('Status')) . ' : ' . dol_escape_htmltag((string) ($or->status_label ?? '')) . '<br>';
-			$tt .= dol_print_date(strtotime($or->date_start), 'day') . ' &#8594; ' . dol_print_date(strtotime($or->date_end), 'day');
-			if (!empty($gantt_or_jobs[$or_id])) {
-				$tt .= '<hr style="margin:4px 0;border:0;border-top:1px solid #ccc;">';
-				foreach ($gantt_or_jobs[$or_id] as $job_label) {
-					$tt .= dol_escape_htmltag($job_label) . '<br>';
-				}
-			}
-			$tooltip_html_array[] = $tt;
-			$tooltip_links_array[] = $link;
+	print '<div class="workshop-gantt" style="--wp-gantt-days:' . $g_days . ';margin-top:4px;">';
 
-			print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
-			print '    ' . ($task_seq++) . ',' . "\n";
-			print '    \'' . dol_escape_js($name) . '\',' . "\n";
-			print '    \'' . dol_escape_js($start_str) . '\',' . "\n";
-			print '    \'' . dol_escape_js($end_str)   . '\',' . "\n";
-			print '    \'' . dol_escape_js($css_class) . '\',' . "\n";
-			print '    \'' . dol_escape_js($link) . '\',' . "\n";
-			print '    0,' . "\n";
-			print '    \'\',' . "\n";
-			print '    0,' . "\n";
-			print '    0,' . "\n";
-			print '    0,' . "\n";
-			print '    1,' . "\n";
-			print '    \'\',' . "\n";
-			print '    \'\',' . "\n";
-			print '    \'\',' . "\n";
-			print '    g' . "\n";
-			print '  ));' . "\n";
-		}
+	// Header row
+	print '<div class="wp-gantt-row wp-gantt-head">';
+	print '<div class="wp-gantt-namecol">' . $langs->trans('Ref') . '</div>';
+	for ($d = 0; $d < $g_days; $d++) {
+		$cts  = $g_start + $d * 86400;
+		$tcls = ($cts === $today_ts0) ? ' wp-gantt-daycol--today' : '';
+		print '<div class="wp-gantt-daycol' . $tcls . '">' . dol_print_date($cts, '%a %d/%m') . '</div>';
 	}
-	print "\n";
+	print '</div>';
 
-	// Draw the chart
-	print '  g.Draw(250 + (nbDays * dayW) + 20);' . "\n";
-	print "\n";
+	$nb_bars = 0;
+	foreach ($gantt_or_rows as $or) {
+		$os = strtotime($or->date_start);
+		$oe = strtotime($or->date_end);
+		if ($oe < $g_start || $os >= $g_end) {
+			continue; // OR outside the visible week
+		}
+		$nb_bars++;
 
-	// Custom tooltip + click-to-navigate on bars
-	if (!empty($tooltip_html_array)) {
-		print '  var wsTT = [' . "\n";
-		foreach ($tooltip_html_array as $i => $html) {
-			print '    ' . ($i > 0 ? ',' : '') . '\'' . dol_escape_js($html) . '\'' . "\n";
+		$startDay = (int) floor(($os - $g_start) / 86400);
+		$endDay   = (int) floor(($oe - $g_start) / 86400);
+		if ($startDay < 0) { $startDay = 0; }
+		if ($endDay > $g_days - 1) { $endDay = $g_days - 1; }
+		if ($endDay < $startDay) { $endDay = $startDay; }
+		$colStart = $startDay + 2; // +1 for the name column, grid is 1-indexed
+		$colEnd   = $endDay + 3;   // grid-column end is exclusive
+
+		$col    = preg_match('/^#?[0-9a-fA-F]{3,8}$/', (string) $or->status_color) ? ('#' . ltrim((string) $or->status_color, '#')) : '#888780';
+		$or_url = dol_buildpath('/workshop/operationorder/or_card.php', 1) . '?id=' . (int) $or->rowid;
+
+		$tip = $or->ref;
+		if (!empty($or->immatriculation)) { $tip .= ' — ' . $or->immatriculation; }
+		if (!empty($or->status_label))    { $tip .= ' [' . $or->status_label . ']'; }
+		if (!empty($gantt_or_jobs[(int) $or->rowid])) {
+			$tip .= ' : ' . implode(', ', $gantt_or_jobs[(int) $or->rowid]);
 		}
-		print '  ];' . "\n";
-		print '  var wsLinks = [' . "\n";
-		foreach ($tooltip_links_array as $i => $lnk) {
-			print '    ' . ($i > 0 ? ',' : '') . '\'' . dol_escape_js($lnk) . '\'' . "\n";
+
+		print '<div class="wp-gantt-row">';
+		print '<div class="wp-gantt-namecol">';
+		print '<a href="' . dol_escape_htmltag($or_url) . '">' . dol_escape_htmltag($or->ref) . '</a>';
+		if (!empty($or->immatriculation)) {
+			print '<span class="wp-gantt-immat">' . dol_escape_htmltag($or->immatriculation) . '</span>';
 		}
-		print '  ];' . "\n";
-		print "\n";
-		print '  var ttEl = document.createElement("div");' . "\n";
-		print '  ttEl.style.cssText = "display:none;position:fixed;z-index:99999;background:#fff;border:1px solid #999;border-radius:4px;padding:8px 10px;box-shadow:2px 2px 8px rgba(0,0,0,.25);max-width:360px;font-size:12px;line-height:1.6;";' . "\n";
-		print '  document.body.appendChild(ttEl);' . "\n";
-		print "\n";
-		// Helper: find bar index from a target element
-		print '  function wsGetBarIdx(t) {' . "\n";
-		print '    if (!t) return -1;' . "\n";
-		print '    if ((t.className || "").indexOf("wsorstatus-") === -1) {' . "\n";
-		print '      t = t.closest ? t.closest("[class*=wsorstatus-]") : null;' . "\n";
-		print '    }' . "\n";
-		print '    if (!t) return -1;' . "\n";
-		print '    var row = t.closest("tr");' . "\n";
-		print '    if (!row) return -1;' . "\n";
-		print '    var rows = row.parentElement.querySelectorAll("tr");' . "\n";
-		print '    var idx = -1;' . "\n";
-		print '    for (var i = 0; i < rows.length; i++) {' . "\n";
-		print '      if (rows[i].querySelector("[class*=wsorstatus-]")) {' . "\n";
-		print '        idx++;' . "\n";
-		print '        if (rows[i] === row) return idx;' . "\n";
-		print '      }' . "\n";
-		print '    }' . "\n";
-		print '    return -1;' . "\n";
-		print '  }' . "\n";
-		print "\n";
-		// Tooltip on hover
-		print '  ganttEl.addEventListener("mouseover", function(ev) {' . "\n";
-		print '    var idx = wsGetBarIdx(ev.target);' . "\n";
-		print '    if (idx >= 0 && idx < wsTT.length) {' . "\n";
-		print '      ttEl.innerHTML = wsTT[idx];' . "\n";
-		print '      ttEl.style.display = "block";' . "\n";
-		print '      ttEl.style.left = (ev.clientX + 14) + "px";' . "\n";
-		print '      ttEl.style.top = (ev.clientY - 10) + "px";' . "\n";
-		print '    }' . "\n";
-		print '  });' . "\n";
-		print '  ganttEl.addEventListener("mousemove", function(ev) {' . "\n";
-		print '    if (ttEl.style.display === "block") {' . "\n";
-		print '      ttEl.style.left = (ev.clientX + 14) + "px";' . "\n";
-		print '      ttEl.style.top = (ev.clientY - 10) + "px";' . "\n";
-		print '    }' . "\n";
-		print '  });' . "\n";
-		print '  ganttEl.addEventListener("mouseout", function(ev) {' . "\n";
-		print '    var to = ev.relatedTarget;' . "\n";
-		print '    if (!to || (!to.closest || !to.closest("[class*=wsorstatus-]"))) {' . "\n";
-		print '      ttEl.style.display = "none";' . "\n";
-		print '    }' . "\n";
-		print '  });' . "\n";
-		// Click on bar navigates to OR card
-		print '  ganttEl.addEventListener("click", function(ev) {' . "\n";
-		print '    var idx = wsGetBarIdx(ev.target);' . "\n";
-		print '    if (idx >= 0 && idx < wsLinks.length) {' . "\n";
-		print '      window.location.href = wsLinks[idx];' . "\n";
-		print '    }' . "\n";
-		print '  });' . "\n";
+		print '</div>';
+		// Background day cells (borders + today highlight)
+		for ($d = 0; $d < $g_days; $d++) {
+			$cts  = $g_start + $d * 86400;
+			$tcls = ($cts === $today_ts0) ? ' wp-gantt-cell--today' : '';
+			print '<div class="wp-gantt-cell' . $tcls . '"></div>';
+		}
+		// OR bar — overlaps the day cells via explicit grid placement
+		print '<a class="wp-gantt-bar" href="' . dol_escape_htmltag($or_url) . '"';
+		print ' style="grid-column:' . $colStart . ' / ' . $colEnd . ';background:' . $col . ';"';
+		print ' title="' . dol_escape_htmltag($tip) . '">';
+		print dol_escape_htmltag($or->ref);
+		print '</a>';
+		print '</div>';
 	}
 
-	print '});' . "\n";
-	print '</script>' . "\n";
+	if (!$nb_bars) {
+		print '<div class="wp-gantt-row"><div class="wp-gantt-empty">' . $langs->trans('WorkshopGanttNoOR') . '</div></div>';
+	}
+
+	print '</div>'; // .workshop-gantt
 
 	// -----------------------------------------------------------------------
 	// "Planifier" feature – modals to schedule OR (status_create -> status_planned)
@@ -1170,50 +1029,6 @@ if ($mode === 'dashboard') {
 		print '</script>' . "\n";
 	}
 
-} else {
-	// -----------------------------------------------------------------------
-	// Mode Pointages – FullCalendar timeGridWeek
-	// -----------------------------------------------------------------------
-	$fc_locale = strtolower(substr($langs->defaultlang, 0, 2));
-	if ($fc_locale === 'en') {
-		$fc_locale = 'en-gb';
-	}
-
-	if (empty($planning_groups)) {
-		print '<p class="opacitymedium">' . $langs->trans('WorkshopNoGroupDefined') . '</p>';
-	}
-
-	print '<div id="workshop-calendar" style="margin-top:4px;"></div>' . "\n";
-
-	print '<script type="text/javascript">' . "\n";
-	print '/* global FullCalendar */' . "\n";
-	print 'document.addEventListener(\'DOMContentLoaded\', function () {' . "\n";
-	print '  var calendarEl = document.getElementById(\'workshop-calendar\');' . "\n";
-	print '  if (!calendarEl) { return; }' . "\n";
-	print "\n";
-	print '  var businessHours = ' . json_encode($business_hours, JSON_UNESCAPED_UNICODE) . ';' . "\n";
-	print "\n";
-	print '  var calendar = new FullCalendar.Calendar(calendarEl, {' . "\n";
-	print '    locale:           \'' . dol_escape_js($fc_locale) . '\',' . "\n";
-	print '    initialView:      \'timeGridWeek\',' . "\n";
-	print '    initialDate:      \'' . dol_escape_js($week_start) . '\',' . "\n";
-	print '    firstDay:         1,' . "\n";
-	print '    hiddenDays:       ' . json_encode($hidden_days) . ',' . "\n";
-	print '    businessHours:    ' . (empty($business_hours) ? 'false' : 'businessHours') . ',' . "\n";
-	print '    slotMinTime:      \'' . dol_escape_js($slot_min) . '\',' . "\n";
-	print '    slotMaxTime:      \'' . dol_escape_js($slot_max) . '\',' . "\n";
-	print '    allDaySlot:       false,' . "\n";
-	print '    headerToolbar:    false,' . "\n";
-	print '    height:           \'auto\',' . "\n";
-	print '    nowIndicator:     true,' . "\n";
-	print '    slotDuration:     \'00:15:00\',' . "\n";
-	print '    slotLabelInterval:\'01:00\',' . "\n";
-	print '    events:           []' . "\n";
-	print '  });' . "\n";
-	print "\n";
-	print '  calendar.render();' . "\n";
-	print '});' . "\n";
-	print '</script>' . "\n";
 }
 
 print dol_get_fiche_end();

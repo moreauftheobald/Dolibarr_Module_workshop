@@ -693,3 +693,5 @@ WorkshopSearchThirdParty=Rechercher un tiers...
 WorkshopPlanNow=Planification immédiate
 WorkshopCreateAndOpenOR=Créer et ouvrir l'OR
 Vehicle=Véhicule
+
+WorkshopGanttNoOR=Aucun ordre de réparation planifié sur cette semaine.

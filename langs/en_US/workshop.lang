@@ -633,3 +633,5 @@ WorkshopSearchThirdParty=Search a third party...
 WorkshopPlanNow=Immediate planning
 WorkshopCreateAndOpenOR=Create and open the RO
 Vehicle=Vehicle
+
+WorkshopGanttNoOR=No repair order planned for this week.

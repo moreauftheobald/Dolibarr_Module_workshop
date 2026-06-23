@@ -406,3 +406,86 @@
 .wp-charge--high   { background: #C0DD97; color: #27500A; }
 .wp-charge--medium { background: #FAC775; color: #412402; }
 .wp-charge--low    { background: #F09595; color: #501313; }
+
+/* === Gantt OR natif === */
+.workshop-gantt {
+	border: 1px solid var(--inputbordercolor, #ccc);
+	border-radius: 4px;
+	overflow: hidden;
+	margin-top: 8px;
+}
+.wp-gantt-row {
+	display: grid;
+	grid-template-columns: 150px repeat(var(--wp-gantt-days, 7), 1fr);
+	border-bottom: 1px solid var(--inputbordercolor, #ccc);
+	min-height: 32px;
+}
+.wp-gantt-row:last-child { border-bottom: none; }
+.wp-gantt-head {
+	background: var(--colorbacktitle1, #f0f0f0);
+	font-weight: 600;
+	min-height: var(--workshop-header-height);
+}
+.wp-gantt-namecol {
+	grid-column: 1;
+	grid-row: 1;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	padding: 2px 8px;
+	border-right: 1px solid var(--inputbordercolor, #ccc);
+	font-size: 12px;
+	overflow: hidden;
+}
+.wp-gantt-namecol a {
+	font-weight: 600;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.wp-gantt-immat {
+	font-size: 10px;
+	color: var(--workshop-gray);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.wp-gantt-daycol {
+	grid-row: 1;
+	text-align: center;
+	font-size: 11px;
+	padding: 4px 2px;
+	border-right: 1px solid var(--inputbordercolor, #ccc);
+	line-height: 1.2;
+}
+.wp-gantt-cell {
+	grid-row: 1;
+	border-right: 1px solid rgba(0, 0, 0, 0.05);
+}
+.wp-gantt-cell--today,
+.wp-gantt-daycol--today { background: rgba(55, 138, 221, 0.07); }
+.wp-gantt-daycol--today { font-weight: 700; color: #185FA5; }
+.wp-gantt-bar {
+	grid-row: 1;
+	align-self: center;
+	height: 18px;
+	margin: 0 3px;
+	border-radius: 3px;
+	color: #fff;
+	font-size: 11px;
+	line-height: 18px;
+	padding: 0 6px;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	cursor: pointer;
+	z-index: 2;
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+.wp-gantt-bar:hover { opacity: 0.88; }
+.wp-gantt-empty {
+	grid-column: 1 / -1;
+	padding: 18px;
+	text-align: center;
+	color: var(--workshop-gray);
+}

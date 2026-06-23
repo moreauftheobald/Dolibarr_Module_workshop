@@ -178,8 +178,9 @@ Ajouter les clés planning manquantes dans `langs/fr_FR/workshop.lang` et `langs
 11. [x] Dashboard (4 cartes métriques PHP + liste OR du jour) — **nouveau landing** (mode `dashboard`).
 12. [x] Bouton « OR rapide » : modale (tiers/véhicule/description + planif immédiate) +
        endpoints `create_or_quick`, `search_thirdparty`, `get_vehicules_for_soc`.
-10. [ ] **Gantt OR CSS natif (3b)** — remplacer JSGantt par grille PHP native.
-       JSGantt **conservé temporairement** pour l'onglet « Planning charge » (autorisé par spec §1).
+10. [x] **Gantt OR CSS natif (3b)** — JSGantt remplacé par une grille CSS native (semaine 7 jours,
+       barres positionnées en grid-column, couleur = couleur du statut, clic → fiche OR).
+       Includes JSGantt retirés ; branche FullCalendar morte supprimée.
 
 **Phase 4 — Finitions**
 13. Retrait complet FullCalendar.
