@@ -148,10 +148,14 @@ Ajouter les clés planning manquantes dans `langs/fr_FR/workshop.lang` et `langs
 
 ## H. Ordre de développement proposé (phasé)
 
-**Phase 1 — Socle données**
-1. SQL `llx_workshop_pointage` + classe `WorkshopPointage` (CRUD + règles métier C).
-2. SQL/dico `llx_workshop_c_impro` + classe + page admin `setup_impro.php` + codes réservés (IMPFin/IMPAnnul).
-3. Helper `workshop_get_mechanics()` basé sur `WORKSHOP_MECHANIC_GROUP` (groupe déjà paramétré).
+**Phase 1 — Socle données** ✅ LIVRÉE
+1. [x] SQL `llx_workshop_pointage` (+ `.key`) + classe `WorkshopPointage`
+       (CRUD + règles métier : clôture auto, fin de journée, annulation, recalc `time_spent` isolé).
+2. [x] SQL/dico `llx_workshop_c_impro` (+ `.key`) + classe `WorkshopImpro` (codes auto `IMP000xx`,
+       codes réservés `IMPFin`/`IMPAnnul`) + page admin `admin/setup_impro.php`
+       (sous-onglet OR « Codes improductifs » + champ `WORKSHOP_IMPRO_CANCEL_DELAY`).
+3. [x] Helper `workshop_get_mechanics()` (`lib/workshop_planning.lib.php`) basé sur `WORKSHOP_MECHANIC_GROUP`.
+4. [x] Clés de langue FR/EN.
 
 **Phase 2 — Vue mécaniciens journée (cœur)**
 4. CSS `workshop.css` (base + grille double sous-ligne).

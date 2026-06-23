@@ -142,6 +142,11 @@ function workshopORAdminPrepareHead(): array
 	$head[$h][2] = 'planning';
 	$h++;
 
+	$head[$h][0] = dol_buildpath("/workshop/admin/setup_impro.php", 1);
+	$head[$h][1] = $langs->trans('WorkshopORSubTabImpro');
+	$head[$h][2] = 'improductifs';
+	$h++;
+
 	$head[$h][0] = dol_buildpath("/workshop/admin/setup_or.php", 1).'?subtab=statuts';
 	$head[$h][1] = $langs->trans('WorkshopORSubTabStatuts');
 	$head[$h][2] = 'statuts';

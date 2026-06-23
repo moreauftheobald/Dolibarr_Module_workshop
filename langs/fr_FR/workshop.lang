@@ -629,3 +629,23 @@ WorkshopPDFComments=Commentaires
 WorkshopPDFSignatureWorkshop=Visa atelier
 WorkshopPDFSignatureCustomer=Visa client
 WorkshopPDFLaborLabel=Main d'oeuvre
+
+# Planning - Codes improductifs (Phase 1)
+WorkshopORSubTabImpro=Codes improductifs
+WorkshopImproPageIntro=Gérez ici les codes improductifs utilisés lors du pointage des mécaniciens. Les absences sont des codes improductifs (cochez « Absence »). Deux codes réservés sont gérés automatiquement et ne peuvent être supprimés.
+WorkshopImproCodes=Codes improductifs
+WorkshopImproCode=Code
+WorkshopImproIsAbsence=Absence
+WorkshopImproReserved=Réservé
+WorkshopImproAutoCode=(généré)
+WorkshopImproAutoCodeHelp=Le code est généré automatiquement (IMP00001, IMP00002, ...).
+WorkshopImproConfirmDelete=Voulez-vous vraiment supprimer ce code improductif ?
+WorkshopImproAdded=Code improductif ajouté
+WorkshopImproDeleted=Code improductif supprimé
+WorkshopImproLabelRequired=Le libellé est obligatoire
+WorkshopImproFinJournee=Fin de journée
+WorkshopImproAnnulation=Annulation
+WorkshopImproCancelDelay=Délai d'annulation d'un pointage
+WorkshopImproCancelDelayHelp=Durée maximale (en minutes) durant laquelle le code « Annulation » peut supprimer le dernier pointage d'un mécanicien. Au-delà, l'annulation est refusée.
+WorkshopMinutes=minutes
+WorkshopORDisabledEnableFirst=Les ordres de réparation doivent d'abord être activés dans l'onglet Général.
