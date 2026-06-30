@@ -161,7 +161,9 @@ $help_url = '';
 llxHeader('', $title, $help_url, '', 0, 0, '', '', '', 'mod-workshop page-card_notes');
 
 if ($id > 0 || !empty($ref)) {
-	$object->fetch_thirdparty();
+	if (!empty($object->fk_soc)) {
+		$object->fetch_thirdparty();
+	}
 
 	$head = vehiculePrepareHead($object);
 

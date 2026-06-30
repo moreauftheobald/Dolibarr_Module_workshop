@@ -53,6 +53,8 @@ if (!$res) {
 require_once DOL_DOCUMENT_ROOT.'/core/class/html.formcompany.class.php';
 require_once DOL_DOCUMENT_ROOT.'/core/lib/date.lib.php';
 dol_include_once('/workshop/class/operationorder.class.php');
+dol_include_once('/workshop/class/vehicule.class.php');
+dol_include_once('/workshop/lib/workshop_vehicule.lib.php');
 
 if (!isModEnabled('workshop')) {
 	accessforbidden();
@@ -74,6 +76,10 @@ $backtopage  = GETPOST('backtopage', 'alpha');
 $optioncss   = GETPOST('optioncss', 'aZ');
 $mode        = GETPOST('mode', 'aZ');
 
+$origin=GETPOST('origin', 'alpha');
+$originid=GETPOSTINT('originid');
+
+
 // Pagination
 $limit     = GETPOSTINT('limit') ? GETPOSTINT('limit') : $conf->liste_limit;
 $sortfield = GETPOST('sortfield', 'aZ09comma');
@@ -89,6 +95,7 @@ $pagenext = $page + 1;
 // Initialize objects
 $object      = new Operationorder($db);
 $extrafields = new ExtraFields($db);
+$vehicule = new Vehicule($db);
 $diroutputmassaction = $conf->workshop->dir_output.'/temp/massgeneration/'.$user->id;
 $hookmanager->initHooks(array($contextpage));
 
@@ -107,6 +114,9 @@ if (!$sortorder) {
 
 // Initialize search criteria
 $search = array();
+
+
+
 foreach ($object->fields as $key => $val) {
 	if (GETPOST('search_'.$key, 'alpha') !== '') {
 		$search[$key] = GETPOST('search_'.$key, 'alpha');
@@ -115,6 +125,11 @@ foreach ($object->fields as $key => $val) {
 		$search[$key.'_dtstart'] = dol_mktime(0, 0, 0, GETPOSTINT('search_'.$key.'_dtstartmonth'), GETPOSTINT('search_'.$key.'_dtstartday'), GETPOSTINT('search_'.$key.'_dtstartyear'));
 		$search[$key.'_dtend']   = dol_mktime(23, 59, 59, GETPOSTINT('search_'.$key.'_dtendmonth'), GETPOSTINT('search_'.$key.'_dtendday'), GETPOSTINT('search_'.$key.'_dtendyear'));
 	}
+}
+
+if ($originid > 0 && $origin=='vehicule') {
+	$search['fk_vehicule'] = $originid;
+	$object->fields['fk_vehicule']['visible'] = 0;
 }
 
 // Build array of fields for columns
@@ -132,6 +147,8 @@ foreach ($object->fields as $key => $val) {
 		);
 	}
 }
+
+
 // Extra fields
 include DOL_DOCUMENT_ROOT.'/core/tpl/extrafields_list_array_fields.tpl.php';
 
@@ -176,6 +193,9 @@ if (empty($reshook)) {
 		}
 		$toselect             = array();
 		$search_array_options = array();
+		if ($originid > 0 && $origin=='vehicule') {
+			$search['fk_vehicule'] = $originid;
+		}
 	}
 	if (GETPOST('button_removefilter_x', 'alpha') || GETPOST('button_removefilter.x', 'alpha') || GETPOST('button_removefilter', 'alpha')
 		|| GETPOST('button_search_x', 'alpha') || GETPOST('button_search.x', 'alpha') || GETPOST('button_search', 'alpha')) {
@@ -309,6 +329,25 @@ $num = $db->num_rows($resql);
 // Output page
 llxHeader('', $title, $help_url, '', 0, 0, array(), array(), '', 'mod-workshop page-list bodyforlist');
 
+if ($origin=='vehicule' && $originid>0) {
+	$vehicule->fetch($originid);
+	if (!empty($vehicule->fk_soc)) {
+		$object->fetch_thirdparty();
+	}
+
+	$head = vehiculePrepareHead($vehicule);
+
+	print dol_get_fiche_head($head, 'orlist', $langs->trans("Vehicule"), -1, $vehicule->picto);
+
+	// Object card
+	// ------------------------------------------------------------
+	$linkback = '<a href="'.dol_buildpath('/workshop/vehicule/vehicule_list.php', 1).'?restore_lastsearch_values=1'.(!empty($vehicule->fk_soc) ? '&socid='.$vehicule->fk_soc : '').'">'.$langs->trans("BackToList").'</a>';
+
+	$morehtmlref = $vehicule->getBanner($form, $permissiontoadd);
+
+	dol_banner_tab($vehicule, 'vin', $linkback, 0, 'id', 'vin', $morehtmlref);
+}
+
 $arrayofselected = is_array($toselect) ? $toselect : array();
 
 $param = '';
@@ -323,6 +362,14 @@ if ($limit > 0 && $limit != $conf->liste_limit) {
 }
 if ($optioncss != '') {
 	$param .= '&optioncss='.urlencode($optioncss);
+}
+
+if (!empty($origin)) {
+	$param .= '&origin='.urlencode($origin);
+}
+
+if ($originid>0) {
+	$param .= '&originid='.urlencode($originid);
 }
 foreach ($search as $key => $val) {
 	if (is_array($search[$key])) {
@@ -362,6 +409,8 @@ if ($optioncss != '') {
 print '<input type="hidden" name="token" value="'.newToken().'">';
 print '<input type="hidden" name="formfilteraction" id="formfilteraction" value="list">';
 print '<input type="hidden" name="action" value="list">';
+print '<input type="hidden" name="origin" value="'.$origin.'">';
+print '<input type="hidden" name="originid" value="'.$originid.'">';
 print '<input type="hidden" name="sortfield" value="'.$sortfield.'">';
 print '<input type="hidden" name="sortorder" value="'.$sortorder.'">';
 print '<input type="hidden" name="page" value="'.$page.'">';

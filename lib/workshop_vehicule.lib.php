@@ -75,9 +75,9 @@ function vehiculePrepareHead($object)
 
 	if ($user->hasRight('workshop', 'operationorders', 'read')) {
 		$nbOperationOrder = getNbORVehicle($object->id);
-		$head[$h][0] = dol_buildpath('/workshop/operationorder/or_list.php?origin=vehicule&originid='.$object->id, 1);
+		$head[$h][0] = dol_buildpath('/workshop/operationorder/or_list.php?origin=vehicule&originid=	'.$object->id, 1);
 		$head[$h][1] = $langs->trans('ORListHisto').'<span class="badge marginleftonlyshort">'.max($nbOperationOrder, 0).'</span>';
-		$head[$h][2] = 'list';
+		$head[$h][2] = 'orlist';
 		$h++;
 	}
 
@@ -283,7 +283,7 @@ function getNbORVehicle($idvehicle, $checkEntity = 1)
 	$sql = 'SELECT COUNT(o.rowid) as nb FROM '.$db->prefix().'workshop_operationorder as o';
 	$sql .= ' WHERE o.fk_vehicule = '.(int) $idvehicle;
 	if ($checkEntity) {
-		$sql .= ' AND o.entity IN ('.getEntity('workshop_operationorder').')';
+		$sql .= ' AND o.entity IN ('.getEntity('operationorder').')';
 	}
 	$resql = $db->query($sql);
 

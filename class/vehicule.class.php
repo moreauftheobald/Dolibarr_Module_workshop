@@ -1176,7 +1176,7 @@ class Vehicule extends CommonObject
 	}
 
 	public function getBanner() {
-		global $langs;
+		global $conf, $langs;
 		// Build morehtmlref (marque, type, tiers)
 		$morehtmlref = '<div class="refidno">';
 		$morehtmlref .= $langs->trans('immatriculation').': <b>'.dol_escape_htmltag($this->immatriculation).'</b>';
@@ -1201,6 +1201,22 @@ class Vehicule extends CommonObject
 				$morehtmlref .= '<br>'.$this->thirdparty->getNomUrl(1);
 			}
 		}
+
+		if (isModEnabled('multicompany')) {
+			dol_include_once('/multicompany/class/actions_multicompany.class.php');
+			$otherentity = new ActionsMulticompany($this->db);
+			$otherentity->getInfo($this->entity);
+
+			if (!empty($otherentity->label)) {
+				$morehtmlref .= '<br>
+					<div class="refidno multicompany-entity-card-container">
+						<span class="fa fa-globe"></span>
+						<span class="multiselect-selected-title-text">' . $otherentity->label . '</span>
+					</div>';
+			}
+		}
+
+
 		$morehtmlref .= '</div>';
 
 		return $morehtmlref;
