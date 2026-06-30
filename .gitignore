@@ -20,3 +20,4 @@
 *.back
 /.editorconfig
 /.gitattributes
+.idea/
