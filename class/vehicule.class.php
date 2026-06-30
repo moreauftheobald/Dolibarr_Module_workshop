@@ -1,5 +1,5 @@
 <?php
-/* Copyright (C) 2020 ATM Consulting <support@atm-consulting.fr>
+/*
  * Copyright (C) 2024 T-SERVICES <contact@theobald-groupe.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -243,7 +243,7 @@ class Vehicule extends CommonObject
 			)
 		),
 		'nb_pneu' => array(
-			'type'    => 'int',
+			'type'    => 'integer',
 			'label'   => 'NbPneu',
 			'enabled' => 1,
 			'visible' => '1',
@@ -264,7 +264,7 @@ class Vehicule extends CommonObject
 			'position' => 170,
 		),
 		'type_custom' => array(
-			'type'    => 'int',
+			'type'    => 'integer',
 			'label'   => 'Type',
 			'enabled' => 1,
 			'visible' => 0,
@@ -306,19 +306,21 @@ class Vehicule extends CommonObject
 			'position' => 210,
 		),
 		'exit_data' => array(
-			'type'    => 'int',
+			'type'    => 'integer',
 			'label'   => 'SortiePrevue',
 			'enabled' => 1,
 			'visible' => 0,
 			'position' => 220,
 		),
 		'age_veh' => array(
-			'type'    => 'int',
+			'type'    => 'integer',
 			'label'   => 'AgeVeh',
 			'enabled' => 1,
 			'visible' => 0,
 			'position' => 230,
 		),
+		'note_public' => array('type' => 'html', 'label' => 'NotePublic', 'enabled' => 1, 'position' => 240, 'notnull' => 0, 'visible' => 0, 'cssview' => 'wordbreak', 'validate' => 1, 'lang' => 'workshop@workshop'),
+		'note_private' => array('type' => 'html', 'label' => 'NotePrivate', 'enabled' => 1, 'position' => 250, 'notnull' => 0, 'visible' => 0, 'cssview' => 'wordbreak', 'validate' => 1, 'lang' => 'workshop@workshop'),
 		'import_key' => array(
 			'type'    => 'varchar(14)',
 			'label'   => 'ImportId',
@@ -1171,7 +1173,34 @@ class Vehicule extends CommonObject
 		return $out;
 	}
 
-//	public function getBanner($linkback='',$morehtmlref='') {
-//		return dol_banner_tab($this, 'vin', $linkback, 1, 'vin', 'vin', $morehtmlref, '', 0, '', '');
-//	}
+	public function getBanner() {
+		global $langs;
+		// Build morehtmlref (marque, type, tiers)
+		$morehtmlref = '<div class="refidno">';
+		$morehtmlref .= $langs->trans('immatriculation').': <b>'.dol_escape_htmltag($this->immatriculation).'</b>';
+
+		dol_include_once('/workshop/class/vehiculemark.class.php');
+		$markDict  = new VehiculeMark($this->db);
+		$markLabel = $markDict->getValueFromId($this->fk_vehicule_mark);
+		if (!empty($markLabel)) {
+			$morehtmlref .= ' &mdash; '.$langs->trans('vehiculeMark').': <b>'.dol_escape_htmltag($markLabel).'</b>';
+		}
+
+		dol_include_once('/workshop/class/vehiculetype.class.php');
+		$typeDict  = new VehiculeType($this->db);
+		$typeLabel = $typeDict->getValueFromId($this->fk_vehicule_type);
+		if (!empty($typeLabel)) {
+			$morehtmlref .= ' &mdash; '.$langs->trans('vehiculeType').': <b>'.dol_escape_htmltag($typeLabel).'</b>';
+		}
+
+		if (!empty($this->fk_soc)) {
+			$this->fetch_thirdparty();
+			if (!empty($this->thirdparty)) {
+				$morehtmlref .= '<br>'.$this->thirdparty->getNomUrl(1);
+			}
+		}
+		$morehtmlref .= '</div>';
+
+		return $morehtmlref;
+	}
 }

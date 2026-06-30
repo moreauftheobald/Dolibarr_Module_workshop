@@ -1,5 +1,5 @@
 <?php
-/* Copyright (C) 2020 ATM Consulting <support@atm-consulting.fr>
+/*
  * Copyright (C) 2024 T-SERVICES <contact@theobald-groupe.com>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -55,7 +55,25 @@ function vehiculePrepareHead($object)
 	$head[$h][2] = 'document';
 	$h++;
 
-	if (isModEnabled("workshop") && $user->hasRight('workshop', 'operationorders', 'read')) {
+
+	if (isset($object->fields['note_public']) || isset($object->fields['note_private'])) {
+		$nbNote = 0;
+		if (!empty($object->note_private)) {
+			$nbNote++;
+		}
+		if (!empty($object->note_public)) {
+			$nbNote++;
+		}
+		$head[$h][0] = dolBuildUrl(dol_buildpath('/workshop/vehicule/vehicule_note.php', 1), ['id' => $object->id]);
+		$head[$h][1] = $langs->trans('Notes');
+		if ($nbNote > 0) {
+			$head[$h][1] .= (!getDolGlobalInt('MAIN_OPTIMIZEFORTEXTBROWSER') ? '<span class="badge marginleftonlyshort">'.$nbNote.'</span>' : '');
+		}
+		$head[$h][2] = 'note';
+		$h++;
+	}
+
+	if ($user->hasRight('workshop', 'operationorders', 'read')) {
 		$nbOperationOrder = getNbORVehicle($object->id);
 		$head[$h][0] = dol_buildpath('/workshop/operationorder/or_list.php?origin=vehicule&originid='.$object->id, 1);
 		$head[$h][1] = $langs->trans('ORListHisto').'<span class="badge marginleftonlyshort">'.max($nbOperationOrder, 0).'</span>';

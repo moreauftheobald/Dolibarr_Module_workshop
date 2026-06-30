@@ -203,7 +203,7 @@ if ($object->id > 0) {
 	// ------------------------------------------------------------
 	$linkback = '<a href="'.dol_buildpath('/workshop/vehicule/vehicule_list.php', 1).'?restore_lastsearch_values=1'.(!empty($socid) ? '&socid='.$socid : '').'">'.$langs->trans("BackToList").'</a>';
 
-	$morehtmlref = $object->getBanner($form, $permissiontoadd);
+	$morehtmlref = $object->getBanner();
 
 	dol_banner_tab($object, 'vin', $linkback, 0, 'id', 'vin', $morehtmlref);
 

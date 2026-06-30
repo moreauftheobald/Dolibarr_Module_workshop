@@ -1,5 +1,5 @@
 <?php
-/* Copyright (C) 2020 ATM Consulting <support@atm-consulting.fr>
+/*
  * Copyright (C) 2024 T-SERVICES <contact@theobald-groupe.com>
  *
  * This program is free software: you can redistribute it and/or modify
