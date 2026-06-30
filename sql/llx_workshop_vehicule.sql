@@ -31,6 +31,8 @@ CREATE TABLE llx_workshop_vehicule (
 	age_veh integer,
 	note_public text,
 	note_private text,
+	fk_user_create integer,
+	fk_user_modif integer,
 	import_key varchar(14),
 	date_creation datetime,
 	tms timestamp DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
