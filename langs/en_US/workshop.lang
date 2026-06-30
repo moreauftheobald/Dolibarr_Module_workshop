@@ -569,3 +569,69 @@ WorkshopPDFComments=Comments
 WorkshopPDFSignatureWorkshop=Workshop signature
 WorkshopPDFSignatureCustomer=Customer signature
 WorkshopPDFLaborLabel=Labour
+
+# Planning - Improductive codes (Phase 1)
+WorkshopORSubTabImpro=Improductive codes
+WorkshopImproPageIntro=Manage here the improductive codes used when mechanics clock their time. Absences are improductive codes (tick "Absence"). Two reserved codes are handled automatically and cannot be deleted.
+WorkshopImproCodes=Improductive codes
+WorkshopImproCode=Code
+WorkshopImproIsAbsence=Absence
+WorkshopImproReserved=Reserved
+WorkshopImproAutoCode=(generated)
+WorkshopImproAutoCodeHelp=The code is generated automatically (IMP00001, IMP00002, ...).
+WorkshopImproConfirmDelete=Do you really want to delete this improductive code?
+WorkshopImproAdded=Improductive code added
+WorkshopImproDeleted=Improductive code deleted
+WorkshopImproLabelRequired=Label is required
+WorkshopImproFinJournee=End of day
+WorkshopImproAnnulation=Cancellation
+WorkshopImproCancelDelay=Pointage cancellation delay
+WorkshopImproCancelDelayHelp=Maximum time (in minutes) during which the "Cancellation" code can delete a mechanic's last pointage. Beyond that, cancellation is refused.
+WorkshopMinutes=minutes
+WorkshopORDisabledEnableFirst=Repair orders must first be enabled in the General tab.
+
+# Mechanics planning - day view (Phase 2)
+WorkshopPlanningModeMecaniciens=Mechanics
+WorkshopPlanningSubDay=Day
+WorkshopPlanningSubWeek=Week
+WorkshopPlanningNoMechanicGroup=No mechanics group is configured. Set it in the module configuration (Repair orders tab).
+WorkshopPlanningNoMechanicsConfigured=No mechanic configured.
+WorkshopPlanningWeekComingSoon=The week view will be available in a future release.
+WorkshopPlanningPlanned=Planned
+WorkshopPlanningClocked=Clocked
+WorkshopPlanningUnassigned=Unassigned
+WorkshopNewPointage=New time entry
+WorkshopEditPointage=Edit time entry
+WorkshopPointageOnJob=On RO / Job
+WorkshopImproductive=Improductive
+WorkshopOR=RO
+WorkshopSearchOR=Search a RO...
+WorkshopJob=Job
+WorkshopMechanic=Mechanic
+WorkshopStartHour=Start time
+WorkshopEndHour=End time
+WorkshopEmptyOpen=empty = in progress
+WorkshopAssignJob=Assign job
+WorkshopDurationHours=Estimated duration (h)
+WorkshopAssignAction=Assign
+WorkshopConfirmDeletePointage=Delete this time entry?
+WorkshopStartRequired=Start time is required
+WorkshopNetworkError=Network error
+
+# Planning - Dashboard, week view, quick OR (Phase 3)
+WorkshopPlanningModeDashboard=Dashboard
+WorkshopDashVehiclesPresent=Vehicles present
+WorkshopDashUnplannedOR=Unplanned ROs
+WorkshopDashJobsNoMechanic=Jobs without mechanic
+WorkshopDashWorkshopLoad=Workshop load
+WorkshopDashORofDay=Repair orders of the day
+WorkshopDashProgress=Progress
+WorkshopDashNoOR=No repair order for this day.
+WorkshopWeekCharge=Load %
+WorkshopNewOR=New RO
+WorkshopSearchThirdParty=Search a third party...
+WorkshopPlanNow=Immediate planning
+WorkshopCreateAndOpenOR=Create and open the RO
+Vehicle=Vehicle
+
+WorkshopGanttNoOR=No repair order planned for this week.

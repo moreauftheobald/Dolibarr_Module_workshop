@@ -49,17 +49,18 @@ if (!$res) {
 	die("Include of main fails");
 }
 
-// Build redirect URL, defaulting mode to 'pointages'
-$mode     = GETPOST('mode', 'aZ09') ?: 'pointages';
+// Build redirect URL, defaulting to the unified mechanics view
+$mode     = GETPOST('mode', 'aZ09') ?: 'mecaniciens';
 $date     = GETPOST('date', 'alpha') ?: date('Y-m-d');
-$fk_user  = GETPOSTINT('fk_user');
+
+// Legacy modes are superseded by the 'mecaniciens' day view
+if (in_array($mode, array('pointages', 'journee'), true)) {
+	$mode = 'mecaniciens';
+}
 
 $url = dol_buildpath('/workshop/workshop_planning.php', 1);
 $url .= '?mode=' . urlencode($mode);
 $url .= '&date=' . urlencode($date);
-if ($fk_user > 0) {
-	$url .= '&fk_user=' . (int) $fk_user;
-}
 
 header('Location: ' . $url);
 exit;

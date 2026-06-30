@@ -18,13 +18,16 @@
 /**
  * \file    workshop/workshop_planning.php
  * \ingroup workshop
- * \brief   Workshop planning view - three display modes:
- *            - atelier:   JSGantt Gantt chart showing planned repair orders
- *                         on a weekly timeline (Mon–Sun).
- *            - pointages: FullCalendar timeGrid showing user time entries,
- *                         filterable by user.
- *            - journee:   Custom day table with one column per user showing
- *                         their time entries for a specific day.
+ * \brief   Workshop planning view - display modes:
+ *            - dashboard:   "Control tower" overview (KPI cards + OR of the day).
+ *            - atelier:     Native CSS Gantt grid of planned repair orders over
+ *                           a 7-day week (replaces the former JSGantt view).
+ *            - mecaniciens: Native HTML/CSS/JS grid of mechanics with two
+ *                           lanes each (planned slots / real clocking).
+ *                           Sub-modes: day and week.
+ *
+ * The legacy 'pointages' and 'journee' modes are superseded by the
+ * 'mecaniciens' view and redirect to it. No external calendar library is used.
  *
  * Business hours (slot min/max times) are computed as the union of the
  * workshop-level planning and all configured group plannings:
@@ -64,7 +67,9 @@ if (!$res) {
 // ---------------------------------------------------------------------------
 require_once DOL_DOCUMENT_ROOT . '/user/class/usergroup.class.php';
 require_once 'lib/workshop.lib.php';
+require_once 'lib/workshop_planning.lib.php';
 dol_include_once('/workshop/class/workshopplanning.class.php');
+dol_include_once('/workshop/class/workshopimpro.class.php');
 
 $langs->loadLangs(array('workshop@workshop', 'users'));
 
@@ -84,21 +89,9 @@ $hookmanager->initHooks(array('workshopplanningview', 'globalcard'));
 // Parameters
 // ---------------------------------------------------------------------------
 $mode           = GETPOST('mode', 'aZ09');
+$submode        = GETPOST('submode', 'aZ09');
 $date_str       = GETPOST('date', 'alpha');
 $fk_user_filter = GETPOSTINT('fk_user');
-
-// Validate mode: only expose modes the user has rights for
-$valid_modes = array();
-if ($canSeeAtelier) {
-	$valid_modes[] = 'atelier';
-}
-if ($canSeePointages) {
-	$valid_modes[] = 'pointages';
-	$valid_modes[] = 'journee';
-}
-if (!in_array($mode, $valid_modes)) {
-	$mode = $valid_modes[0];
-}
 
 // Validate date: must be YYYY-MM-DD, default to today
 if (empty($date_str) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_str)) {
@@ -106,6 +99,31 @@ if (empty($date_str) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_str)) {
 }
 
 $baseUrl = dol_buildpath('/workshop/workshop_planning.php', 1);
+
+// Legacy modes (pointages/journee) are now served by the unified
+// "mecaniciens" day view.
+if (in_array($mode, array('pointages', 'journee'), true)) {
+	header('Location: '.$baseUrl.'?mode=mecaniciens&date='.urlencode($date_str));
+	exit;
+}
+
+// Validate mode: only expose modes the user has rights for
+$valid_modes = array();
+if ($canSeeAtelier) {
+	$valid_modes[] = 'dashboard';
+	$valid_modes[] = 'atelier';
+}
+if ($canSeePointages) {
+	$valid_modes[] = 'mecaniciens';
+}
+if (!in_array($mode, $valid_modes, true)) {
+	$mode = $valid_modes[0];
+}
+
+// Mechanics view has two sub-modes: day (default) and week (Phase 3).
+if ($submode !== 'week') {
+	$submode = 'day';
+}
 
 // ---------------------------------------------------------------------------
 // Action handler – schedule an OR (move to "planned" status with new dates)
@@ -366,7 +384,18 @@ $dow        = (int) date('N', $date_ts); // 1=Mon … 7=Sun (ISO-8601)
 $week_start = date('Y-m-d', $date_ts - ($dow - 1) * 86400);
 
 // Prev / Next targets differ per mode
-if ($mode === 'journee') {
+if ($mode === 'dashboard') {
+	$prev_date = date('Y-m-d', $date_ts - 86400);
+	$next_date = date('Y-m-d', $date_ts + 86400);
+} elseif ($mode === 'mecaniciens') {
+	if ($submode === 'week') {
+		$prev_date = date('Y-m-d', strtotime($week_start) - 7 * 86400);
+		$next_date = date('Y-m-d', strtotime($week_start) + 7 * 86400);
+	} else {
+		$prev_date = date('Y-m-d', $date_ts - 86400);
+		$next_date = date('Y-m-d', $date_ts + 86400);
+	}
+} elseif ($mode === 'journee') {
 	$prev_date = date('Y-m-d', $date_ts - 86400);
 	$next_date = date('Y-m-d', $date_ts + 86400);
 } elseif ($mode === 'atelier') {
@@ -398,17 +427,9 @@ $title = $langs->trans('WorkshopPlanningView');
 $TIncludeCSS = array();
 $TIncludeJS  = array();
 
-if ($mode === 'atelier') {
-	// JSGantt – included in Dolibarr core
-	$TIncludeCSS[] = '/includes/jsgantt/jsgantt.css';
-	$TIncludeJS[]  = '/includes/jsgantt/jsgantt.js';
-	$TIncludeJS[]  = '/projet/jsgantt_language.js.php?lang=' . $langs->defaultlang;
-} else {
-	// FullCalendar 5 for pointages/journee modes
-	$TIncludeCSS[] = 'https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css';
-	$TIncludeJS[]  = 'https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.js';
-	$TIncludeJS[]  = 'https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/locales-all.min.js';
-}
+// Native workshop planning assets (all views — no external calendar library)
+$TIncludeCSS[] = dol_buildpath('/workshop/css/workshop.css', 1);
+$TIncludeJS[]  = dol_buildpath('/workshop/js/workshop_planning.js', 1);
 
 llxHeader('', $title, '', '', 0, 0, $TIncludeJS, $TIncludeCSS, '', 'mod-workshop page-planning');
 
@@ -421,27 +442,28 @@ $head = array();
 $h    = 0;
 
 if ($canSeeAtelier) {
+	$head[$h][0] = $baseUrl . '?mode=dashboard&date=' . urlencode($date_str);
+	$head[$h][1] = $langs->trans('WorkshopPlanningModeDashboard');
+	$head[$h][2] = 'dashboard';
+	$h++;
+
 	$head[$h][0] = $baseUrl . '?mode=atelier&date=' . urlencode($date_str);
 	$head[$h][1] = $langs->trans('WorkshopPlanningModeAtelier');
 	$head[$h][2] = 'atelier';
 	$h++;
 }
 if ($canSeePointages) {
-	$head[$h][0] = $baseUrl . '?mode=pointages&date=' . urlencode($date_str);
-	$head[$h][1] = $langs->trans('WorkshopPlanningModePointages');
-	$head[$h][2] = 'pointages';
-	$h++;
-
-	$head[$h][0] = $baseUrl . '?mode=journee&date=' . urlencode($date_str);
-	$head[$h][1] = $langs->trans('WorkshopPlanningModeJournee');
-	$head[$h][2] = 'journee';
+	$head[$h][0] = $baseUrl . '?mode=mecaniciens&date=' . urlencode($date_str);
+	$head[$h][1] = $langs->trans('WorkshopPlanningModeMecaniciens');
+	$head[$h][2] = 'mecaniciens';
 	$h++;
 }
 
 print dol_get_fiche_head($head, $mode, '', -1, 'fa-calendar-alt');
 
-// Warning when no planning groups are configured
-if (empty($planning_groups)) {
+// Warning when no planning groups are configured (atelier mode only;
+// the mecaniciens view has its own mechanic-group warning)
+if (empty($planning_groups) && $mode !== 'mecaniciens') {
 	print info_admin($langs->trans('WorkshopNoGroupDefined'), 0, 0, 'warning');
 }
 
@@ -450,8 +472,8 @@ if (empty($planning_groups)) {
 // ---------------------------------------------------------------------------
 // Base URL fragment shared by Prev and Next links
 $nav_base = $baseUrl . '?mode=' . urlencode($mode);
-if ($fk_user_filter > 0 && $mode === 'pointages') {
-	$nav_base .= '&fk_user=' . (int) $fk_user_filter;
+if ($mode === 'mecaniciens') {
+	$nav_base .= '&submode=' . urlencode($submode);
 }
 
 print '<div class="workshop-planning-nav" style="display:flex;align-items:center;gap:8px;margin:12px 0 8px 0;flex-wrap:wrap;">';
@@ -462,11 +484,23 @@ print img_picto($langs->trans('Previous'), 'fa-chevron-left');
 print '</a>';
 
 // Period label (different format per mode)
-if ($mode === 'atelier') {
+if ($mode === 'dashboard') {
+	print '<span class="wp-period-label">';
+	print $langs->trans('WorkshopPlanningDayOf') . ' ' . dol_print_date($date_ts, 'day');
+	print '</span>';
+} elseif ($mode === 'mecaniciens') {
+	print '<span class="wp-period-label">';
+	if ($submode === 'week') {
+		print $langs->trans('WorkshopPlanningWeekOf') . ' ' . dol_print_date(strtotime($week_start), 'day');
+	} else {
+		print $langs->trans('WorkshopPlanningDayOf') . ' ' . dol_print_date($date_ts, 'day');
+	}
+	print '</span>';
+} elseif ($mode === 'atelier') {
 	// "Semaine du xx/xx/xxxx au xx/xx/xxxx" (4-week period)
 	$period_start_label = dol_print_date(strtotime($week_start), 'day');
-	$period_end_label   = dol_print_date(strtotime($period_end), 'day');
-	print '<span style="font-weight:bold;margin:0 4px;">';
+	$period_end_label   = dol_print_date(strtotime($week_end), 'day');
+	print '<span class="wp-period-label">';
 	print $langs->trans('WorkshopPlanningWeekFromTo', $period_start_label, $period_end_label);
 	print '</span>';
 } elseif ($mode === 'journee') {
@@ -493,11 +527,27 @@ print '</a>';
 // Date picker (submits form on change)
 print '<form method="GET" action="' . dol_escape_htmltag($baseUrl) . '" style="margin:0;margin-left:8px;">';
 print '<input type="hidden" name="mode" value="' . dol_escape_htmltag($mode) . '">';
-if ($fk_user_filter > 0 && $mode === 'pointages') {
-	print '<input type="hidden" name="fk_user" value="' . (int) $fk_user_filter . '">';
+if ($mode === 'mecaniciens') {
+	print '<input type="hidden" name="submode" value="' . dol_escape_htmltag($submode) . '">';
 }
 print '<input type="date" name="date" value="' . dol_escape_htmltag($date_str) . '" class="flat" style="padding:3px 6px;" onchange="this.form.submit();">';
 print '</form>';
+
+// Toggle Journée / Semaine (mecaniciens mode)
+if ($mode === 'mecaniciens') {
+	$toggle_base = $baseUrl . '?mode=mecaniciens&date=' . urlencode($date_str);
+	print '<div class="wp-mode-toggle" style="margin-left:8px;">';
+	print '<a class="wp-mode-btn' . ($submode === 'day' ? ' active' : '') . '" href="' . dol_escape_htmltag($toggle_base . '&submode=day') . '">' . $langs->trans('WorkshopPlanningSubDay') . '</a>';
+	print '<a class="wp-mode-btn' . ($submode === 'week' ? ' active' : '') . '" href="' . dol_escape_htmltag($toggle_base . '&submode=week') . '">' . $langs->trans('WorkshopPlanningSubWeek') . '</a>';
+	print '</div>';
+}
+
+// "Nouvel OR" button (mecaniciens mode + OR write right)
+if ($mode === 'mecaniciens' && $user->hasRight('workshop', 'operationorders', 'write')) {
+	print '<a class="butActionNew" href="javascript:void(0);" id="btn-new-or-planning" style="margin-left:16px;">';
+	print img_picto('', 'fa-plus-circle') . ' ' . $langs->trans('WorkshopNewOR');
+	print '</a>';
+}
 
 // "Planifier" button (atelier mode + write right)
 if ($mode === 'atelier' && $user->hasRight('workshop', 'workshopplanning', 'write')) {
@@ -527,69 +577,208 @@ print '</div>'; // .workshop-planning-nav
 // Main content – switches on $mode
 // ---------------------------------------------------------------------------
 
-if ($mode === 'journee') {
+if ($mode === 'dashboard') {
 	// -----------------------------------------------------------------------
-	// Mode Journée – custom table: one column per user, one row per time slot
+	// Mode Tableau de bord – synthèse "tour de contrôle" (Phase 3)
 	// -----------------------------------------------------------------------
-	if (empty($all_users)) {
-		print '<p class="opacitymedium">' . $langs->trans('WorkshopPlanningNoUsers') . '</p>';
-	} else {
-		print '<div class="div-table-responsive" style="overflow-x:auto;margin-top:4px;">';
-		print '<table class="noborder workshop-day-table" style="border-collapse:collapse;min-width:100%;">';
+	$day_lo = $date_str . ' 00:00:00';
+	$day_hi = $date_str . ' 23:59:59';
+	$ent    = getEntity('workshop');
 
-		// Header row: "Heure" + one column per user
-		print '<tr class="liste_titre">';
-		print '<th style="width:55px;min-width:55px;text-align:center;">' . $langs->trans('Hour') . '</th>';
-		foreach ($all_users as $uid => $usr) {
-			print '<th class="center" style="min-width:130px;">';
-			print dol_escape_htmltag(dolGetFirstLastname($usr->firstname, $usr->lastname));
-			print '</th>';
-		}
-		print '</tr>';
+	// Metric 1: vehicles present (active OR overlapping the day, with a vehicle)
+	$nb_vehicules = 0;
+	$sqlm = 'SELECT COUNT(DISTINCT o.fk_vehicule) AS nb FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder o';
+	$sqlm .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder_status s ON s.rowid = o.status AND s.display_on_planning = 1';
+	$sqlm .= ' WHERE o.entity IN (' . $ent . ') AND o.fk_vehicule > 0';
+	$sqlm .= " AND o.date_start IS NOT NULL AND o.date_start <= '" . $db->escape($day_hi) . "'";
+	$sqlm .= " AND (o.date_end IS NULL OR o.date_end >= '" . $db->escape($day_lo) . "')";
+	$resm = $db->query($sqlm);
+	if ($resm && ($o = $db->fetch_object($resm))) { $nb_vehicules = (int) $o->nb; }
 
-		// One row per 30-minute time slot
-		$slot_idx = 0;
-		foreach ($time_slots as $slot) {
-			$row_class = ($slot_idx % 2 === 0) ? 'even' : 'odd';
-			print '<tr class="oddeven ' . $row_class . '" style="height:28px;">';
+	// Metric 2: unplanned ORs (no date_planned, visible on planning)
+	$nb_unplanned = 0;
+	$sqlm = 'SELECT COUNT(*) AS nb FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder o';
+	$sqlm .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder_status s ON s.rowid = o.status AND s.display_on_planning = 1';
+	$sqlm .= ' WHERE o.entity IN (' . $ent . ') AND (o.date_planned IS NULL OR o.date_planned = 0)';
+	$resm = $db->query($sqlm);
+	if ($resm && ($o = $db->fetch_object($resm))) { $nb_unplanned = (int) $o->nb; }
 
-			// Time label cell
-			print '<td class="center" style="font-size:0.82em;font-weight:bold;white-space:nowrap;background-color:var(--colorbackgrey, #f4f4f4);border-right:1px solid #ddd;">';
-			print dol_escape_htmltag($slot);
-			print '</td>';
+	// Metric 3: jobs without a mechanic on plannable ORs
+	$nb_jobs_nomec = 0;
+	$sqlm = 'SELECT COUNT(*) AS nb FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder_jobs j';
+	$sqlm .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder o ON o.rowid = j.fk_operationorder';
+	$sqlm .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder_status s ON s.rowid = o.status AND s.display_on_planning = 1';
+	$sqlm .= ' WHERE o.entity IN (' . $ent . ') AND (j.fk_user_assign IS NULL OR j.fk_user_assign = 0)';
+	$resm = $db->query($sqlm);
+	if ($resm && ($o = $db->fetch_object($resm))) { $nb_jobs_nomec = (int) $o->nb; }
 
-			// One data cell per user (content filled by AJAX in a future iteration)
-			foreach ($all_users as $uid => $usr) {
-				print '<td class="center workshop-day-cell"';
-				print ' data-user="' . $uid . '"';
-				print ' data-slot="' . dol_escape_htmltag($slot) . '"';
-				print ' data-date="' . dol_escape_htmltag($date_str) . '"';
-				print ' style="border:1px solid #ebebeb;"></td>';
-			}
+	// Metric 4: workshop load = planned time of the day / capacity
+	$sum_planned = 0;
+	$sqlm = 'SELECT SUM(j.time_planned) AS tot FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder_jobs j';
+	$sqlm .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder o ON o.rowid = j.fk_operationorder';
+	$sqlm .= ' WHERE o.entity IN (' . $ent . ')';
+	$sqlm .= " AND j.date_start IS NOT NULL AND j.date_start >= '" . $db->escape($day_lo) . "' AND j.date_start <= '" . $db->escape($day_hi) . "'";
+	$resm = $db->query($sqlm);
+	if ($resm && ($o = $db->fetch_object($resm))) { $sum_planned = (int) $o->tot; }
 
+	$mecs    = workshop_get_mechanics($db, $conf->entity);
+	$nb_mec  = count($mecs);
+	$drange  = workshop_get_day_slot_range($db, $date_ts, $conf->entity);
+	$day_h   = (strtotime('2000-01-01 ' . $drange['max']) - strtotime('2000-01-01 ' . $drange['min'])) / 3600;
+	$capacity = $nb_mec * $day_h * 3600;
+	$charge   = $capacity > 0 ? min(100, round($sum_planned / $capacity * 100)) : 0;
+
+	// --- Metric cards ---
+	print '<div class="wp-dash-cards">';
+	print '<div class="wp-card wp-card--blue"><div class="wp-card-label">' . $langs->trans('WorkshopDashVehiclesPresent') . '</div><div class="wp-card-value">' . $nb_vehicules . '</div></div>';
+	print '<div class="wp-card wp-card--amber"><div class="wp-card-label">' . $langs->trans('WorkshopDashUnplannedOR') . '</div><div class="wp-card-value">' . $nb_unplanned . '</div></div>';
+	print '<div class="wp-card wp-card--coral"><div class="wp-card-label">' . $langs->trans('WorkshopDashJobsNoMechanic') . '</div><div class="wp-card-value">' . $nb_jobs_nomec . '</div></div>';
+	print '<div class="wp-card wp-card--green"><div class="wp-card-label">' . $langs->trans('WorkshopDashWorkshopLoad') . '</div><div class="wp-card-value">' . $charge . '&nbsp;%</div></div>';
+	print '</div>';
+
+	// --- OR of the day ---
+	print '<div class="wp-dash-title">' . $langs->trans('WorkshopDashORofDay') . '</div>';
+
+	$sqlo  = 'SELECT o.rowid, o.ref, o.status, s.label AS status_label, s.color AS status_color,';
+	$sqlo .= ' v.immatriculation, soc.nom AS soc_name,';
+	$sqlo .= ' (SELECT SUM(time_spent) FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder_jobs WHERE fk_operationorder = o.rowid) AS spent,';
+	$sqlo .= ' (SELECT SUM(time_planned) FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder_jobs WHERE fk_operationorder = o.rowid) AS planned';
+	$sqlo .= ' FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder o';
+	$sqlo .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder_status s ON s.rowid = o.status AND s.display_on_planning = 1';
+	$sqlo .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'workshop_vehicule v ON v.rowid = o.fk_vehicule';
+	$sqlo .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'societe soc ON soc.rowid = o.fk_soc';
+	$sqlo .= ' WHERE o.entity IN (' . $ent . ')';
+	$sqlo .= " AND ((o.date_planned >= '" . $db->escape($day_lo) . "' AND o.date_planned <= '" . $db->escape($day_hi) . "')";
+	$sqlo .= "   OR (o.date_start IS NOT NULL AND o.date_start <= '" . $db->escape($day_hi) . "' AND (o.date_end IS NULL OR o.date_end >= '" . $db->escape($day_lo) . "')))";
+	$sqlo .= ' ORDER BY o.ref ASC';
+	$sqlo .= $db->plimit(200);
+
+	print '<div class="div-table-responsive" style="margin-top:6px;">';
+	print '<table class="noborder centpercent">';
+	print '<tr class="liste_titre">';
+	print '<th>' . $langs->trans('Ref') . '</th>';
+	print '<th>' . $langs->trans('immatriculation') . '</th>';
+	print '<th>' . $langs->trans('ThirdParty') . '</th>';
+	print '<th>' . $langs->trans('Status') . '</th>';
+	print '<th>' . $langs->trans('WorkshopDashProgress') . '</th>';
+	print '</tr>';
+
+	$reso = $db->query($sqlo);
+	$nb_lines = 0;
+	if ($reso) {
+		while ($o = $db->fetch_object($reso)) {
+			$nb_lines++;
+			$prog = (!empty($o->planned) && $o->planned > 0) ? min(100, round($o->spent / $o->planned * 100)) : 0;
+			$col  = preg_match('/^#?[0-9a-fA-F]{3,8}$/', (string) $o->status_color) ? ('#' . ltrim((string) $o->status_color, '#')) : '#888780';
+			$or_url = dol_buildpath('/workshop/operationorder/or_card.php', 1) . '?id=' . (int) $o->rowid;
+			print '<tr class="oddeven">';
+			print '<td><a href="' . dol_escape_htmltag($or_url) . '">' . dol_escape_htmltag($o->ref) . '</a></td>';
+			print '<td>' . dol_escape_htmltag($o->immatriculation) . '</td>';
+			print '<td>' . dol_escape_htmltag($o->soc_name) . '</td>';
+			print '<td><span class="wp-status-badge" style="background:' . $col . ';">' . dol_escape_htmltag($o->status_label) . '</span></td>';
+			print '<td><div class="wp-progress"><div class="wp-progress-bar" style="width:' . $prog . '%;"></div><span class="wp-progress-text">' . $prog . '%</span></div></td>';
 			print '</tr>';
-			$slot_idx++;
 		}
-
-		// Empty state when no slots could be computed
-		if (empty($time_slots)) {
-			$colspan = count($all_users) + 1;
-			print '<tr><td colspan="' . $colspan . '" class="center opacitymedium" style="padding:20px;">';
-			print $langs->trans('WorkshopPlanningNoTimeSlots');
-			print '</td></tr>';
-		}
-
-		print '</table>';
-		print '</div>';
+		$db->free($reso);
 	}
+	if (!$nb_lines) {
+		print '<tr><td colspan="5" class="center opacitymedium" style="padding:18px;">' . $langs->trans('WorkshopDashNoOR') . '</td></tr>';
+	}
+	print '</table></div>';
+
+} elseif ($mode === 'mecaniciens') {
+	// -----------------------------------------------------------------------
+	// Mode Mécaniciens – native HTML/CSS/JS grid (Phase 2: day sub-mode)
+	// -----------------------------------------------------------------------
+	$canWritePointage = $user->hasRight('workshop', 'workshopmecanicsplanning', 'write');
+	$canWriteOR       = $user->hasRight('workshop', 'operationorders', 'write');
+
+	if (!getDolGlobalInt('WORKSHOP_MECHANIC_GROUP')) {
+		print info_admin($langs->trans('WorkshopPlanningNoMechanicGroup'), 0, 0, 'warning');
+	}
+
+	// Grid container — populated by AJAX (get_planning_day or get_planning_week).
+	print '<div id="workshop-day-grid-container" style="margin-top:4px;">';
+	print '<div class="opacitymedium" style="padding:16px;">' . $langs->trans('Loading') . '...</div>';
+	print '</div>';
+
+	// Improductive codes (incl. reserved) for the pointage modal.
+	$improObj  = new WorkshopImpro($db);
+	$improMap  = $improObj->getSelectList(1);
+	$improList = array();
+	foreach ($improMap as $code => $lbl) {
+		$improList[] = array('code' => $code, 'label' => $lbl);
+	}
+
+	// Mechanics list for the "quick OR" modal.
+	$mecList = array();
+	foreach (workshop_get_mechanics($db, $conf->entity) as $muid => $mobj) {
+		$mecList[] = array('id' => $muid, 'name' => $mobj->fullname);
+	}
+
+	// Translation strings passed to the JS layer.
+	$wpLang = array(
+		'Mechanics'     => $langs->trans('WorkshopPlanningModeMecaniciens'),
+		'NoMechanics'   => $langs->trans('WorkshopPlanningNoMechanicsConfigured'),
+		'Planned'       => $langs->trans('WorkshopPlanningPlanned'),
+		'Clocked'       => $langs->trans('WorkshopPlanningClocked'),
+		'Unassigned'    => $langs->trans('WorkshopPlanningUnassigned'),
+		'NoUnassigned'  => $langs->trans('None'),
+		'NewPointage'   => $langs->trans('WorkshopNewPointage'),
+		'EditPointage'  => $langs->trans('WorkshopEditPointage'),
+		'OnJob'         => $langs->trans('WorkshopPointageOnJob'),
+		'Improductive'  => $langs->trans('WorkshopImproductive'),
+		'OR'            => $langs->trans('WorkshopOR'),
+		'SearchOR'      => $langs->trans('WorkshopSearchOR'),
+		'Job'           => $langs->trans('WorkshopJob'),
+		'ImproCode'     => $langs->trans('WorkshopImproCode'),
+		'Start'         => $langs->trans('WorkshopStartHour'),
+		'End'           => $langs->trans('WorkshopEndHour'),
+		'EmptyOpen'     => $langs->trans('WorkshopEmptyOpen'),
+		'Note'          => $langs->trans('Note'),
+		'Delete'        => $langs->trans('Delete'),
+		'Save'          => $langs->trans('Save'),
+		'AssignJob'     => $langs->trans('WorkshopAssignJob'),
+		'DurationHours' => $langs->trans('WorkshopDurationHours'),
+		'Assign'        => $langs->trans('WorkshopAssignAction'),
+		'Pointage'      => $langs->trans('Pointage'),
+		'ConfirmDelete' => $langs->trans('WorkshopConfirmDeletePointage'),
+		'StartRequired' => $langs->trans('WorkshopStartRequired'),
+		'NetworkError'  => $langs->trans('WorkshopNetworkError'),
+		'Charge'        => $langs->trans('WorkshopWeekCharge'),
+		'NewOR'         => $langs->trans('WorkshopNewOR'),
+		'ThirdParty'    => $langs->trans('ThirdParty'),
+		'SearchThirdParty' => $langs->trans('WorkshopSearchThirdParty'),
+		'Vehicle'       => $langs->trans('Vehicle'),
+		'Description'   => $langs->trans('Description'),
+		'PlanNow'       => $langs->trans('WorkshopPlanNow'),
+		'Mechanic'      => $langs->trans('WorkshopMechanic'),
+		'CreateAndOpen' => $langs->trans('WorkshopCreateAndOpenOR'),
+	);
+
+	print '<script type="text/javascript">' . "\n";
+	print 'jQuery(function(){ WorkshopPlanning.init({' . "\n";
+	print '  ajaxUrl: ' . json_encode(dol_buildpath('/workshop/ajax/planning_ajax.php', 1)) . ',' . "\n";
+	print '  pageUrl: ' . json_encode($baseUrl) . ',' . "\n";
+	print '  date: ' . json_encode($date_str) . ',' . "\n";
+	print '  submode: ' . json_encode($submode) . ',' . "\n";
+	print '  weekStart: ' . json_encode($week_start) . ',' . "\n";
+	print '  slotMin: ' . json_encode($slot_min) . ',' . "\n";
+	print '  slotMax: ' . json_encode($slot_max) . ',' . "\n";
+	print '  canWrite: ' . ($canWritePointage ? 'true' : 'false') . ',' . "\n";
+	print '  canWriteOR: ' . ($canWriteOR ? 'true' : 'false') . ',' . "\n";
+	print '  refreshRate: ' . (int) getDolGlobalInt('WORKSHOP_OR_PLANNING_REFRESH_RATE', 0) . ',' . "\n";
+	print '  csrfToken: ' . json_encode(newToken()) . ',' . "\n";
+	print '  improCodes: ' . json_encode($improList, JSON_UNESCAPED_UNICODE) . ',' . "\n";
+	print '  users: ' . json_encode($mecList, JSON_UNESCAPED_UNICODE) . ',' . "\n";
+	print '  lang: ' . json_encode($wpLang, JSON_UNESCAPED_UNICODE) . "\n";
+	print '}); });' . "\n";
+	print '</script>' . "\n";
 
 } elseif ($mode === 'atelier') {
 	// -----------------------------------------------------------------------
-	// Mode Atelier – JSGantt Gantt chart showing planned repair orders
+	// Mode Atelier – native CSS Gantt grid of planned repair orders (7-day week)
 	// -----------------------------------------------------------------------
-
-	// Date format for JSGantt input (matches Dolibarr date output)
-	$dateformatinput = 'yyyy-mm-dd';
 
 	// -----------------------------------------------------------------------
 	// Load OR data for the visible period (week_start ± 1 week pad on each side)
@@ -644,212 +833,80 @@ if ($mode === 'journee') {
 		}
 	}
 
-	// CSS: narrow task name column, ellipsis on long names + per-status bar colors
-	print '<style type="text/css">' . "\n";
-	print '  #GanttChartDIV .gmainleft  { width: 250px !important; min-width: 200px; max-width: 300px; }' . "\n";
-	print '  #GanttChartDIV .gname      { max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }' . "\n";
-	// Match JSGantt default task bar metrics so the bar is actually visible
-	// (passing a custom itemClass replaces .gtaskblue / .gtaskred entirely)
-	print '  #GanttChartDIV [class^="wsorstatus-"] { height: 13px; opacity: 0.9; margin-top: 1px; border: 1px solid rgba(0,0,0,0.2); cursor: pointer; }' . "\n";
-	foreach ($gantt_status_colors as $stid => $col) {
-		$col_safe = preg_match('/^#[0-9a-fA-F]{3,8}$/', $col) ? $col : '#3c8dbc';
-		print '  #GanttChartDIV .wsorstatus-' . (int) $stid . ' { background-color: ' . $col_safe . ' !important; }' . "\n";
-	}
-	print '</style>' . "\n";
-
-	print '<div style="margin-top:4px;">' . "\n";
-	print '<div style="position:relative;" class="gantt" id="GanttChartDIV"></div>' . "\n";
-	print '</div>' . "\n";
-
-	print '<script type="text/javascript">' . "\n";
-	print 'document.addEventListener(\'DOMContentLoaded\', function () {' . "\n";
-	print '  var ganttEl = document.getElementById(\'GanttChartDIV\');' . "\n";
-	print '  if (!ganttEl) { return; }' . "\n";
-	print "\n";
-
-	// Initialize JSGantt chart
-	print '  var g = new JSGantt.GanttChart(ganttEl, \'day\');' . "\n";
-	print "\n";
-
-	// Date format configuration
-	print '  g.setDateInputFormat(\'' . dol_escape_js($dateformatinput) . '\');' . "\n";
-	print '  g.setDateTaskTableDisplayFormat(\'dd/mm/yyyy\');' . "\n";
-	print '  g.setDateTaskDisplayFormat(\'dd mon yyyy\');' . "\n";
-	print '  g.setDayMajorDateDisplayFormat(\'dd mon\');' . "\n";
-	print "\n";
-
-	// Display options – keep only task name column, hide all others
-	print '  g.setShowRes(0);' . "\n";
-	print '  g.setShowDur(0);' . "\n";
-	print '  g.setShowComp(0);' . "\n";
-	print '  g.setShowStartDate(0);' . "\n";
-	print '  g.setShowEndDate(0);' . "\n";
-	print '  g.setShowTaskInfoLink(0);' . "\n";
-	print '  g.setFormatArr("day");' . "\n";
-	print '  g.setCaptionType(\'Caption\');' . "\n";
-	print '  g.setUseFade(0);' . "\n";
-	print '  g.setUseToolTip(0);' . "\n";
-	print "\n";
-	// Calculate dayColWidth so 28 displayed days fill the available width
-	// (JSGantt adds ~1 week padding on each side: 2 requested weeks → 4 displayed)
-	print '  var availW = (jQuery(".fiche").width() || document.body.clientWidth) - 250 - 80;' . "\n";
-	print '  var nbDays = 28;' . "\n";
-	print '  var dayW = Math.max(Math.floor(availW / nbDays), 18);' . "\n";
-	print '  g.setDayColWidth(dayW);' . "\n";
-	print '  g.setUseSort(0);' . "\n";
-	print "\n";
-	// Visible range: 2 weeks (S, S+1) — JSGantt pads ±1 week → displays S-1..S+2
-	print '  g.setMinDate(\'' . dol_escape_js($week_start) . '\');' . "\n";
-	print '  g.setMaxDate(\'' . dol_escape_js($period_end) . '\');' . "\n";
-	print '  g.setScrollTo(\'' . dol_escape_js($week_start) . '\');' . "\n";
-
-	// Language – uses the jsgantt_language.js.php bridge from Dolibarr core
-	print '  if (typeof vLangs !== \'undefined\') {' . "\n";
-	print '    g.addLang(vLang, vLangs);' . "\n";
-	print '    g.setLang(vLang);' . "\n";
-	print '  }' . "\n";
-	print "\n";
-
 	// -----------------------------------------------------------------------
-	// Output one TaskItem per loaded OR (or a placeholder if none found)
+	// Native CSS Gantt grid (7-day week window) — replaces JSGantt
 	// -----------------------------------------------------------------------
-	if (empty($gantt_or_rows)) {
-		print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
-		print '    0,' . "\n";
-		print '    \'' . dol_escape_js($langs->trans('WorkshopPlanningNoOR')) . '\',' . "\n";
-		print '    \'' . dol_escape_js($week_start) . '\',' . "\n";
-		print '    \'' . dol_escape_js($period_end) . '\',' . "\n";
-		print '    \'ggroupblack\',' . "\n";
-		print '    \'\', 0, \'\', 0, 0, 0, 1, \'\', \'\', \'\',' . "\n";
-		print '    g' . "\n";
-		print '  ));' . "\n";
-	} else {
-		$or_card_url = dol_buildpath('/workshop/operationorder/or_card.php', 1);
-		$task_seq = 1;
-		$tooltip_html_array = array();
-		$tooltip_links_array = array();
-		foreach ($gantt_or_rows as $or) {
-			$or_id     = (int) $or->rowid;
-			$or_ref    = (string) ($or->ref ?? '');
-			$immat     = trim((string) ($or->immatriculation ?? ''));
-			$soc       = trim((string) ($or->soc_name ?? ''));
-			$start_str = date('Y-m-d', strtotime($or->date_start));
-			$end_str   = date('Y-m-d', strtotime($or->date_end) + 86400);
-			$css_class = 'wsorstatus-' . (int) $or->status;
-			$name      = $immat !== '' ? $immat . ' - ' . $or_ref : $or_ref;
-			$link      = $or_card_url . '?id=' . $or_id;
+	$g_days   = 7;
+	$g_start   = strtotime($week_start . ' 00:00:00');
+	$g_end     = $g_start + $g_days * 86400; // exclusive
+	$today_ts0 = strtotime(date('Y-m-d') . ' 00:00:00');
 
-			// Tooltip HTML
-			$tt  = '<b>' . dol_escape_htmltag($or_ref) . '</b><br>';
-			$tt .= dol_escape_htmltag($langs->trans('Customer')) . ' : ' . dol_escape_htmltag($soc ?: '-') . '<br>';
-			$tt .= dol_escape_htmltag($langs->trans('Immatriculation')) . ' : ' . dol_escape_htmltag($immat ?: '-') . '<br>';
-			$tt .= dol_escape_htmltag($langs->trans('Status')) . ' : ' . dol_escape_htmltag((string) ($or->status_label ?? '')) . '<br>';
-			$tt .= dol_print_date(strtotime($or->date_start), 'day') . ' &#8594; ' . dol_print_date(strtotime($or->date_end), 'day');
-			if (!empty($gantt_or_jobs[$or_id])) {
-				$tt .= '<hr style="margin:4px 0;border:0;border-top:1px solid #ccc;">';
-				foreach ($gantt_or_jobs[$or_id] as $job_label) {
-					$tt .= dol_escape_htmltag($job_label) . '<br>';
-				}
-			}
-			$tooltip_html_array[] = $tt;
-			$tooltip_links_array[] = $link;
+	print '<div class="workshop-gantt" style="--wp-gantt-days:' . $g_days . ';margin-top:4px;">';
 
-			print '  g.AddTaskItem(new JSGantt.TaskItem(' . "\n";
-			print '    ' . ($task_seq++) . ',' . "\n";
-			print '    \'' . dol_escape_js($name) . '\',' . "\n";
-			print '    \'' . dol_escape_js($start_str) . '\',' . "\n";
-			print '    \'' . dol_escape_js($end_str)   . '\',' . "\n";
-			print '    \'' . dol_escape_js($css_class) . '\',' . "\n";
-			print '    \'' . dol_escape_js($link) . '\',' . "\n";
-			print '    0,' . "\n";
-			print '    \'\',' . "\n";
-			print '    0,' . "\n";
-			print '    0,' . "\n";
-			print '    0,' . "\n";
-			print '    1,' . "\n";
-			print '    \'\',' . "\n";
-			print '    \'\',' . "\n";
-			print '    \'\',' . "\n";
-			print '    g' . "\n";
-			print '  ));' . "\n";
-		}
+	// Header row
+	print '<div class="wp-gantt-row wp-gantt-head">';
+	print '<div class="wp-gantt-namecol">' . $langs->trans('Ref') . '</div>';
+	for ($d = 0; $d < $g_days; $d++) {
+		$cts  = $g_start + $d * 86400;
+		$tcls = ($cts === $today_ts0) ? ' wp-gantt-daycol--today' : '';
+		print '<div class="wp-gantt-daycol' . $tcls . '">' . dol_print_date($cts, '%a %d/%m') . '</div>';
 	}
-	print "\n";
+	print '</div>';
 
-	// Draw the chart
-	print '  g.Draw(250 + (nbDays * dayW) + 20);' . "\n";
-	print "\n";
+	$nb_bars = 0;
+	foreach ($gantt_or_rows as $or) {
+		$os = strtotime($or->date_start);
+		$oe = strtotime($or->date_end);
+		if ($oe < $g_start || $os >= $g_end) {
+			continue; // OR outside the visible week
+		}
+		$nb_bars++;
 
-	// Custom tooltip + click-to-navigate on bars
-	if (!empty($tooltip_html_array)) {
-		print '  var wsTT = [' . "\n";
-		foreach ($tooltip_html_array as $i => $html) {
-			print '    ' . ($i > 0 ? ',' : '') . '\'' . dol_escape_js($html) . '\'' . "\n";
+		$startDay = (int) floor(($os - $g_start) / 86400);
+		$endDay   = (int) floor(($oe - $g_start) / 86400);
+		if ($startDay < 0) { $startDay = 0; }
+		if ($endDay > $g_days - 1) { $endDay = $g_days - 1; }
+		if ($endDay < $startDay) { $endDay = $startDay; }
+		$colStart = $startDay + 2; // +1 for the name column, grid is 1-indexed
+		$colEnd   = $endDay + 3;   // grid-column end is exclusive
+
+		$col    = preg_match('/^#?[0-9a-fA-F]{3,8}$/', (string) $or->status_color) ? ('#' . ltrim((string) $or->status_color, '#')) : '#888780';
+		$or_url = dol_buildpath('/workshop/operationorder/or_card.php', 1) . '?id=' . (int) $or->rowid;
+
+		$tip = $or->ref;
+		if (!empty($or->immatriculation)) { $tip .= ' — ' . $or->immatriculation; }
+		if (!empty($or->status_label))    { $tip .= ' [' . $or->status_label . ']'; }
+		if (!empty($gantt_or_jobs[(int) $or->rowid])) {
+			$tip .= ' : ' . implode(', ', $gantt_or_jobs[(int) $or->rowid]);
 		}
-		print '  ];' . "\n";
-		print '  var wsLinks = [' . "\n";
-		foreach ($tooltip_links_array as $i => $lnk) {
-			print '    ' . ($i > 0 ? ',' : '') . '\'' . dol_escape_js($lnk) . '\'' . "\n";
+
+		print '<div class="wp-gantt-row">';
+		print '<div class="wp-gantt-namecol">';
+		print '<a href="' . dol_escape_htmltag($or_url) . '">' . dol_escape_htmltag($or->ref) . '</a>';
+		if (!empty($or->immatriculation)) {
+			print '<span class="wp-gantt-immat">' . dol_escape_htmltag($or->immatriculation) . '</span>';
 		}
-		print '  ];' . "\n";
-		print "\n";
-		print '  var ttEl = document.createElement("div");' . "\n";
-		print '  ttEl.style.cssText = "display:none;position:fixed;z-index:99999;background:#fff;border:1px solid #999;border-radius:4px;padding:8px 10px;box-shadow:2px 2px 8px rgba(0,0,0,.25);max-width:360px;font-size:12px;line-height:1.6;";' . "\n";
-		print '  document.body.appendChild(ttEl);' . "\n";
-		print "\n";
-		// Helper: find bar index from a target element
-		print '  function wsGetBarIdx(t) {' . "\n";
-		print '    if (!t) return -1;' . "\n";
-		print '    if ((t.className || "").indexOf("wsorstatus-") === -1) {' . "\n";
-		print '      t = t.closest ? t.closest("[class*=wsorstatus-]") : null;' . "\n";
-		print '    }' . "\n";
-		print '    if (!t) return -1;' . "\n";
-		print '    var row = t.closest("tr");' . "\n";
-		print '    if (!row) return -1;' . "\n";
-		print '    var rows = row.parentElement.querySelectorAll("tr");' . "\n";
-		print '    var idx = -1;' . "\n";
-		print '    for (var i = 0; i < rows.length; i++) {' . "\n";
-		print '      if (rows[i].querySelector("[class*=wsorstatus-]")) {' . "\n";
-		print '        idx++;' . "\n";
-		print '        if (rows[i] === row) return idx;' . "\n";
-		print '      }' . "\n";
-		print '    }' . "\n";
-		print '    return -1;' . "\n";
-		print '  }' . "\n";
-		print "\n";
-		// Tooltip on hover
-		print '  ganttEl.addEventListener("mouseover", function(ev) {' . "\n";
-		print '    var idx = wsGetBarIdx(ev.target);' . "\n";
-		print '    if (idx >= 0 && idx < wsTT.length) {' . "\n";
-		print '      ttEl.innerHTML = wsTT[idx];' . "\n";
-		print '      ttEl.style.display = "block";' . "\n";
-		print '      ttEl.style.left = (ev.clientX + 14) + "px";' . "\n";
-		print '      ttEl.style.top = (ev.clientY - 10) + "px";' . "\n";
-		print '    }' . "\n";
-		print '  });' . "\n";
-		print '  ganttEl.addEventListener("mousemove", function(ev) {' . "\n";
-		print '    if (ttEl.style.display === "block") {' . "\n";
-		print '      ttEl.style.left = (ev.clientX + 14) + "px";' . "\n";
-		print '      ttEl.style.top = (ev.clientY - 10) + "px";' . "\n";
-		print '    }' . "\n";
-		print '  });' . "\n";
-		print '  ganttEl.addEventListener("mouseout", function(ev) {' . "\n";
-		print '    var to = ev.relatedTarget;' . "\n";
-		print '    if (!to || (!to.closest || !to.closest("[class*=wsorstatus-]"))) {' . "\n";
-		print '      ttEl.style.display = "none";' . "\n";
-		print '    }' . "\n";
-		print '  });' . "\n";
-		// Click on bar navigates to OR card
-		print '  ganttEl.addEventListener("click", function(ev) {' . "\n";
-		print '    var idx = wsGetBarIdx(ev.target);' . "\n";
-		print '    if (idx >= 0 && idx < wsLinks.length) {' . "\n";
-		print '      window.location.href = wsLinks[idx];' . "\n";
-		print '    }' . "\n";
-		print '  });' . "\n";
+		print '</div>';
+		// Background day cells (borders + today highlight)
+		for ($d = 0; $d < $g_days; $d++) {
+			$cts  = $g_start + $d * 86400;
+			$tcls = ($cts === $today_ts0) ? ' wp-gantt-cell--today' : '';
+			print '<div class="wp-gantt-cell' . $tcls . '"></div>';
+		}
+		// OR bar — overlaps the day cells via explicit grid placement
+		print '<a class="wp-gantt-bar" href="' . dol_escape_htmltag($or_url) . '"';
+		print ' style="grid-column:' . $colStart . ' / ' . $colEnd . ';background:' . $col . ';"';
+		print ' title="' . dol_escape_htmltag($tip) . '">';
+		print dol_escape_htmltag($or->ref);
+		print '</a>';
+		print '</div>';
 	}
 
-	print '});' . "\n";
-	print '</script>' . "\n";
+	if (!$nb_bars) {
+		print '<div class="wp-gantt-row"><div class="wp-gantt-empty">' . $langs->trans('WorkshopGanttNoOR') . '</div></div>';
+	}
+
+	print '</div>'; // .workshop-gantt
 
 	// -----------------------------------------------------------------------
 	// "Planifier" feature – modals to schedule OR (status_create -> status_planned)
@@ -972,50 +1029,6 @@ if ($mode === 'journee') {
 		print '</script>' . "\n";
 	}
 
-} else {
-	// -----------------------------------------------------------------------
-	// Mode Pointages – FullCalendar timeGridWeek
-	// -----------------------------------------------------------------------
-	$fc_locale = strtolower(substr($langs->defaultlang, 0, 2));
-	if ($fc_locale === 'en') {
-		$fc_locale = 'en-gb';
-	}
-
-	if (empty($planning_groups)) {
-		print '<p class="opacitymedium">' . $langs->trans('WorkshopNoGroupDefined') . '</p>';
-	}
-
-	print '<div id="workshop-calendar" style="margin-top:4px;"></div>' . "\n";
-
-	print '<script type="text/javascript">' . "\n";
-	print '/* global FullCalendar */' . "\n";
-	print 'document.addEventListener(\'DOMContentLoaded\', function () {' . "\n";
-	print '  var calendarEl = document.getElementById(\'workshop-calendar\');' . "\n";
-	print '  if (!calendarEl) { return; }' . "\n";
-	print "\n";
-	print '  var businessHours = ' . json_encode($business_hours, JSON_UNESCAPED_UNICODE) . ';' . "\n";
-	print "\n";
-	print '  var calendar = new FullCalendar.Calendar(calendarEl, {' . "\n";
-	print '    locale:           \'' . dol_escape_js($fc_locale) . '\',' . "\n";
-	print '    initialView:      \'timeGridWeek\',' . "\n";
-	print '    initialDate:      \'' . dol_escape_js($week_start) . '\',' . "\n";
-	print '    firstDay:         1,' . "\n";
-	print '    hiddenDays:       ' . json_encode($hidden_days) . ',' . "\n";
-	print '    businessHours:    ' . (empty($business_hours) ? 'false' : 'businessHours') . ',' . "\n";
-	print '    slotMinTime:      \'' . dol_escape_js($slot_min) . '\',' . "\n";
-	print '    slotMaxTime:      \'' . dol_escape_js($slot_max) . '\',' . "\n";
-	print '    allDaySlot:       false,' . "\n";
-	print '    headerToolbar:    false,' . "\n";
-	print '    height:           \'auto\',' . "\n";
-	print '    nowIndicator:     true,' . "\n";
-	print '    slotDuration:     \'00:15:00\',' . "\n";
-	print '    slotLabelInterval:\'01:00\',' . "\n";
-	print '    events:           []' . "\n";
-	print '  });' . "\n";
-	print "\n";
-	print '  calendar.render();' . "\n";
-	print '});' . "\n";
-	print '</script>' . "\n";
 }
 
 print dol_get_fiche_end();
