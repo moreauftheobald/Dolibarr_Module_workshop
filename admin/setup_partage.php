@@ -122,7 +122,6 @@ if ($action == 'save_vehicule_sharing') {
 				$shared = array_map('intval', $shared);
 				if ($dao->fetch($entityId) > 0) {
 					$dao->options['sharings'][$elementVehicule]    = $shared;
-					$dao->options['sharings']['workshop'] = $shared;
 					if ($dao->update($entityId, $user) < 1) {
 						setEventMessages($langs->trans('Error'), null, 'errors');
 					}
@@ -163,7 +162,6 @@ if ($action == 'save_or_sharing' && getDolGlobalInt('WORKSHOP_USE_OR')) {
 				$shared = array_map('intval', $shared);
 				if ($dao->fetch($entityId) > 0) {
 					$dao->options['sharings'][$elementOR]    = $shared;
-					$dao->options['sharings']['workshop'] = $shared;
 					if ($dao->update($entityId, $user) < 1) {
 						setEventMessages($langs->trans('Error'), null, 'errors');
 					}
@@ -174,6 +172,27 @@ if ($action == 'save_or_sharing' && getDolGlobalInt('WORKSHOP_USE_OR')) {
 
 	setEventMessages($langs->trans("SetupSaved"), null, 'mesgs');
 }
+
+if (in_array($action, ['save_vehicule_sharing','save_or_sharing'])) {
+
+	$dao = new DaoMulticompany($db);
+	$dao->getEntities();
+
+
+	if (!empty($shareData)) {
+		foreach ($shareData as $entityId => $shared) {
+			$shared = array_map('intval', $shared);
+			if ($dao->fetch($entityId) > 0) {
+				$shared = array_unique(array_merge($dao->options['sharings'][$elementOR], $dao->options['sharings'][$elementVehicule]));
+				$dao->options['sharings']['workshop'] = $shared;
+				if ($dao->update($entityId, $user) < 1) {
+					setEventMessages($langs->trans('Error'), null, 'errors');
+				}
+			}
+		}
+	}
+}
+
 
 
 // ---------------------------------------------------------------------------
@@ -220,7 +239,7 @@ if (!isModEnabled("multicompany") || empty(getDolGlobalString("MULTICOMPANY_SHAR
 	print '</tr>';
 	print '<tr class="oddeven">';
 	print '<td>'.$langs->trans("WorkshopActivateVehiculeSharing").'</td>';
-	print '<td class="center">'.ajax_constantonoff($constVehiculeSharingEnabled, array(), 0).'</td>';
+	print '<td class="center">'.ajax_constantonoff($constVehiculeSharingEnabled, array(), 0,0,0,1).'</td>';
 	print '</tr>';
 	print '</table>';
 
@@ -288,7 +307,7 @@ if (!isModEnabled("multicompany") || empty(getDolGlobalString("MULTICOMPANY_SHAR
 		print '</tr>';
 		print '<tr class="oddeven">';
 		print '<td>'.$langs->trans("WorkshopActivateORSharing").'</td>';
-		print '<td class="center">'.ajax_constantonoff($constORSharingEnabled, array(), 0).'</td>';
+		print '<td class="center">'.ajax_constantonoff($constORSharingEnabled, array(), 0,0,0,1).'</td>';
 		print '</tr>';
 		print '</table>';
 
