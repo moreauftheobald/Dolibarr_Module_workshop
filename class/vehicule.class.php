@@ -334,7 +334,7 @@ class Vehicule extends CommonObject
 			'type' => 'datetime',
 			'label' => 'DateCreation',
 			'enabled' => 1,
-			'visible' => 0,
+			'visible' => -2,
 			'notnull' => 0,
 			'position' => 500,
 		),
