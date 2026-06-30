@@ -169,7 +169,7 @@ class Vehicule extends CommonObject
 			'picto' => 'company',
 			'enabled' => 'isModEnabled("societe")',
 			'position' => 50,
-			'notnull' => -1,
+			'notnull' => 1,
 			'visible' => 1,
 			'index' => 1,
 			'css' => 'maxwidth500 widthcentpercentminusxx',
@@ -1215,7 +1215,6 @@ class Vehicule extends CommonObject
 					</div>';
 			}
 		}
-
 
 		$morehtmlref .= '</div>';
 
