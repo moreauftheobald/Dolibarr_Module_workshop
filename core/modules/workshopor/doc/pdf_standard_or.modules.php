@@ -24,7 +24,7 @@
 dol_include_once('/workshop/core/modules/workshop/modules_workshop.php');
 dol_include_once('/workshop/class/operationorder.class.php');
 dol_include_once('/workshop/class/operationorder_jobs.class.php');
-dol_include_once('/workshop/class/Vehicule.class.php');
+dol_include_once('//workshop/class/vehicule.class.php');
 dol_include_once('/workshop/class/vehiculetype.class.php');
 dol_include_once('/workshop/class/vehiculemark.class.php');
 dol_include_once('/workshop/class/vehiculecontracttype.class.php');

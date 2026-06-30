@@ -59,7 +59,7 @@ require_once DOL_DOCUMENT_ROOT.'/core/class/html.formactions.class.php';
 require_once DOL_DOCUMENT_ROOT.'/societe/class/societe.class.php';
 require_once DOL_DOCUMENT_ROOT.'/user/class/user.class.php';
 dol_include_once('/workshop/class/operationorder.class.php');
-dol_include_once('/workshop/class/Vehicule.class.php');
+dol_include_once('//workshop/class/vehicule.class.php');
 dol_include_once('/workshop/class/Conducteur.class.php');
 dol_include_once('/workshop/class/Tag.class.php');
 dol_include_once('/workshop/class/OperationorderTag.class.php');

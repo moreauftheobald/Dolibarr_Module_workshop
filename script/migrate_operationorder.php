@@ -89,7 +89,7 @@ dol_include_once('/workshop/class/operationorderdet.class.php');
 dol_include_once('/workshop/class/workshopoperationorderstatus.class.php');
 dol_include_once('/workshop/class/Conducteur.class.php');
 dol_include_once('/workshop/class/servicetype.class.php');
-dol_include_once('/workshop/class/Vehicule.class.php');
+dol_include_once('//workshop/class/vehicule.class.php');
 dol_include_once('/workshop/class/Tag.class.php');
 dol_include_once('/workshop/class/OperationorderTag.class.php');
 

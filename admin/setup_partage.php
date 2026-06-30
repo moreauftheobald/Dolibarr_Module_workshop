@@ -66,11 +66,10 @@ if (!$user->admin) {
 // (follows the same pattern as DoliFleet multicompany_sharing.php)
 // ---------------------------------------------------------------------------
 // Vehicles
-$elementVehicule    = 'workshop_vehicule';
-$elementVehiculeAlt = 'workshopvehicule';
+$elementVehicule    = 'vehicule';
+
 // Operation Orders
-$elementOR          = 'workshop_operationorder';
-$elementORAlt       = 'workshopoperationorder';
+$elementOR          = 'operationorder';
 
 // Constant names for the sharing enable toggles (stored globally, entity=0)
 $constVehiculeSharingEnabled = 'MULTICOMPANY_'.strtoupper($elementVehicule).'_SHARING_ENABLED';
@@ -82,31 +81,13 @@ $constORSharingEnabled       = 'MULTICOMPANY_'.strtoupper($elementOR).'_SHARING_
 // ---------------------------------------------------------------------------
 if (isModEnabled("multicompany") && !empty(getDolGlobalString("MULTICOMPANY_SHARINGS_ENABLED"))) {
 	$vehSharingVal = getDolGlobalString($constVehiculeSharingEnabled);
-	dolibarr_set_const($db, 'MULTICOMPANY_'.strtoupper($elementVehiculeAlt).'_SHARING_ENABLED', $vehSharingVal, 'chaine', 0, '', 0);
+	dolibarr_set_const($db, 'MULTICOMPANY_'.strtoupper($elementVehicule).'_SHARING_ENABLED', $vehSharingVal, 'chaine', 0, '', 0);
 
 	$orSharingVal = getDolGlobalString($constORSharingEnabled);
-	dolibarr_set_const($db, 'MULTICOMPANY_'.strtoupper($elementORAlt).'_SHARING_ENABLED', $orSharingVal, 'chaine', 0, '', 0);
+	dolibarr_set_const($db, 'MULTICOMPANY_'.strtoupper($elementOR).'_SHARING_ENABLED', $orSharingVal, 'chaine', 0, '', 0);
 
-	// Register elements in MULTICOMPANY_EXTERNAL_MODULES_SHARING
-	$externalmodules = array();
-	if (!empty(getDolGlobalString("MULTICOMPANY_EXTERNAL_MODULES_SHARING"))) {
-		$externalmodules = json_decode(getDolGlobalString("MULTICOMPANY_EXTERNAL_MODULES_SHARING"), true);
-	}
+	dolibarr_set_const($db, 'MULTICOMPANY_WORKSHOP_SHARING_ENABLED', (int)($vehSharingVal || $orSharingVal), 'chaine', 0, '', 0);
 
-	$changed = false;
-	if (!empty($vehSharingVal)) {
-		$externalmodules['workshop']['sharingmodulename'][$elementVehicule]    = 'workshop';
-		$externalmodules['workshop']['sharingmodulename'][$elementVehiculeAlt] = 'workshop';
-		$changed = true;
-	}
-	if (getDolGlobalInt('WORKSHOP_USE_OR') && !empty($orSharingVal)) {
-		$externalmodules['workshop']['sharingmodulename'][$elementOR]    = 'workshop';
-		$externalmodules['workshop']['sharingmodulename'][$elementORAlt] = 'workshop';
-		$changed = true;
-	}
-	if ($changed) {
-		dolibarr_set_const($db, 'MULTICOMPANY_EXTERNAL_MODULES_SHARING', json_encode($externalmodules), 'chaine', 0, '', 0);
-	}
 }
 
 // ---------------------------------------------------------------------------
@@ -122,14 +103,14 @@ if ($action == 'save_vehicule_sharing') {
 	if ($conf->entity == 1) {
 		foreach ($dao->entities as $entity) {
 			$entity->options['sharings'][$elementVehicule]    = array();
-			$entity->options['sharings'][$elementVehiculeAlt] = array();
+			$dao->options['sharings']['workshop'] = array();
 			$entity->update($entity->id, $user);
 		}
 	} else {
 		$dao->fetch($conf->entity);
 		if ($dao->id > 0) {
 			$dao->options['sharings'][$elementVehicule]    = array();
-			$dao->options['sharings'][$elementVehiculeAlt] = array();
+			$dao->options['sharings']['workshop'] = array();
 			$dao->update($dao->id, $user);
 		}
 	}
@@ -141,7 +122,7 @@ if ($action == 'save_vehicule_sharing') {
 				$shared = array_map('intval', $shared);
 				if ($dao->fetch($entityId) > 0) {
 					$dao->options['sharings'][$elementVehicule]    = $shared;
-					$dao->options['sharings'][$elementVehiculeAlt] = $shared;
+					$dao->options['sharings']['workshop'] = $shared;
 					if ($dao->update($entityId, $user) < 1) {
 						setEventMessages($langs->trans('Error'), null, 'errors');
 					}
@@ -163,14 +144,14 @@ if ($action == 'save_or_sharing' && getDolGlobalInt('WORKSHOP_USE_OR')) {
 	if ($conf->entity == 1) {
 		foreach ($dao->entities as $entity) {
 			$entity->options['sharings'][$elementOR]    = array();
-			$entity->options['sharings'][$elementORAlt] = array();
+			$dao->options['sharings']['workshop'] = array();
 			$entity->update($entity->id, $user);
 		}
 	} else {
 		$dao->fetch($conf->entity);
 		if ($dao->id > 0) {
 			$dao->options['sharings'][$elementOR]    = array();
-			$dao->options['sharings'][$elementORAlt] = array();
+			$dao->options['sharings']['workshop'] = array();
 			$dao->update($dao->id, $user);
 		}
 	}
@@ -182,7 +163,7 @@ if ($action == 'save_or_sharing' && getDolGlobalInt('WORKSHOP_USE_OR')) {
 				$shared = array_map('intval', $shared);
 				if ($dao->fetch($entityId) > 0) {
 					$dao->options['sharings'][$elementOR]    = $shared;
-					$dao->options['sharings'][$elementORAlt] = $shared;
+					$dao->options['sharings']['workshop'] = $shared;
 					if ($dao->update($entityId, $user) < 1) {
 						setEventMessages($langs->trans('Error'), null, 'errors');
 					}
@@ -193,6 +174,7 @@ if ($action == 'save_or_sharing' && getDolGlobalInt('WORKSHOP_USE_OR')) {
 
 	setEventMessages($langs->trans("SetupSaved"), null, 'mesgs');
 }
+
 
 // ---------------------------------------------------------------------------
 // Extra assets needed for the multiselect widget (from multicompany module)
@@ -410,7 +392,8 @@ function workshopMultiselectEntities($htmlname, $current, $option = '', $sharing
 			if (is_object($current) && $current->id != $entity->id && $entity->active == 1) {
 				$return .= '<option value="'.(int) $entity->id.'"';
 				if (
-					is_array($current->options['sharings'][$sharingElement])
+					isset($current->options['sharings'][$sharingElement])
+					&& is_array($current->options['sharings'][$sharingElement])
 					&& in_array($entity->id, $current->options['sharings'][$sharingElement])
 				) {
 					$return .= ' selected="selected"';

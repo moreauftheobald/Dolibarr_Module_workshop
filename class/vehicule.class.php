@@ -1170,4 +1170,8 @@ class Vehicule extends CommonObject
 
 		return $out;
 	}
+
+//	public function getBanner($linkback='',$morehtmlref='') {
+//		return dol_banner_tab($this, 'vin', $linkback, 1, 'vin', 'vin', $morehtmlref, '', 0, '', '');
+//	}
 }

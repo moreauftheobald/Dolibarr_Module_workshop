@@ -813,6 +813,31 @@ class modWorkshop extends DolibarrModules
 			"INSERT INTO ".MAIN_DB_PREFIX."document_model (nom, type, entity) VALUES('standard_or', 'workshop', ".((int) $conf->entity).")",
 		));
 
+		$params = array(
+			'workshop' => array(
+				'sharingelements' => array(
+					'workshop' => array(
+						'type' => 'object'),
+					'vehicule' => array(
+						'type' => 'object'),
+					'operationorder' => array(
+						'type' => 'object')),
+				'sharingmodulename' => array(
+					'vehicule' => 'workshop',
+					'operationorder' => 'workshop',
+				),
+				'addzero' => array(
+					'workshop',
+					'vehicule',
+					'operationorder'
+				)
+			)
+		);
+
+		$externalmodule = json_decode(getDolGlobalString('MULTICOMPANY_EXTERNAL_MODULES_SHARING'), true);
+		$externalmodule = array_merge((empty($externalmodule) ? array(): $externalmodule), $params);
+		dolibarr_set_const($this->db, "MULTICOMPANY_EXTERNAL_MODULES_SHARING", json_encode($externalmodule), 'chaine', 0, '', 0);
+
 		return $this->_init($sql, $options);
 	}
 
@@ -828,7 +853,10 @@ class modWorkshop extends DolibarrModules
 	{
 		$sql = array(
 			"DELETE FROM ".MAIN_DB_PREFIX."document_model WHERE nom = 'standard_or' AND type = 'workshop'",
+			"DELETE FROM ".MAIN_DB_PREFIX."const WHERE name IN ('MULTICOMPANY_EXTERNAL_MODULES_SHARING')",
 		);
+
+
 		return $this->_remove($sql, $options);
 	}
 }

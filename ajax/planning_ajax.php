@@ -718,7 +718,7 @@ if ($action === 'create_or_quick') {
 
 	dol_include_once('/workshop/class/operationorder.class.php');
 	dol_include_once('/workshop/class/operationorder_jobs.class.php');
-	dol_include_once('/workshop/class/Vehicule.class.php');
+	dol_include_once('//workshop/class/vehicule.class.php');
 
 	$fk_soc      = GETPOSTINT('fk_soc');
 	$fk_vehicule = GETPOSTINT('fk_vehicule');
