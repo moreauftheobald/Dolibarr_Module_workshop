@@ -701,3 +701,5 @@ RefClient=Réf. Client
 QtyToDebit=Qté à débitée
 QtyDebited=Qté débitée
 QtyPlanned=Qté. plannifiée
+
+ServiceType=Type de Job

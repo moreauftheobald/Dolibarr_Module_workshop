@@ -258,6 +258,7 @@ if ($action === 'get_planning_day') {
 	$sqlu .= ' INNER JOIN '.$db->prefix().'workshop_operationorder_status as s ON s.rowid = o.status AND s.display_on_planning = 1';
 	$sqlu .= ' WHERE (j.fk_user_assign IS NULL OR j.fk_user_assign = 0)';
 	$sqlu .= ' AND o.entity IN ('.getEntity('workshop').')';
+	$sqlu .= ' AND s.rowid = '.getDolGlobalInt('WORKSHOP_OR_STATUS_ON_PLANNED');
 	$sqlu .= ' ORDER BY o.ref ASC, j.rang ASC';
 	$sqlu .= $db->plimit(100);
 	$resu = $db->query($sqlu);

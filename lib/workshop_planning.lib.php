@@ -50,11 +50,7 @@ function workshop_get_mechanics($db, $entity = null)
 	$sql .= ' INNER JOIN '.$db->prefix().'user as u ON u.rowid = gu.fk_user';
 	$sql .= ' WHERE gu.fk_usergroup = '.((int) $groupid);
 	$sql .= ' AND u.statut = 1';
-	if (getDolGlobalInt('MULTICOMPANY_TRANSVERSE_MODE')) {
-		$sql .= ' AND gu.entity IN (0, ' . (int)$entity . ')';
-	} else {
-		$sql .= ' AND gu.entity IN (0, ' . (int)$entity . ')';
-	}
+	$sql .= ' AND gu.entity IN (0, ' . (int)$entity . ')';
 	$sql .= ' ORDER BY u.lastname ASC, u.firstname ASC';
 
 	$resql = $db->query($sql);
