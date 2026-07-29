@@ -50,7 +50,11 @@ function workshop_get_mechanics($db, $entity = null)
 	$sql .= ' INNER JOIN '.$db->prefix().'user as u ON u.rowid = gu.fk_user';
 	$sql .= ' WHERE gu.fk_usergroup = '.((int) $groupid);
 	$sql .= ' AND u.statut = 1';
-	$sql .= ' AND u.entity IN (0, '.((int) $entity).')';
+	if (getDolGlobalInt('MULTICOMPANY_TRANSVERSE_MODE')) {
+		$sql .= ' AND gu.entity IN (0, ' . (int)$entity . ')';
+	} else {
+		$sql .= ' AND gu.entity IN (0, ' . (int)$entity . ')';
+	}
 	$sql .= ' ORDER BY u.lastname ASC, u.firstname ASC';
 
 	$resql = $db->query($sql);
@@ -125,4 +129,3 @@ function workshop_get_day_slot_range($db, $date_ts, $entity = null)
 
 	return array('min' => $min, 'max' => $max);
 }
-

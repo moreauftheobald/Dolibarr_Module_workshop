@@ -71,6 +71,7 @@ require_once 'lib/workshop_planning.lib.php';
 dol_include_once('/workshop/class/workshopplanning.class.php');
 dol_include_once('/workshop/class/workshopplanning.class.php');
 dol_include_once('/workshop/class/workshopoperationorderstatus.class.php');
+dol_include_once('/workshop/class/workshopimpro.class.php');
 
 $langs->loadLangs(array('workshop@workshop', 'users'));
 
