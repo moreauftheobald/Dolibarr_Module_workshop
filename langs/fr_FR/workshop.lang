@@ -698,3 +698,6 @@ WorkshopGanttNoOR=Aucun ordre de réparation planifié sur cette semaine.
 
 ORListHisto=Historique Opé.
 RefClient=Réf. Client
+QtyToDebit=Qté à débitée
+QtyDebited=Qté débitée
+QtyPlanned=Qté. plannifiée
