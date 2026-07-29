@@ -107,15 +107,15 @@ if ($id > 0) {
 		dol_print_error($db, $object->error);
 		exit;
 	}
-	if (!$object->canRead($user)) {
-		accessforbidden();
-	}
 	// Pour un OR existant : droit d'écriture dépendant du statut courant
 	$permissiontoadd = $object->canWrite($user);
+	$permissiontoread = $permissiontoadd || $object->canRead($user);
+	if (!$permissiontoread) {
+		accessforbidden();
+	}
 }
 
 // Fonctions helpers orCardState* → voir lib/workshop_or_card.lib.php
-
 
 /*
  * Actions
@@ -1290,7 +1290,7 @@ if ($id > 0) {
 				continue;
 			}
 
-			$canChange     = $targetStatus->userCan($user, 'changeToThisStatus');
+			$canChange     = $targetStatus->userCan($user, 'changeToThisStatus') && $permissiontoadd;
 			$needsPlanning = !empty($targetStatus->require_planned_date) && empty($object->date_planned);
 			$isActive      = $canChange && !$needsPlanning;
 
@@ -1327,11 +1327,6 @@ if ($id > 0) {
 			print '</a>'."\n";
 		}
 	}
-
-	print '</div>'."\n";
-
-	// ── Rangée 2 : boutons d'action métier ────────────────────────────────
-	print '<div class="tabsAction">'."\n";
 
 	// Ajouter un JOB
 	$addJobUrl = $_SERVER['PHP_SELF'].'?id='.$object->id.'&action=add_job&token='.newToken();
@@ -1395,7 +1390,7 @@ if ($id > 0) {
 		print '</a>'."\n";
 	}
 
-	print '</div>'."\n"; // close tabsAction
+	print '</div>'."\n";
 
 
 	// ── Dialog : Ajouter un Job ───────────────────────────────────────────

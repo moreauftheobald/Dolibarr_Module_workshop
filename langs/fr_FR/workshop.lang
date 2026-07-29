@@ -468,7 +468,7 @@ WorkshopTargetableStatus=Statuts accessibles depuis ce statut
 WorkshopNoOtherStatusAvailable=Aucun autre statut disponible
 WorkshopCouldRead=Groupes pouvant lire les OR à ce statut
 WorkshopCouldReadHelp=Sélectionnez les groupes d'utilisateurs autorisés à consulter les ordres de réparation ayant ce statut, pour l'entité courante.
-WorkshopCouldEdit=Groupes pouvant modifier les OR à ce statut
+WorkshopCouldEdit=Groupes pouvant lire et modifier les OR à ce statut
 WorkshopCouldEditHelp=Sélectionnez les groupes d'utilisateurs autorisés à modifier les ordres de réparation ayant ce statut, pour l'entité courante.
 WorkshopCouldChangeToThisStatus=Groupes pouvant passer les OR à ce statut
 WorkshopCouldChangeToThisStatusHelp=Sélectionnez les groupes d'utilisateurs autorisés à faire passer un ordre de réparation à ce statut, pour l'entité courante.
@@ -695,3 +695,6 @@ WorkshopCreateAndOpenOR=Créer et ouvrir l'OR
 Vehicle=Véhicule
 
 WorkshopGanttNoOR=Aucun ordre de réparation planifié sur cette semaine.
+
+ORListHisto=Historique Opé.
+RefClient=Réf. Client

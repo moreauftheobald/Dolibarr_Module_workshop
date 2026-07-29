@@ -560,15 +560,8 @@ class WorkshopOperationOrderStatus extends CommonObject
 			return true;
 		}
 
-		// Si aucun groupe n'est configuré pour cette action : fallback sur les droits Dolibarr de base
-		if (empty($this->TGroupCan[$action])) {
-			if ($action === 'read') {
-				return (bool) $user->hasRight('workshop', 'operationorders', 'read');
-			}
-			return (bool) $user->hasRight('workshop', 'operationorders', 'write');
-		}
-
 		$TUserGroups = $this->getUserGroups($user);
+
 		foreach ($TUserGroups as $fk_group => $group) {
 			if (in_array($fk_group, $this->TGroupCan[$action])) {
 				return true;
@@ -599,12 +592,17 @@ class WorkshopOperationOrderStatus extends CommonObject
 	 */
 	protected function getUserGroups(User $user)
 	{
+		global $conf;
+
 		$TGroups = array();
 
 		$sql  = 'SELECT fk_usergroup FROM ' . $this->db->prefix() . 'usergroup_user';
 		$sql .= ' WHERE fk_user = ' . (int) $user->id;
-		$sql .= ' AND entity IN (0, ' . (int) $user->entity . ')';
-
+		if (getDolGlobalInt('MULTICOMPANY_TRANSVERSE_MODE')) {
+			$sql .= ' AND entity IN (0, ' . (int)$conf->entity . ')';
+		} else {
+			$sql .= ' AND entity IN (0, ' . (int)$user->entity . ')';
+		}
 		$resql = $this->db->query($sql);
 		if ($resql) {
 			while ($row = $this->db->fetch_object($resql)) {

@@ -217,6 +217,7 @@ $modulepart = 'workshop';
 $param = '&id='.$object->id;
 //$relativepathwithnofile='vehicule/' . dol_sanitizeFileName($object->id).'/';
 $relativepathwithnofile = 'vehicule/'.dol_sanitizeFileName($object->ref).'/';
+$permtoedit=1;
 
 include DOL_DOCUMENT_ROOT.'/core/tpl/document_actions_post_headers.tpl.php';
 

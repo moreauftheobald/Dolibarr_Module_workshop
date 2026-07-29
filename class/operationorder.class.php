@@ -704,6 +704,7 @@ class Operationorder extends CommonObject
 	public function canRead(User $user)
 	{
 		return $this->userCan($user, 'read');
+		//TODO permissionread
 	}
 
 	/**
