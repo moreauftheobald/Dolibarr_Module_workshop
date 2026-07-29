@@ -109,7 +109,7 @@ if ($id > 0) {
 	}
 	// Pour un OR existant : droit d'écriture dépendant du statut courant
 	$permissiontoadd = $object->canWrite($user);
-	$permissiontoread = $permissiontoadd || $object->canRead($user);
+	$permissiontoread = $object->canRead($user);
 	if (!$permissiontoread) {
 		accessforbidden();
 	}

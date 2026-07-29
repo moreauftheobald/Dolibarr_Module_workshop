@@ -563,7 +563,7 @@ class WorkshopOperationOrderStatus extends CommonObject
 		$TUserGroups = $this->getUserGroups($user);
 
 		foreach ($TUserGroups as $fk_group => $group) {
-			if (in_array($fk_group, $this->TGroupCan[$action])) {
+			if (isset ($this->TGroupCan[$action]) && in_array($fk_group, $this->TGroupCan[$action])) {
 				return true;
 			}
 		}

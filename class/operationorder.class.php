@@ -563,65 +563,69 @@ class Operationorder extends CommonObject
 	 */
 	public function getNomUrl($withpicto = 0, $option = '', $notooltip = 0, $morecss = '', $save_lastsearch_value = -1)
 	{
-		global $conf, $langs, $hookmanager;
+		global $conf, $langs, $user;
 
 		if (!empty($conf->dol_no_mouse_hover)) {
 			$notooltip = 1;
 		}
 
 		$result = '';
-		$params = array(
-			'id'    => $this->id,
-			'objecttype' => $this->element,
-			'option' => $option,
-		);
-		$classfortooltip = 'classfortooltip';
-		$dataparams = '';
-		if (getDolGlobalInt('MAIN_ENABLE_AJAX_TOOLTIP')) {
-			$classfortooltip = 'classforajaxtooltip';
-			$dataparams = ' data-params="'.dol_escape_htmltag(json_encode($params)).'"';
-			$label = '';
-		} else {
-			$label = implode($this->getTooltipContentArray($params));
-		}
-
-		$url =dol_buildpath('/workshop/operationorder/or_card.php',1) . '?id='.$this->id;
-
-		if ($option != 'nolink') {
-			$linkclose = '';
-			if (empty($notooltip)) {
-				if (!empty($conf->global->MAIN_OPTIMIZEFORTEXTBROWSER)) {
-					$label = $langs->trans("ShowOperationorder");
-					$linkclose = ' alt="'.dol_escape_htmltag($label, 1).'"';
-				}
-				$linkclose .= ' title="'.dol_escape_htmltag($label, 1).'"';
-				$linkclose .= ' class="'.$classfortooltip.($morecss ? ' '.$morecss : '').'"';
-				$linkclose .= $dataparams;
+		if ($this->canRead($user)) {
+			$params = array(
+				'id' => $this->id,
+				'objecttype' => $this->element,
+				'option' => $option,
+			);
+			$classfortooltip = 'classfortooltip';
+			$dataparams = '';
+			if (getDolGlobalInt('MAIN_ENABLE_AJAX_TOOLTIP')) {
+				$classfortooltip = 'classforajaxtooltip';
+				$dataparams = ' data-params="' . dol_escape_htmltag(json_encode($params)) . '"';
+				$label = '';
 			} else {
-				$linkclose = ($morecss ? ' class="'.$morecss.'"' : '');
+				$label = implode($this->getTooltipContentArray($params));
 			}
 
-			if ($save_lastsearch_value == -1 && preg_match('/list\.php/', $_SERVER['PHP_SELF'])) {
-				$save_lastsearch_value = 1;
-			}
-			if ($save_lastsearch_value == 1) {
-				$url .= '&save_lastsearch_values=1';
-			}
+			$url = dol_buildpath('/workshop/operationorder/or_card.php', 1) . '?id=' . $this->id;
 
-			$linkstart  = '<a href="'.$url.'"';
-			$linkstart .= $linkclose.'>';
-			$linkend     = '</a>';
+			if ($option != 'nolink') {
+				$linkclose = '';
+				if (empty($notooltip)) {
+					if (!empty($conf->global->MAIN_OPTIMIZEFORTEXTBROWSER)) {
+						$label = $langs->trans("ShowOperationorder");
+						$linkclose = ' alt="' . dol_escape_htmltag($label, 1) . '"';
+					}
+					$linkclose .= ' title="' . dol_escape_htmltag($label, 1) . '"';
+					$linkclose .= ' class="' . $classfortooltip . ($morecss ? ' ' . $morecss : '') . '"';
+					$linkclose .= $dataparams;
+				} else {
+					$linkclose = ($morecss ? ' class="' . $morecss . '"' : '');
+				}
 
-			$result .= $linkstart;
-			if ($withpicto) {
-				$result .= img_object(($notooltip ? '' : $label), ($this->picto ? $this->picto : 'generic'), ($notooltip ? (($withpicto != 2) ? 'class="paddingright"' : '') : $dataparams.' class="'.(($withpicto != 2) ? 'paddingright ' : '').$classfortooltip.'"'), 0, 0, $notooltip ? 0 : 1);
-			}
-			if ($withpicto != 2) {
+				if ($save_lastsearch_value == -1 && preg_match('/list\.php/', $_SERVER['PHP_SELF'])) {
+					$save_lastsearch_value = 1;
+				}
+				if ($save_lastsearch_value == 1) {
+					$url .= '&save_lastsearch_values=1';
+				}
+
+				$linkstart = '<a href="' . $url . '"';
+				$linkstart .= $linkclose . '>';
+				$linkend = '</a>';
+
+				$result .= $linkstart;
+				if ($withpicto) {
+					$result .= img_object(($notooltip ? '' : $label), ($this->picto ? $this->picto : 'generic'), ($notooltip ? (($withpicto != 2) ? 'class="paddingright"' : '') : $dataparams . ' class="' . (($withpicto != 2) ? 'paddingright ' : '') . $classfortooltip . '"'), 0, 0, $notooltip ? 0 : 1);
+				}
+				if ($withpicto != 2) {
+					$result .= $this->ref;
+				}
+				$result .= $linkend;
+			} else {
 				$result .= $this->ref;
 			}
-			$result .= $linkend;
-		} else {
-			$result .= $this->ref;
+		}else {
+			$result = $this->ref;
 		}
 
 		return $result;
@@ -703,8 +707,7 @@ class Operationorder extends CommonObject
 	 */
 	public function canRead(User $user)
 	{
-		return $this->userCan($user, 'read');
-		//TODO permissionread
+		return $this->canWrite($user) || $this->userCan($user, 'read');
 	}
 
 	/**
