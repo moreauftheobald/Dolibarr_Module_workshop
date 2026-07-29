@@ -884,92 +884,11 @@ if ($id > 0) {
 
 	// ── Construction du morehtmlref (lignes sous le numéro OR dans le bandeau)
 
-	// Tags de l'OR — pastilles colorées juste sous le numéro
-	$orTagObj  = new OperationorderTag($db);
-	$orTagList = $orTagObj->getTagsForOR($object->id);
-	$morehtmlref = '';
-	if (is_array($orTagList) && !empty($orTagList)) {
-		$morehtmlref .= '<div style="margin-bottom:6px;">';
-		foreach ($orTagList as $tag) {
-			$morehtmlref .= $tag->getNomUrl().' ';
-		}
-		$morehtmlref .= '</div>';
-	}
 
-	$morehtmlref .= '<div class="refidno">';
 
-	// Société (modifiable en ligne)
-	$morehtmlref .= $langs->trans('ThirdParty').': ';
-	if ($action == 'editfk_soc' && $permissiontoadd) {
-		$morehtmlref .= '<form method="POST" action="'.$_SERVER['PHP_SELF'].'" style="display:inline-block">';
-		$morehtmlref .= '<input type="hidden" name="token" value="'.newToken().'">';
-		$morehtmlref .= '<input type="hidden" name="action" value="save_fk_soc">';
-		$morehtmlref .= '<input type="hidden" name="id" value="'.$object->id.'">';
-		$morehtmlref .= $object->showInputField($object->fields['fk_soc'], 'fk_soc', $object->fk_soc, '', '', '', 'minwidth200');
-		$morehtmlref .= ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
-		$morehtmlref .= ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
-		$morehtmlref .= '</form>';
-	} else {
-		if ($object->fk_soc > 0) {
-			$soc = new Societe($db);
-			$soc->fetch($object->fk_soc);
-			$morehtmlref .= $soc->getNomUrl(1);
-		} else {
-			$morehtmlref .= '<span class="opacitymedium">'.$langs->trans('None').'</span>';
-		}
-		if ($permissiontoadd) {
-			$morehtmlref .= ' <a class="editfielda" href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'&action=editfk_soc">'.img_edit().'</a>';
-		}
-	}
 
-	$morehtmlref .= '<br>';
 
-	// Référence client (modifiable en ligne)
-	$morehtmlref .= $langs->trans('RefClient').': ';
-	if ($action == 'editref_client' && $permissiontoadd) {
-		$morehtmlref .= '<form method="POST" action="'.$_SERVER['PHP_SELF'].'" style="display:inline-block">';
-		$morehtmlref .= '<input type="hidden" name="token" value="'.newToken().'">';
-		$morehtmlref .= '<input type="hidden" name="action" value="save_ref_client">';
-		$morehtmlref .= '<input type="hidden" name="id" value="'.$object->id.'">';
-		$morehtmlref .= '<input type="text" name="ref_client" class="minwidth200" value="'.dol_escape_htmltag((string) $object->ref_client).'">';
-		$morehtmlref .= ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
-		$morehtmlref .= ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
-		$morehtmlref .= '</form>';
-	} else {
-		$morehtmlref .= (!empty($object->ref_client) ? dol_escape_htmltag($object->ref_client) : '<span class="opacitymedium">'.$langs->trans('None').'</span>');
-		if ($permissiontoadd) {
-			$morehtmlref .= ' <a class="editfielda" href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'&action=editref_client">'.img_edit().'</a>';
-		}
-	}
-
-	$morehtmlref .= '<br>';
-
-	// Véhicule (modifiable en ligne)
-	$morehtmlref .= $langs->trans('Vehicule').': ';
-	if ($action == 'editfk_vehicule' && $permissiontoadd) {
-		$morehtmlref .= '<form method="POST" action="'.$_SERVER['PHP_SELF'].'" style="display:inline-block">';
-		$morehtmlref .= '<input type="hidden" name="token" value="'.newToken().'">';
-		$morehtmlref .= '<input type="hidden" name="action" value="save_fk_vehicule">';
-		$morehtmlref .= '<input type="hidden" name="id" value="'.$object->id.'">';
-		$morehtmlref .= $object->showInputField($object->fields['fk_vehicule'], 'fk_vehicule', $object->fk_vehicule, '', '', '', 'minwidth200');
-		$morehtmlref .= ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
-		$morehtmlref .= ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
-		$morehtmlref .= '</form>';
-	} else {
-		if ($object->fk_vehicule > 0) {
-			$vehicule = new Vehicule($db);
-			if ($vehicule->fetch($object->fk_vehicule) > 0) {
-				$morehtmlref .= $vehicule->getNomUrl(1);
-			}
-		} else {
-			$morehtmlref .= '<span class="opacitymedium">'.$langs->trans('None').'</span>';
-		}
-		if ($permissiontoadd) {
-			$morehtmlref .= ' <a class="editfielda" href="'.$_SERVER['PHP_SELF'].'?id='.$object->id.'&action=editfk_vehicule">'.img_edit().'</a>';
-		}
-	}
-
-	$morehtmlref .= '</div>';
+	$morehtmlref = $object->getBanner($action, $permissiontoadd);
 
 	// ── Bandeau ──────────────────────────────────────────────────────────────
 	dol_banner_tab($object, 'ref', $linkback, 1, 'ref', 'ref', $morehtmlref, '', $object->getLibStatut(4));

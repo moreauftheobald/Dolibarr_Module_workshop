@@ -782,6 +782,115 @@ class Operationorder extends CommonObject
 		return 1;
 	}
 
+	public function getBanner($action,$permissiontoadd) {
+		global $conf, $langs;
+
+
+		// Tags de l'OR — pastilles colorées juste sous le numéro
+		$orTagObj  = new OperationorderTag($this->db);
+		$orTagList = $orTagObj->getTagsForOR($this->id);
+		if (is_array($orTagList) && !empty($orTagList)) {
+			$morehtmlref .= '<div style="margin-bottom:6px;">';
+			foreach ($orTagList as $tag) {
+				$morehtmlref .= $tag->getNomUrl().' ';
+			}
+			$morehtmlref .= '</div>';
+		}
+
+		$morehtmlref = '<div class="refidno">';
+
+		// Société (modifiable en ligne)
+		$morehtmlref .= $langs->trans('ThirdParty').': ';
+		if ($action == 'editfk_soc' && $permissiontoadd) {
+			$morehtmlref .= '<form method="POST" action="'.$_SERVER['PHP_SELF'].'" style="display:inline-block">';
+			$morehtmlref .= '<input type="hidden" name="token" value="'.newToken().'">';
+			$morehtmlref .= '<input type="hidden" name="action" value="save_fk_soc">';
+			$morehtmlref .= '<input type="hidden" name="id" value="'.$this->id.'">';
+			$morehtmlref .= $this->showInputField($this->fields['fk_soc'], 'fk_soc', $this->fk_soc, '', '', '', 'minwidth200');
+			$morehtmlref .= ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
+			$morehtmlref .= ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$this->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
+			$morehtmlref .= '</form>';
+		} else {
+			if ($this->fk_soc > 0) {
+				$soc = new Societe($this->db);
+				$soc->fetch($this->fk_soc);
+				$morehtmlref .= $soc->getNomUrl(1);
+			} else {
+				$morehtmlref .= '<span class="opacitymedium">'.$langs->trans('None').'</span>';
+			}
+			if ($permissiontoadd) {
+				$morehtmlref .= ' <a class="editfielda" href="'.$_SERVER['PHP_SELF'].'?id='.$this->id.'&action=editfk_soc">'.img_edit().'</a>';
+			}
+		}
+
+		$morehtmlref .= '<br>';
+
+		// Référence client (modifiable en ligne)
+		$morehtmlref .= $langs->trans('RefClient').': ';
+		if ($action == 'editref_client' && $permissiontoadd) {
+			$morehtmlref .= '<form method="POST" action="'.$_SERVER['PHP_SELF'].'" style="display:inline-block">';
+			$morehtmlref .= '<input type="hidden" name="token" value="'.newToken().'">';
+			$morehtmlref .= '<input type="hidden" name="action" value="save_ref_client">';
+			$morehtmlref .= '<input type="hidden" name="id" value="'.$this->id.'">';
+			$morehtmlref .= '<input type="text" name="ref_client" class="minwidth200" value="'.dol_escape_htmltag((string) $this->ref_client).'">';
+			$morehtmlref .= ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
+			$morehtmlref .= ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$this->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
+			$morehtmlref .= '</form>';
+		} else {
+			$morehtmlref .= (!empty($this->ref_client) ? dol_escape_htmltag($this->ref_client) : '<span class="opacitymedium">'.$langs->trans('None').'</span>');
+			if ($permissiontoadd) {
+				$morehtmlref .= ' <a class="editfielda" href="'.$_SERVER['PHP_SELF'].'?id='.$this->id.'&action=editref_client">'.img_edit().'</a>';
+			}
+		}
+
+		$morehtmlref .= '<br>';
+
+		// Véhicule (modifiable en ligne)
+		$morehtmlref .= $langs->trans('Vehicule').': ';
+		if ($action == 'editfk_vehicule' && $permissiontoadd) {
+			$morehtmlref .= '<form method="POST" action="'.$_SERVER['PHP_SELF'].'" style="display:inline-block">';
+			$morehtmlref .= '<input type="hidden" name="token" value="'.newToken().'">';
+			$morehtmlref .= '<input type="hidden" name="action" value="save_fk_vehicule">';
+			$morehtmlref .= '<input type="hidden" name="id" value="'.$this->id.'">';
+			$morehtmlref .= $this->showInputField($this->fields['fk_vehicule'], 'fk_vehicule', $this->fk_vehicule, '', '', '', 'minwidth200');
+			$morehtmlref .= ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
+			$morehtmlref .= ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$this->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
+			$morehtmlref .= '</form>';
+		} else {
+			if ($this->fk_vehicule > 0) {
+				$vehicule = new Vehicule($this->db);
+				if ($vehicule->fetch($this->fk_vehicule) > 0) {
+					$morehtmlref .= $vehicule->getNomUrl(1);
+				}
+			} else {
+				$morehtmlref .= '<span class="opacitymedium">'.$langs->trans('None').'</span>';
+			}
+			if ($permissiontoadd) {
+				$morehtmlref .= ' <a class="editfielda" href="'.$_SERVER['PHP_SELF'].'?id='.$this->id.'&action=editfk_vehicule">'.img_edit().'</a>';
+			}
+		}
+
+
+
+		if (isModEnabled('multicompany')) {
+			dol_include_once('/multicompany/class/actions_multicompany.class.php');
+			$otherentity = new ActionsMulticompany($this->db);
+			$otherentity->getInfo($this->entity);
+
+			if (!empty($otherentity->label)) {
+				$morehtmlref .= '<br>
+					<div class="refidno multicompany-entity-card-container">
+						<span class="fa fa-globe"></span>
+						<span class="multiselect-selected-title-text">' . $otherentity->label . '</span>
+					</div>';
+			}
+		}
+
+		$morehtmlref .= '</div>';
+
+		return $morehtmlref;
+	}
+
 	/**
 	 * Return label of the current status badge
 	 *
