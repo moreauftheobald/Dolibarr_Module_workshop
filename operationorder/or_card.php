@@ -883,11 +883,6 @@ if ($id > 0) {
 	$linkback = '<a href="'.dol_buildpath('/workshop/operationorder/or_list.php', 1).'?restore_lastsearch_values=1">'.$langs->trans('BackToList').'</a>';
 
 	// ── Construction du morehtmlref (lignes sous le numéro OR dans le bandeau)
-
-
-
-
-
 	$morehtmlref = $object->getBanner($action, $permissiontoadd);
 
 	// ── Bandeau ──────────────────────────────────────────────────────────────

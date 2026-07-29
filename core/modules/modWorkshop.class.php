@@ -522,7 +522,7 @@ class modWorkshop extends DolibarrModules
 			'langs'=>'workshop@workshop',
 			'position'=>1000+$r,
 			'enabled'=>'isModEnabled("workshop") && getDolGlobalInt("WORKSHOP_USE_OR")',
-			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
+			'perms'=>'$user->hasRight("workshop", "operationorders", "readext")',
 			'target'=>'',
 			'user'=>2,
 			'object'=>'OperationOrder'
@@ -538,7 +538,7 @@ class modWorkshop extends DolibarrModules
 			'langs'=>'workshop@workshop',
 			'position'=>1000+$r,
 			'enabled'=>'isModEnabled("workshop") && getDolGlobalInt("WORKSHOP_USE_OR")',
-			'perms'=>'$user->hasRight("workshop", "vehicule", "write")',
+			'perms'=>'$user->hasRight("workshop", "operationorders", "readext")',
 			'target'=>'',
 			'user'=>2,
 			'object'=>'OperationOrder'
@@ -555,13 +555,12 @@ class modWorkshop extends DolibarrModules
 			'langs'=>'workshop@workshop',
 			'position'=>1000+$r,
 			'enabled'=>'isModEnabled("workshop") && getDolGlobalInt("WORKSHOP_USE_OR")',
-			'perms'=>'$user->hasRight("workshop", "status", "read")',
+			'perms'=>'$user->hasRight("workshop", "status", "read") && $user->hasRight("workshop", "operationorders", "readext")',
 			'target'=>'',
 			'user'=>2,
 		);
 
 		// Tags OR : gérés via le formulaire "Paramètres OR" (workshop_param_unified.php?context=atelier)
-
 		$this->menu[$r++]=array(
 			'fk_menu'=>'fk_mainmenu=workshop,fk_leftmenu=workshop_param',
 			'type'=>'left',
@@ -573,7 +572,7 @@ class modWorkshop extends DolibarrModules
 			'langs'=>'workshop@workshop',
 			'position'=>1000+$r,
 			'enabled'=>'isModEnabled("workshop") && getDolGlobalInt("WORKSHOP_USE_OR")',
-			'perms'=>'$user->hasRight("workshop", "workshopplanning", "read")',
+			'perms'=>'$user->hasRight("workshop", "workshopplanning", "read") && $user->hasRight("workshop", "operationorders", "readext")',
 			'target'=>'',
 			'user'=>2,
 		);
@@ -590,7 +589,7 @@ class modWorkshop extends DolibarrModules
 			'langs'    => 'workshop@workshop',
 			'position' => 1000 + $r,
 			'enabled'  => 'isModEnabled("workshop") && getDolGlobalInt("WORKSHOP_USE_OR")',
-			'perms'    => '$user->hasRight("workshop", "vehicule", "write")',
+			'perms'    => '$user->hasRight("workshop", "operationorders", "readext")',
 			'target'   => '',
 			'user'     => 2,
 		);
