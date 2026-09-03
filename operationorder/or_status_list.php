@@ -139,8 +139,9 @@ $boolCols = array(
 // Définition des colonnes optionnelles pilotées par le sélecteur de colonnes standard Dolibarr.
 // Les colonnes Code et Libellé restent toujours affichées (identité de la ligne).
 $arrayfields = array(
-    'status_type' => array('label' => 'WorkshopStatusType', 'checked' => '1', 'enabled' => '1', 'position' => 25),
-    'color'       => array('label' => 'Color', 'checked' => '1', 'enabled' => '1', 'position' => 30),
+    'status_type'   => array('label' => 'WorkshopStatusType', 'checked' => '1', 'enabled' => '1', 'position' => 25),
+    'job_behaviour' => array('label' => 'WorkshopStatusJobBehaviour', 'checked' => '1', 'enabled' => '1', 'position' => 26),
+    'color'         => array('label' => 'Color', 'checked' => '1', 'enabled' => '1', 'position' => 30),
 );
 $posfield = 40;
 foreach ($boolCols as $fieldName => $labelKey) {
@@ -174,6 +175,9 @@ print '<th>' . $langs->trans('Code') . '</th>';
 print '<th>' . $langs->trans('Label') . '</th>';
 if (!empty($arrayfields['status_type']['checked'])) {
     print '<th>' . $langs->trans('WorkshopStatusType') . '</th>';
+}
+if (!empty($arrayfields['job_behaviour']['checked'])) {
+    print '<th>' . $langs->trans('WorkshopStatusJobBehaviour') . '</th>';
 }
 if (!empty($arrayfields['color']['checked'])) {
     print '<th>' . $langs->trans('Color') . '</th>';
@@ -216,6 +220,11 @@ if (!empty($Tlist)) {
         // Type de statut
         if (!empty($arrayfields['status_type']['checked'])) {
             print '<td>' . dol_escape_htmltag($oStatus->getLibStatusType()) . '</td>';
+        }
+
+        // Comportement du statut de l'OR (vide pour les statuts d'OR seul)
+        if (!empty($arrayfields['job_behaviour']['checked'])) {
+            print '<td>' . dol_escape_htmltag($oStatus->getLibJobBehaviour()) . '</td>';
         }
 
         // Couleur
