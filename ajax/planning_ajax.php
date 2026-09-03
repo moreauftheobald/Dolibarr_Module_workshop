@@ -484,6 +484,27 @@ if ($action === 'assign_job') {
 	if ($fk_job <= 0 || $fk_user <= 0) {
 		wp_json(array('success' => false, 'error' => $langs->trans('ErrorBadParameters')));
 	}
+
+	// The job's parent OR carries the status-based permission (WorkshopOperationOrderStatus).
+	// 'workshopmecanicsplanning:write', checked above, only gates the planning feature itself,
+	// not whether this user may edit THIS OR at its current status.
+	dol_include_once('/workshop/class/operationorder.class.php');
+	dol_include_once('/workshop/class/operationorder_jobs.class.php');
+
+	$job = new Operationorder_jobs($db);
+	if ($job->fetch($fk_job) <= 0 || empty($job->fk_operationorder)) {
+		wp_json(array('success' => false, 'error' => $langs->trans('ErrorRecordNotFound')));
+	}
+
+	$or = new Operationorder($db);
+	if ($or->fetch($job->fk_operationorder) <= 0 || (int) $or->entity !== (int) $conf->entity) {
+		wp_json(array('success' => false, 'error' => $langs->trans('ErrorRecordNotFound')));
+	}
+	if (!$or->canWrite($user)) {
+		http_response_code(403);
+		wp_json(array('success' => false, 'error' => $langs->trans('NotEnoughPermissions')));
+	}
+
 	$ts_start = wp_build_ts($date, $start);
 	if ($ts_start === false) {
 		wp_json(array('success' => false, 'error' => $langs->trans('WorkshopErrorInvalidDates')));
