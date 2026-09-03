@@ -1126,7 +1126,7 @@ if ($id > 0) {
 	print '<tr><td class="titlefield">';
 	print $form->editfieldkey($langs->trans('KmCreationOR'), 'km', $object->km, $object, $permissiontoadd);
 	print '</td><td>';
-	$kmDisplay = (!empty($object->km) ? dol_escape_htmltag(number_format((float) $object->km, 0, ',', ' ')).' km' : '<span class="opacitymedium">'.$langs->trans('NA').'</span>');
+	$kmDisplay = (!empty($object->km) ? dol_escape_htmltag(price((float) $object->km, 0, '', 1, 0, 0)).' km' : '<span class="opacitymedium">'.$langs->trans('NA').'</span>');
 	print orCardInlineEditTd(
 		$action, 'km', 'save_km', $object->id,
 		'<input type="text" name="km" class="maxwidth100" value="'.dol_escape_htmltag((string) $object->km).'">',
