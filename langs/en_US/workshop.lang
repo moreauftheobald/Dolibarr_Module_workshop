@@ -350,6 +350,7 @@ WorkshopStatusTypeORAndJob=Repair order and job status
 WorkshopStatusJobBehaviour=OR status behaviour
 WorkshopStatusJobBehaviourAny=Becomes the OR status if one job has this status
 WorkshopStatusJobBehaviourAll=Becomes the OR status if all jobs have this status
+WorkshopJobStatus=Job status
 WorkshopORStatusActive=Active
 WorkshopORStatusDisabled=Disabled
 WorkshopORStatusUndefined=Status undefined

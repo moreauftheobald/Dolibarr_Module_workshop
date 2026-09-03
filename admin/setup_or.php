@@ -53,6 +53,7 @@ require_once DOL_DOCUMENT_ROOT."/core/lib/admin.lib.php";
 require_once DOL_DOCUMENT_ROOT."/core/lib/pdf.lib.php";
 dol_include_once('/workshop/lib/workshop.lib.php');
 dol_include_once('/workshop/class/operationorder.class.php');
+dol_include_once('/workshop/class/workshopoperationorderstatus.class.php');
 
 $langs->loadLangs(array("admin", "workshop@workshop"));
 
@@ -218,6 +219,7 @@ if ($action == 'update_subtab' && !empty($user->admin)) {
 		$statusFields = array(
 			'WORKSHOP_OR_STATUS_ON_CREATE',
 			'WORKSHOP_OR_STATUS_ON_PLANNED',
+			'WORKSHOP_JOB_STATUS_ON_CREATE',
 			'WORKSHOP_OR_CHANGE_STATUS_ON_START',
 			'WORKSHOP_OR_STATUS_ON_START',
 			'WORKSHOP_OR_CHANGE_STATUS_ON_STOP',
@@ -767,12 +769,16 @@ if (getDolGlobalInt('WORKSHOP_USE_OR')) {
 
 	if ($subtab == 'statuts') {
 		// Load available statuses (active only, ordered by rank)
-		$sqlORS = "SELECT rowid, label FROM ".$db->prefix()."workshop_operationorder_status WHERE status = 1 ORDER BY rang ASC";
+		$sqlORS = "SELECT rowid, label,status_type FROM ".$db->prefix()."workshop_operationorder_status WHERE status = 1 ORDER BY rang ASC";
 		$resORS = $db->query($sqlORS);
 		$TStatusAvailable = array(0 => '--- '.$langs->trans('None').' ---');
+		$TStatusAvailableForJob = array(0 => '--- '.$langs->trans('None').' ---');
 		if ($resORS) {
 			while ($objORS = $db->fetch_object($resORS)) {
 				$TStatusAvailable[$objORS->rowid] = $objORS->label;
+				if ($objORS->status_type==WorkshopOperationOrderStatus::TYPE_OR_AND_JOB) {
+					$TStatusAvailableForJob[$objORS->rowid] = $objORS->label;
+				}
 			}
 		}
 
@@ -798,6 +804,13 @@ if (getDolGlobalInt('WORKSHOP_USE_OR')) {
 		print '<td>'.$form->textwithpicto($langs->trans('WorkshopORStatusOnPlanned'), $langs->trans('WorkshopORStatusOnPlannedHelp')).'</td>';
 		print '<td>'.$form->selectarray('WORKSHOP_OR_STATUS_ON_PLANNED', $TStatusAvailable, getDolGlobalInt('WORKSHOP_OR_STATUS_ON_PLANNED'), 0, 0, 0, '', 0, 0, 0, '', 'flat', 1).'</td>';
 		print '</tr>';
+
+		// Statut du job la création
+		print '<tr class="oddeven">';
+		print '<td>'.$form->textwithpicto($langs->trans('WorkshopJobStatusOnCreate'), $langs->trans('WorkshopJobStatusOnCreateHelp')).'</td>';
+		print '<td>'.$form->selectarray('WORKSHOP_JOB_STATUS_ON_CREATE', $TStatusAvailableForJob, getDolGlobalInt('WORKSHOP_JOB_STATUS_ON_CREATE'), 0, 0, 0, '', 0, 0, 0, '', 'flat', 1).'</td>';
+		print '</tr>';
+
 
 		// Toggle : changer statut au démarrage d'une tâche
 		print '<tr class="oddeven">';

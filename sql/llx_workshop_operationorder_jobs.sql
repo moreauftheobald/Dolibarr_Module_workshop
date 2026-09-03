@@ -3,6 +3,7 @@ CREATE TABLE llx_workshop_operationorder_jobs (
   date_creation      datetime         DEFAULT NULL,
   tms                timestamp        DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   fk_operationorder  integer NOT NULL DEFAULT 0,
+  status             integer          DEFAULT NULL,
   label              varchar(255)     DEFAULT NULL,
   description        longtext         DEFAULT NULL,
   fk_service_type    integer          DEFAULT NULL,

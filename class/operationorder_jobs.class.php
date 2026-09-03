@@ -67,6 +67,7 @@ class Operationorder_jobs extends CommonObject
 	public $fields = array(
 		'rowid'             => array('type' => 'integer',     'label' => 'TechnicalID',  'enabled' => 1, 'position' => 1,   'notnull' => 1, 'visible' => 0),
 		'fk_operationorder' => array('type' => 'integer:Operationorder:workshop/class/operationorder.class.php', 'label' => 'OperationOrder', 'enabled' => 1, 'position' => 10, 'notnull' => 1, 'visible' => 1),
+		'status'            => array('type' => 'integer',     'label' => 'WorkshopJobStatus', 'enabled' => 1, 'position' => 11, 'notnull' => 0, 'visible' => 0),
 		'label'             => array('type' => 'varchar(255)', 'label' => 'Label',        'enabled' => 1, 'position' => 20,  'notnull' => 0, 'visible' => 1, 'searchall' => 1, 'showoncombobox' => 1, 'css' => 'minwidth300', 'autofocusoncreate' => 1),
 		'description'       => array('type' => 'html',        'label' => 'Description',  'enabled' => 1, 'position' => 30,  'notnull' => 0, 'visible' => 3, 'cssview' => 'wordbreak'),
 		'fk_service_type'   => array('type' => 'integer:ServiceType:workshop/class/servicetype.class.php', 'label' => 'ServiceType', 'enabled' => 1, 'position' => 40, 'notnull' => 0, 'visible' => 1, 'css' => 'maxwidth500 widthcentpercentminusxx'),
@@ -100,6 +101,8 @@ class Operationorder_jobs extends CommonObject
 
 	public $rowid;
 	public $fk_operationorder;
+	/** @var int|null Rowid d'un WorkshopOperationOrderStatus de type TYPE_OR_AND_JOB */
+	public $status;
 	public $label;
 	public $description;
 	public $fk_service_type;
@@ -183,6 +186,11 @@ class Operationorder_jobs extends CommonObject
 	 */
 	public function create(User $user, $notrigger = 0)
 	{
+		if (empty($this->status)) {
+			// Statut de job par défaut, défini dans le paramétrage du module
+			$this->status = getDolGlobalInt('WORKSHOP_JOB_STATUS_ON_CREATE') ?: null;
+		}
+
 		return $this->createCommon($user, $notrigger);
 	}
 
