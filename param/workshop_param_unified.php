@@ -59,6 +59,7 @@ if (!$res && file_exists("../../../main.inc.php")) { $res = @include "../../../m
 if (!$res) { die("Include of main fails"); }
 
 dol_include_once('/workshop/lib/workshop.lib.php');
+require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
 
 $langs->load("workshop@workshop");
 
@@ -152,7 +153,7 @@ foreach ($objConfig['fields'] as $fieldName => $fieldConfig) {
 		$tmpPath = GETPOST('ws_file_uploaded_'.$fieldName, 'alphanohtml');
 		if (!empty($tmpPath) && workshopIsValidUploadedTempFile($tmpPath, $conf)) {
 			$fileUploadedPaths[$fieldName] = $tmpPath;
-			$postValues[$fieldName] = basename($tmpPath, '.pdf');
+			$postValues[$fieldName] = dol_sanitizeFileName(preg_replace('/\.pdf$/i', '', dol_basename($tmpPath)));
 		} else {
 			// Pas de nouveau fichier uploadé : on ne modifie pas la valeur existante (sera gérée plus bas)
 			$postValues[$fieldName] = null;
@@ -236,7 +237,7 @@ if (empty($reshook)) {
 				}
 				foreach ($fileUploadedPaths as $fieldName => $tmpPath) {
 					if (file_exists($tmpPath)) {
-						$newname = $destdir.'/'.basename($tmpPath);
+						$newname = $destdir.'/'.dol_basename($tmpPath);
 						dol_move($tmpPath, $newname);
 					}
 				}

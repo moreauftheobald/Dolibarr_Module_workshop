@@ -354,3 +354,16 @@ Corriger de manière autonome SAUF pour :
 - Simplicité d'abord : impact minimal sur le code existant
 - Pas de correctif temporaire : trouver la cause racine
 - Relire la section 8 (éléments abandonnés) avant toute nouvelle implémentation
+
+---
+
+## 12. Audit de conformité/sécurité/qualité — `AUDIT.md`
+
+Le module a fait l'objet d'un audit complet (sécurité, conformité aux conventions Dolibarr/de ce fichier, performance, i18n). `AUDIT.md`, à la racine du module, documente la **méthodologie** utilisée (catégories vérifiées, méthode de détection pour chacune, pièges déjà rencontrés) ainsi qu'un journal des exécutions passées.
+
+À relire/relancer :
+- Périodiquement, au fil de l'avancement du développement (le code dérive vite des conventions sans repasse régulière).
+- Avant une mise en production ou une release.
+- Après un gros ajout de fonctionnalité (nouvelle page, nouveau modèle de numérotation, nouvelles chaînes utilisateur…).
+
+Pour relancer : demander à Claude Code de suivre `AUDIT.md`, sur tout le module ou une seule catégorie (ex. « relance uniquement la catégorie N+1 »). Chaque nouvelle exécution doit ajouter une ligne au journal du fichier.
