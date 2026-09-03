@@ -1047,7 +1047,7 @@ class Vehicule extends CommonObject
 		if ($withpicto && $withpicto != 2) {
 			$result .= ' ';
 		}
-		$result .= $link.$this->immatriculation.' - '.$this->vin.$linkend;
+		$result .= $link.dol_escape_htmltag($this->immatriculation).' - '.dol_escape_htmltag($this->vin).$linkend;
 
 		return $result;
 	}

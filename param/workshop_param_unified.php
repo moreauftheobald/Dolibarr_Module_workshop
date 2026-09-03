@@ -212,7 +212,7 @@ if (empty($reshook)) {
 			}
 
 			if ($action === 'confirmnew') {
-				$object->entity        = 0;
+				$object->entity        = $conf->entity;
 				$object->date_creation = dol_now();
 				$res = $object->create($user);
 			} elseif ($action === 'confirmedit') {
