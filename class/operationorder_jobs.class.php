@@ -215,25 +215,15 @@ class Operationorder_jobs extends CommonObject
 
 		dol_include_once('/workshop/class/operationorderdet.class.php');
 
-		$sql  = 'SELECT rowid FROM '.$this->db->prefix().'workshop_operationorderdet';
-		$sql .= ' WHERE fk_operationorder_jobs = '.((int) $this->id);
-		$sql .= ' ORDER BY rang ASC, rowid ASC';
-
-		$resql = $this->db->query($sql);
-		if ($resql) {
-			while ($obj = $this->db->fetch_object($resql)) {
-				$line = new Operationorderdet($this->db);
-				$result = $line->fetch($obj->rowid);
-				if ($result > 0) {
-					$this->lines[] = $line;
-				}
-			}
-			$this->db->free($resql);
-			return 1;
-		} else {
-			$this->error = $this->db->lasterror();
+		$detObj = new Operationorderdet($this->db);
+		$lines = $detObj->fetchAllByJob($this->id);
+		if (!is_array($lines)) {
+			$this->error = $detObj->error ?: implode(',', $detObj->errors);
 			return -1;
 		}
+
+		$this->lines = array_values($lines);
+		return 1;
 	}
 
 	/**

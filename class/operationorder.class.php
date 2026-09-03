@@ -321,26 +321,37 @@ class Operationorder extends CommonObject
 		$this->lines = array();
 
 		dol_include_once('/workshop/class/operationorder_jobs.class.php');
+		dol_include_once('/workshop/class/operationorderdet.class.php');
 
-		$sql  = 'SELECT rowid FROM '.$this->db->prefix().'workshop_operationorder_jobs';
-		$sql .= ' WHERE fk_operationorder = '.((int) $this->id);
-		$sql .= ' ORDER BY rang ASC, rowid ASC';
-
-		$resql = $this->db->query($sql);
-		if ($resql) {
-			while ($obj = $this->db->fetch_object($resql)) {
-				$line = new Operationorder_jobs($this->db);
-				$result = $line->fetch($obj->rowid);
-				if ($result > 0) {
-					$this->lines[] = $line;
-				}
-			}
-			$this->db->free($resql);
-			return 1;
-		} else {
-			$this->error = $this->db->lasterror();
+		// One query for all jobs of this OR, then one query for all their detail lines
+		// (grouped in PHP), instead of one fetch() per job cascading into one fetch()
+		// per detail line.
+		$jobObj = new Operationorder_jobs($this->db);
+		$jobs = $jobObj->fetchAllByOperationorder($this->id);
+		if (!is_array($jobs)) {
+			$this->error = $jobObj->error ?: implode(',', $jobObj->errors);
 			return -1;
 		}
+
+		$linesByJob = array();
+		if (!empty($jobs)) {
+			$detObj = new Operationorderdet($this->db);
+			$detLines = $detObj->fetchAllByOperationorder($this->id);
+			if (!is_array($detLines)) {
+				$this->error = $detObj->error ?: implode(',', $detObj->errors);
+				return -1;
+			}
+			foreach ($detLines as $detLine) {
+				$linesByJob[(int) $detLine->fk_operationorder_jobs][] = $detLine;
+			}
+		}
+
+		foreach ($jobs as $job) {
+			$job->lines = isset($linesByJob[$job->id]) ? $linesByJob[$job->id] : array();
+			$this->lines[] = $job;
+		}
+
+		return 1;
 	}
 
 	/**
