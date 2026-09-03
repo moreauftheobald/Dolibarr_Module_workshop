@@ -579,7 +579,7 @@ class Operationorder extends CommonObject
 			if ($option != 'nolink') {
 				$linkclose = '';
 				if (empty($notooltip)) {
-					if (!empty($conf->global->MAIN_OPTIMIZEFORTEXTBROWSER)) {
+					if (getDolGlobalBool('MAIN_OPTIMIZEFORTEXTBROWSER')) {
 						$label = $langs->trans("ShowOperationorder");
 						$linkclose = ' alt="' . dol_escape_htmltag($label, 1) . '"';
 					}
