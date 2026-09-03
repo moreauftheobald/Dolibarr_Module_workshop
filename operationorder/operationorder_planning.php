@@ -48,7 +48,7 @@ if (!$res) {
 }
 
 require_once DOL_DOCUMENT_ROOT . '/user/class/usergroup.class.php';
-require_once '../lib/workshop.lib.php';
+dol_include_once('/workshop/lib/workshop.lib.php');
 dol_include_once('/workshop/class/workshopplanning.class.php');
 
 $langs->loadLangs(array('admin', 'workshop@workshop', 'users'));

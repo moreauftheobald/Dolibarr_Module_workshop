@@ -60,7 +60,7 @@ if (!$res) {
 }
 
 require_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
-require_once '../lib/workshop.lib.php';
+dol_include_once('/workshop/lib/workshop.lib.php');
 
 /**
  * @var Conf $conf

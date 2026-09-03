@@ -51,7 +51,7 @@ global $langs, $user;
 
 require_once DOL_DOCUMENT_ROOT."/core/lib/admin.lib.php";
 require_once DOL_DOCUMENT_ROOT."/core/lib/pdf.lib.php";
-require_once '../lib/workshop.lib.php';
+dol_include_once('/workshop/lib/workshop.lib.php');
 dol_include_once('/workshop/class/operationorder.class.php');
 
 $langs->loadLangs(array("admin", "workshop@workshop"));
