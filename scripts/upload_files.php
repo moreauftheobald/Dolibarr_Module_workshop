@@ -56,7 +56,34 @@ require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
 
 global $conf, $user;
 
+// This endpoint is only used to stage the 'doc_obl' PDF field of the servicetype
+// dictionary (see param/workshop_param_unified.php), which is gated by this right.
+if (!$user->hasRight('workshop', 'vehicule', 'write')) {
+	header('HTTP/1.1 403 Forbidden');
+	print json_encode('Not enough permissions');
+	exit;
+}
+
+// Manual CSRF check: this endpoint only reads $_FILES, so Dolibarr's automatic
+// protection in main.inc.php (which only clears $_POST on an invalid token, and
+// only runs when MAIN_SECURITY_CSRF_WITH_TOKEN is enabled) would not stop a
+// forged request here.
+$token = GETPOST('token', 'alpha');
+if (empty($token) || empty($_SESSION['token']) || $token !== $_SESSION['token']) {
+	header('HTTP/1.1 403 Forbidden');
+	print json_encode('Invalid or missing CSRF token');
+	exit;
+}
+
 if (array_key_exists('file', $_FILES)) {
+	// Only PDF is expected here (see 'file_accept' => 'application/pdf' in getWorkshopParamObjects()).
+	$ext = strtolower(pathinfo((string) $_FILES['file']['name'], PATHINFO_EXTENSION));
+	if ($ext !== 'pdf') {
+		header('HTTP/1.1 400 Bad Request');
+		print json_encode('Only PDF files are allowed');
+		exit;
+	}
+
 	$upload_dir = $conf->user->multidir_temp[$conf->entity].'/';
 	$name = $upload_dir.dol_sanitizeFileName($_FILES['file']['name']);
 	$result = dol_move_uploaded_file($_FILES['file']['tmp_name'], $name, 1);

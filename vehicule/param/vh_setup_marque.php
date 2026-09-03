@@ -85,6 +85,13 @@ if (!$user->hasRight("workshop", "vehicule", "readext")) {
 
 if (!isModEnabled("workshop")) accessforbidden();
 
+// 'readext' above only allows viewing the list: creating, editing or deleting
+// a record requires the 'write' right.
+if (in_array($action, array('confirmnew', 'confirmedit', 'confirmdelete'))
+	&& !$user->hasRight('workshop', 'vehicule', 'write')) {
+	accessforbidden();
+}
+
 $hookmanager->initHooks(array('vhsetupmarque', 'globalcard')); // Note that conf->hooks_modules contains array
 
 

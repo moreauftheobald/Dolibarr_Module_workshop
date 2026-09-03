@@ -128,7 +128,7 @@ if ($id > 0 || !empty($ref)) {
 // Permissions
 // (There are several ways to check permission.)
 // Set $enablepermissioncheck to 1 to enable a minimum low level of checks
-$enablepermissioncheck = 0;
+$enablepermissioncheck = 1;
 if ($enablepermissioncheck) {
 	$permissiontoread = $user->hasRight('workshop', 'vehicule', 'read');
 	$permissiontoadd  = $user->hasRight('workshop', 'vehicule', 'write'); // Used by the include of actions_addupdatedelete.inc.php and actions_linkedfiles.inc.php
@@ -217,7 +217,7 @@ $modulepart = 'workshop';
 $param = '&id='.$object->id;
 //$relativepathwithnofile='vehicule/' . dol_sanitizeFileName($object->id).'/';
 $relativepathwithnofile = 'vehicule/'.dol_sanitizeFileName($object->ref).'/';
-$permtoedit=1;
+$permtoedit = $permissiontoadd;
 
 include DOL_DOCUMENT_ROOT.'/core/tpl/document_actions_post_headers.tpl.php';
 

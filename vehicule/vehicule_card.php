@@ -120,6 +120,21 @@ if (empty($reshook)) {
 	include DOL_DOCUMENT_ROOT.'/core/actions_dellink.inc.php';
 
 	$error = 0;
+
+	// Only 'read' is checked above: all the actions below change data and
+	// require the 'write' right. ('confirm_modif'/'confirm_reopen'/'confirm_validate'
+	// and 'confirm_delete' already check their own right inline in their case.)
+	$writeactions = array(
+		'add', 'update', 'update_extras', 'confirm_clone', 'dellink',
+		'addActivity', 'confirm_delActivity', 'updateActivity',
+		'addVehiculeLink', 'confirm_unlinkVehicule',
+		'addVehiculeOperation', 'confirm_delOperation', 'updateOperation',
+		'confirm_cloneOperations',
+	);
+	if (in_array($action, $writeactions) && !$user->hasRight('workshop', 'vehicule', 'write')) {
+		accessforbidden();
+	}
+
 	switch ($action) {
 		case 'add':
 		case 'update':

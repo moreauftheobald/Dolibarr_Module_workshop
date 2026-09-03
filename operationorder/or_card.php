@@ -220,9 +220,9 @@ if (empty($reshook)) {
 		$object->fk_conducteur = GETPOSTINT('fk_conducteur');
 		$object->fk_user_creat = $user->id;
 
-		// Statut défini dans le paramètre admin, fallback STATUS_DRAFT
-		$statusOnCreate = getDolGlobalInt('WORKSHOP_OR_STATUS_ON_CREATE');
-		$object->status = $statusOnCreate > 0 ? $statusOnCreate : Operationorder::STATUS_DRAFT;
+		// Statut à la création : toujours celui paramétré dans l'administration du
+		// module (onglet "statuts"), jamais une valeur codée en dur.
+		$object->status = getDolGlobalInt('WORKSHOP_OR_STATUS_ON_CREATE');
 
 		// Totaux à 0
 		$object->total_ht          = 0;

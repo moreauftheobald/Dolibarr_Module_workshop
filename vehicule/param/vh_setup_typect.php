@@ -87,6 +87,13 @@ if (!$user->hasRight("workshop", "vehicule", "readext")) {
 
 if (!isModEnabled("workshop")) accessforbidden();
 
+// 'readext' above only allows viewing the list: creating, editing or deleting
+// a record requires the 'write' right.
+if (in_array($action, array('confirmnew', 'confirmedit', 'confirmdelete'))
+	&& !$user->hasRight('workshop', 'vehicule', 'write')) {
+	accessforbidden();
+}
+
 $marksActivDatas=['0'=>$langs->trans('AllMarks')];
 $marksInactivDatas=[];
 $marks=$objectMark->fetchAll('','',0);

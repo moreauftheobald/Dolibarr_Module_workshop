@@ -78,6 +78,13 @@ $confirm = GETPOST('confirm', 'alpha');
 $rowid   = GETPOST('rowid',   'int');
 $page    = GETPOSTISSET('pageplusone') ? (GETPOST('pageplusone') - 1) : GETPOST('page', 'int');
 
+// The check above only requires 'readext': it must not be enough to create, edit
+// or delete a record. Only 'write' can trigger an actual data change.
+if (in_array($action, array('confirmnew', 'confirmedit', 'confirmdelete'))
+	&& !$user->hasRight('workshop', 'vehicule', 'write')) {
+	accessforbidden();
+}
+
 if (empty($page) || $page < 0
 	|| GETPOST('button_search', 'alpha')
 	|| GETPOST('button_removefilter', 'alpha')) {
@@ -138,9 +145,12 @@ foreach ($objConfig['fields'] as $fieldName => $fieldConfig) {
 		$palette = getWorkshopColorPalette();
 		$postValues[$fieldName] = isset($palette[$raw]) ? $raw : '';
 	} elseif ($fieldConfig['type'] === 'file') {
-		// Le hidden ws_file_uploaded_{fieldName} contient le chemin temp du fichier uploadé via AJAX
+		// Le hidden ws_file_uploaded_{fieldName} contient le chemin temp du fichier uploadé via AJAX.
+		// Ce chemin est fourni par le client : on ne l'accepte que s'il pointe réellement sur un
+		// fichier du répertoire temporaire de l'utilisateur (sinon dol_move(), plus bas, pourrait
+		// déplacer n'importe quel fichier lisible par le process web).
 		$tmpPath = GETPOST('ws_file_uploaded_'.$fieldName, 'alphanohtml');
-		if (!empty($tmpPath)) {
+		if (!empty($tmpPath) && workshopIsValidUploadedTempFile($tmpPath, $conf)) {
 			$fileUploadedPaths[$fieldName] = $tmpPath;
 			$postValues[$fieldName] = basename($tmpPath, '.pdf');
 		} else {

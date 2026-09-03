@@ -746,8 +746,9 @@ if ($action === 'create_or_quick') {
 	$or->fk_soc        = $fk_soc;
 	$or->fk_vehicule   = $fk_vehicule ?: null;
 	$or->fk_user_creat = $user->id;
-	$statusOnCreate    = getDolGlobalInt('WORKSHOP_OR_STATUS_ON_CREATE');
-	$or->status        = $statusOnCreate > 0 ? $statusOnCreate : Operationorder::STATUS_DRAFT;
+	// Statut à la création : toujours celui paramétré dans l'administration du
+	// module (onglet "statuts"), jamais une valeur codée en dur.
+	$or->status = getDolGlobalInt('WORKSHOP_OR_STATUS_ON_CREATE');
 	$or->total_ht          = 0;
 	$or->total_ht_part     = 0;
 	$or->total_ht_mo       = 0;

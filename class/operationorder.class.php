@@ -68,11 +68,6 @@ class Operationorder extends CommonObject
 	/**
 	 * @var array Array with all fields and their property.
 	 */
-	const STATUS_DRAFT     = 0;
-	const STATUS_OPEN      = 1;
-	const STATUS_DONE      = 2;
-	const STATUS_CLOSED    = 3;
-	const STATUS_CANCELLED = -1;
 
 	public $fields = array(
 		'rowid'          => array('type' => 'integer',      'label' => 'TechnicalID',    'enabled' => 1, 'position' => 1,   'notnull' => 1, 'visible' => 0),
@@ -170,24 +165,6 @@ class Operationorder extends CommonObject
 	 *
 	 * @param DoliDB $db Database handler
 	 */
-	/** @var array Label status mapping */
-	public $labelStatus = array(
-		self::STATUS_CANCELLED => 'Cancelled',
-		self::STATUS_DRAFT     => 'Draft',
-		self::STATUS_OPEN      => 'Open',
-		self::STATUS_DONE      => 'Done',
-		self::STATUS_CLOSED    => 'Closed',
-	);
-
-	/** @var array CSS badge type per status (dolGetStatus type) */
-	public $labelStatusShort = array(
-		self::STATUS_CANCELLED => 'status9',
-		self::STATUS_DRAFT     => 'status0',
-		self::STATUS_OPEN      => 'status4',
-		self::STATUS_DONE      => 'status6',
-		self::STATUS_CLOSED    => 'status6',
-	);
-
 	public function __construct(DoliDB $db)
 	{
 		global $langs;
@@ -924,51 +901,6 @@ class Operationorder extends CommonObject
 		global $langs;
 		$langs->load('workshop@workshop');
 		return dolGetStatus($langs->trans('WorkshopORStatusUndefined'), '', '', 'status0', $mode);
-	}
-
-	/**
-	 * Set status to Open (validated) — kept for backward compatibility with or_card.php
-	 * @deprecated Utiliser setStatus($user, $fk_status) avec un statut dynamique
-	 */
-	public function setOpen(User $user, $notrigger = 0)
-	{
-		return $this->setStatusCommon($user, self::STATUS_OPEN, $notrigger, 'OPERATIONORDER_OPEN');
-	}
-
-	/**
-	 * Set status to Done — kept for backward compatibility with or_card.php
-	 * @deprecated Utiliser setStatus($user, $fk_status) avec un statut dynamique
-	 */
-	public function setDone(User $user, $notrigger = 0)
-	{
-		return $this->setStatusCommon($user, self::STATUS_DONE, $notrigger, 'OPERATIONORDER_DONE');
-	}
-
-	/**
-	 * Set status to Closed — kept for backward compatibility with or_card.php
-	 * @deprecated Utiliser setStatus($user, $fk_status) avec un statut dynamique
-	 */
-	public function setClosed(User $user, $notrigger = 0)
-	{
-		return $this->setStatusCommon($user, self::STATUS_CLOSED, $notrigger, 'OPERATIONORDER_CLOSE');
-	}
-
-	/**
-	 * Set status back to Draft — kept for backward compatibility with or_card.php
-	 * @deprecated Utiliser setStatus($user, $fk_status) avec un statut dynamique
-	 */
-	public function setDraft(User $user, $notrigger = 0)
-	{
-		return $this->setStatusCommon($user, self::STATUS_DRAFT, $notrigger, 'OPERATIONORDER_REOPEN');
-	}
-
-	/**
-	 * Set status to Cancelled — kept for backward compatibility with or_card.php
-	 * @deprecated Utiliser setStatus($user, $fk_status) avec un statut dynamique
-	 */
-	public function cancel(User $user, $notrigger = 0)
-	{
-		return $this->setStatusCommon($user, self::STATUS_CANCELLED, $notrigger, 'OPERATIONORDER_CANCEL');
 	}
 
 	/**

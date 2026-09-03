@@ -423,6 +423,30 @@ function getWorkshopVatRateOptions(DoliDB $db): array
 
 
 /**
+ * Check that a path submitted by the client for a 'file' type field really points
+ * to a file inside the current user's Dolibarr temp directory.
+ *
+ * The 'ws_file_uploaded_{fieldName}' hidden field is plain client-controlled input:
+ * without this check, a tampered value would let dol_move() (called by the caller
+ * once this path is accepted) move/read any file reachable by the web process,
+ * regardless of what was actually uploaded via scripts/upload_files.php.
+ *
+ * @param  string $tmpPath Path submitted by the client
+ * @param  Conf   $conf    Dolibarr conf object
+ * @return bool            True if the path is a real file directly inside the user's temp dir
+ */
+function workshopIsValidUploadedTempFile(string $tmpPath, $conf): bool
+{
+	$tempdir = realpath($conf->user->multidir_temp[$conf->entity]);
+	$realfile = realpath($tmpPath);
+	if ($tempdir === false || $realfile === false || !is_file($realfile)) {
+		return false;
+	}
+	return dirname($realfile) === $tempdir;
+}
+
+
+/**
  * Build a formconfirm question entry for a single field.
  *
  * @param  string      $fieldName   Field name (key in $objConfig['fields'])
