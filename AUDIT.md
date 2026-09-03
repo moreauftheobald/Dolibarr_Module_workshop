@@ -69,7 +69,16 @@ Avant de renommer une constante repérée : vérifier si une constante « propre
 ### 8. Séparation métier / vue
 Une méthode de classe métier (`class/*.php`) qui exécute une requête ne doit pas appeler `setEventMessages()` directement (ça mélange logique et affichage, et ça empêche de réutiliser la méthode dans un contexte sans UI, ex. AJAX/CLI). Convention : en cas d'échec, poser `$this->error`/`$this->errors[]` et retourner une valeur négative ; c'est à l'appelant (page/vue) d'appeler `setEventMessages()` selon le contexte.
 
-### 9. Vérification en conditions réelles (conteneur Docker)
+### 9. Fonctions PHP natives remplaçables par les fonctions core Dolibarr
+Dolibarr fournit des équivalents à préférer aux fonctions PHP natives — plus robustes (charset, fuseau horaire de l'utilisateur plutôt que celui du serveur) et cohérents avec le reste de l'application :
+- `date()`, `strtotime()`, `mktime()` → `dol_print_date()`, `dol_stringtotime()`, `dol_mktime()` (calculs de date/heure sensibles au fuseau de l'utilisateur, pas seulement au fuseau serveur).
+- `number_format()` → `price($montant, 0, '', 1, $rounding, $forcerounding)` (formatage numérique respectant la locale de l'utilisateur au lieu d'un format codé en dur ; `$currency_code=''` par défaut n'ajoute pas de symbole monétaire, utilisable pour n'importe quelle valeur numérique, pas seulement des prix).
+- `basename()` → `dol_basename()` (gère correctement les jeux de caractères où `basename()` natif échoue, ex. cyrillique) ; si le nom de fichier obtenu est ensuite stocké/réutilisé, le passer aussi dans `dol_sanitizeFileName()`. `dol_basename()` ne supporte pas la suppression de suffixe (2ème argument de `basename()` natif) — combiner avec un `preg_replace()` si besoin.
+- `unserialize()` → `json_decode(..., true)` **uniquement si les données stockées ne sont pas déjà au format PHP `serialize()`** — sinon il faudrait migrer les données existantes, ne pas faire ce changement à la légère (cf. `tpl/vehicule_links.tpl.php`, laissé tel quel pour cette raison).
+
+**Piège** : ces remplacements touchent souvent des fichiers de fonctionnalités actives (planning, cartes objet) — vérifier en premier qu'aucun développement n'est en cours dessus (catégorie 10) avant de s'y lancer.
+
+### 10. Vérification en conditions réelles (conteneur Docker)
 Le conteneur `theobald22_8_dolibarr_web` monte ce dépôt en direct (`/var/www/html/custom/workshop` = ce dossier). Pour vérifier un correctif sur de vraies données plutôt que sur la seule lecture de code :
 
 ```bash
@@ -86,7 +95,7 @@ EOPHP'
 - Pour comparer deux implémentations (ex. avant/après une optimisation N+1) : faire tourner les deux sur les mêmes données réelles et diffuser un `json_encode()` des structures obtenues plutôt qu'un `var_dump` à l'œil.
 - Un fichier lint-propre (`php -l`) peut quand même planter à l'exécution (méthode manquante sur une classe parente, colonne SQL inexistante, etc.) — le charger réellement est la seule vérification fiable pour du code jamais exercé (numérotation « advanced », par ex.).
 
-### 10. Fusion Git avec le développement en cours
+### 11. Fusion Git avec le développement en cours
 Un collègue peut pousser en parallèle sur la même branche (`V1_CLAUDE`) du même dépôt (remote `github`, actif — `origin`/Framagit est un miroir à part, à ne pas confondre). Avant de pousser :
 1. `git fetch github` puis comparer `HEAD..github/V1_CLAUDE`.
 2. S'il y a du nouveau, faire un essai à blanc (`git merge-tree $(git merge-base HEAD github/V1_CLAUDE) HEAD github/V1_CLAUDE`) pour repérer un conflit textuel.
@@ -105,5 +114,6 @@ Un collègue peut pousser en parallèle sur la même branche (`V1_CLAUDE`) du m�
 | 2026-09-03 | 🟡 MOYENNE | `MAIN_DB_PREFIX`, `$conf->global->`, includes, indentation, code mort, i18n affiché-écran + audit exhaustif des clés | `4d62cd4`, `4ed86f8`, `3a0199b`, `60dbc17`, `0fa98a7`, `ee39322`, `f2c5403` |
 | 2026-09-03 | ⚪ FAIBLE | PHPDoc, accolades, typage, TODO, casse des droits (+ bug i18n réel : 12/20 libellés sans traduction anglaise), échappement | `c654e27` |
 | 2026-09-03 | Étape 7 | Constantes résiduelles, escape/sanitize, setEventMessages hors métier, JS inline | `70a1baf`, `1d85094` |
+| 2026-09-03 | Catégorie 9 (fonctions natives), partiel | `number_format()`→`price()`, `basename()`→`dol_basename()`/`dol_sanitizeFileName()`. Reste à faire : `date()`/`strtotime()`/`mktime()` dans `workshop_planning.php`/`ajax/planning_ajax.php`/`lib/workshop_planning.lib.php` — différé, Florian travaille sur ces fichiers | `fb406e9` |
 
 *Ajouter une ligne à chaque nouvelle exécution (date, portée, résumé, commits).*
