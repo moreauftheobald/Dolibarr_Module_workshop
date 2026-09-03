@@ -1372,7 +1372,23 @@ if ($id > 0) {
 			}
 		}
 
+		// Statut du job à la création (affiché, non modifiable)
+		$jobStatusBadge = '<span class="opacitymedium">—</span>';
+		$jobStatusOnCreateId = getDolGlobalInt('WORKSHOP_JOB_STATUS_ON_CREATE');
+		if ($jobStatusOnCreateId > 0) {
+			$stCreate = new WorkshopOperationOrderStatus($db);
+			if ($stCreate->fetch($jobStatusOnCreateId, false) > 0) {
+				$jobStatusBadge = $stCreate->getBadge();
+			}
+		}
+
 		$fq = array(
+			array(
+				'type'  => 'other',
+				'label' => $langs->trans('WorkshopJobStatus'),
+				'name'  => 'job_status_display',
+				'value' => $jobStatusBadge,
+			),
 			array(
 				'type'  => 'other',
 				'label' => $langs->trans('ServiceType').' <span class="fieldrequired">*</span>',
@@ -1495,11 +1511,26 @@ if ($id > 0) {
 				}
 			}
 
+			// Statut du job (affiché, non modifiable)
+			$jobStatusBadge = '<span class="opacitymedium">—</span>';
+			if (!empty($editJob->status)) {
+				$stEdit = new WorkshopOperationOrderStatus($db);
+				if ($stEdit->fetch((int) $editJob->status, false) > 0) {
+					$jobStatusBadge = $stEdit->getBadge();
+				}
+			}
+
 			$fqEdit = array(
 				array(
 					'type'  => 'hidden',
 					'name'  => 'jobid',
 					'value' => (string) $editJobId,
+				),
+				array(
+					'type'  => 'other',
+					'label' => $langs->trans('WorkshopJobStatus'),
+					'name'  => 'job_status_display',
+					'value' => $jobStatusBadge,
 				),
 				array(
 					'type'  => 'other',
@@ -1892,6 +1923,18 @@ if ($id > 0) {
 			$st = new ServiceType($db);
 			if ($st->fetch((int) $j->fk_service_type) > 0) {
 				$serviceTypeCache[$j->fk_service_type] = $st;
+			}
+		}
+	}
+
+	// Pré-chargement du cache des statuts de job (pour la pastille dans le TPL)
+	$jobStatusCache = array();
+	foreach ($jobsList as $j) {
+		$sid = (int) $j->status;
+		if ($sid > 0 && !isset($jobStatusCache[$sid])) {
+			$stObj = new WorkshopOperationOrderStatus($db);
+			if ($stObj->fetch($sid, false) > 0) {
+				$jobStatusCache[$sid] = $stObj;
 			}
 		}
 	}

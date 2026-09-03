@@ -118,6 +118,15 @@ $timeHtml  = '<span title="'.dol_escape_htmltag($langs->trans('TimeSpent')).'">'
 		?>
 	</td>
 	<td class="right workshop-jobs-col-actions nowraponall">
+		<?php
+		// Pastille ronde de la couleur du statut du job (survol = libellé)
+		$jobStatusObj = (!empty($job->status) && isset($jobStatusCache[$job->status])) ? $jobStatusCache[$job->status] : null;
+		if ($jobStatusObj) {
+			echo '<span class="workshop-job-status-dot" style="background-color:'
+				.dol_escape_htmltag($jobStatusObj->color ?: '#3c8dbc').'" title="'
+				.dol_escape_htmltag($jobStatusObj->label).'"></span>';
+		}
+		?>
 		<?php if ($canEditAtStatus) {
 			$editUrl = $_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&action=edit_job&jobid='.(int) $job->id;
 			$delUrl  = $_SERVER['PHP_SELF'].'?id='.(int) $object->id.'&action=delete_job&jobid='.(int) $job->id.'&token='.newToken();
