@@ -371,28 +371,31 @@ function workshopUnifiedParamPrepareHead(string $context = ''): array
 
 /**
  * Returns the predefined colour palette available for tag/label colour fields.
- * Keys are lowercase 7-character hex codes (#rrggbb); values are French labels.
+ * Keys are lowercase 7-character hex codes (#rrggbb); values are translated labels.
  *
  * @return array<string,string>
  */
 function getWorkshopColorPalette(): array
 {
+	global $langs;
+	$langs->load('workshop@workshop');
+
 	return array(
-		'#dc3545' => 'Rouge',
-		'#e8561a' => 'Rouge orangé',
-		'#fd7e14' => 'Orange',
-		'#ffc107' => 'Jaune',
-		'#8bc34a' => 'Vert clair',
-		'#28a745' => 'Vert',
-		'#20c997' => 'Turquoise',
-		'#17a2b8' => 'Cyan',
-		'#3c7dc4' => 'Bleu',
-		'#007bff' => 'Bleu vif',
-		'#6f42c1' => 'Violet',
-		'#e83e8c' => 'Rose',
-		'#6c757d' => 'Gris',
-		'#343a40' => 'Gris foncé',
-		'#212529' => 'Noir',
+		'#dc3545' => $langs->trans('WorkshopColorRed'),
+		'#e8561a' => $langs->trans('WorkshopColorRedOrange'),
+		'#fd7e14' => $langs->trans('WorkshopColorOrange'),
+		'#ffc107' => $langs->trans('WorkshopColorYellow'),
+		'#8bc34a' => $langs->trans('WorkshopColorLightGreen'),
+		'#28a745' => $langs->trans('WorkshopColorGreen'),
+		'#20c997' => $langs->trans('WorkshopColorTurquoise'),
+		'#17a2b8' => $langs->trans('WorkshopColorCyan'),
+		'#3c7dc4' => $langs->trans('WorkshopColorBlue'),
+		'#007bff' => $langs->trans('WorkshopColorBrightBlue'),
+		'#6f42c1' => $langs->trans('WorkshopColorPurple'),
+		'#e83e8c' => $langs->trans('WorkshopColorPink'),
+		'#6c757d' => $langs->trans('WorkshopColorGrey'),
+		'#343a40' => $langs->trans('WorkshopColorDarkGrey'),
+		'#212529' => $langs->trans('WorkshopColorBlack'),
 	);
 }
 
@@ -570,34 +573,13 @@ function workshopBuildParamFormQuestion(string $fieldName, array $fieldConfig, $
 			$out .= '<div style="margin-bottom:4px"><strong>'.$langs->trans('WorkshopDocOblCurrent').' :</strong> '.dol_escape_htmltag($currentDoc).'.pdf</div>';
 		}
 		$out .= '<input class="flat minwidth300" id="ws_file_'.$fieldName.'" type="file" name="'.$fieldName.'" accept="'.$accept.'"/>';
-		$out .= '<button type="button" id="ws_upload_'.$fieldName.'">'
+		$out .= '<button type="button" class="ws-upload-btn" id="ws_upload_'.$fieldName.'"'
+			.' data-field="'.dol_escape_htmltag($fieldName).'"'
+			.' data-uploaddir="'.dol_escape_htmltag($upload_dir).'"'
+			.' data-token="'.dol_escape_htmltag(newToken()).'"'
+			.' data-url="'.dol_escape_htmltag(dol_buildpath('/workshop/scripts/upload_files.php', 3)).'">'
 			.img_picto('', 'fontawesome_fa-save', 'class="paddingright pictofixedwidth valignmiddle"')
 			.'</button>';
-		$out .= '<script>';
-		$out .= '$(document).on("click", "#ws_upload_'.$fieldName.'", function(e) {'."\n";
-		$out .= '  e.preventDefault();'."\n";
-		$out .= '  let fileInput = document.getElementById("ws_file_'.$fieldName.'");'."\n";
-		$out .= '  if (!fileInput.files || !fileInput.files[0]) return;'."\n";
-		$out .= '  let form_data = new FormData();'."\n";
-		$out .= '  form_data.append("file", fileInput.files[0]);'."\n";
-		$out .= '  form_data.append("upload_dir", "'.dol_escape_js($upload_dir).'");'."\n";
-		$out .= '  form_data.append("token", "'.newToken().'");'."\n";
-		$out .= '  $.ajax({'."\n";
-		$out .= '    url: "'.dol_buildpath('/workshop/scripts/upload_files.php', 3).'",'."\n";
-		$out .= '    cache: false,'."\n";
-		$out .= '    contentType: false,'."\n";
-		$out .= '    processData: false,'."\n";
-		$out .= '    data: form_data,'."\n";
-		$out .= '    type: "POST",'."\n";
-		$out .= '    success: function (data) {'."\n";
-		$out .= '      fileInput.disabled = true;'."\n";
-		$out .= '      document.getElementById("ws_upload_'.$fieldName.'").disabled = true;'."\n";
-		$out .= '      document.getElementById("ws_file_uploaded_'.$fieldName.'").value = data;'."\n";
-		$out .= '    },'."\n";
-		$out .= '    error: function () { alert("Erreur lors de l\'upload du fichier"); }'."\n";
-		$out .= '  });'."\n";
-		$out .= '});'."\n";
-		$out .= '</script>';
 
 		// The hidden field that receives the temp file path after AJAX upload
 		return array(

@@ -47,7 +47,7 @@ class modWorkshop extends DolibarrModules
 
 		// Id for module (must be unique).
 		// Use here a free id (See in Home -> System information -> Dolibarr for list of used modules id).
-		$this->numero = 437872; // TODO Go on page https://wiki.dolibarr.org/index.php/List_of_modules_id to reserve an id number for your module
+		$this->numero = 437872;
 
 		// Key text used to identify module (for permissions, menus, etc...)
 		$this->rights_class = 'workshop';
@@ -291,22 +291,22 @@ class modWorkshop extends DolibarrModules
 		// Add here entries to declare new permissions
 		/* BEGIN MODULEBUILDER PERMISSIONS */
 		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + 0 + 1);
-		$this->rights[$r][1] = 'Readoperationorders';
+		$this->rights[$r][1] = 'ReadWorkshopOperationOrders';
 		$this->rights[$r][4] = 'operationorders';
 		$this->rights[$r][5] = 'read';
 		$r++;
 		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + 1 + 1);
-		$this->rights[$r][1] = 'Createoperationorders';
+		$this->rights[$r][1] = 'CreateWorkshopOperationOrders';
 		$this->rights[$r][4] = 'operationorders';
 		$this->rights[$r][5] = 'write';
 		$r++;
 		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + 2 + 1);
-		$this->rights[$r][1] = 'Deleteoperationorders';
+		$this->rights[$r][1] = 'DeleteWorkshopOperationOrders';
 		$this->rights[$r][4] = 'operationorders';
 		$this->rights[$r][5] = 'delete';
 		$r++;
 		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + 3 + 1);
-		$this->rights[$r][1] = 'Readworkshopsext';
+		$this->rights[$r][1] = 'ReadWorkshopOperationOrdersExt';
 		$this->rights[$r][4] = 'operationorders';
 		$this->rights[$r][5] = 'readext';
 		$r++;
@@ -331,22 +331,22 @@ class modWorkshop extends DolibarrModules
 		$this->rights[$r][5] = 'write';
 		$r++;
 		$this->rights[$r][0] = $this->numero . sprintf('%02d', (4 * 10) + 0 + 1);
-		$this->rights[$r][1] = 'Readvehicules';
+		$this->rights[$r][1] = 'ReadWorkshopVehicules';
 		$this->rights[$r][4] = 'vehicule';
 		$this->rights[$r][5] = 'read';
 		$r++;
 		$this->rights[$r][0] = $this->numero . sprintf('%02d', (3 * 10) + 0 + 1);
-		$this->rights[$r][1] = 'Readvehiculesext';
+		$this->rights[$r][1] = 'ReadWorkshopVehiculesExt';
 		$this->rights[$r][4] = 'vehicule';
 		$this->rights[$r][5] = 'readext';
 		$r++;
 		$this->rights[$r][0] = $this->numero . sprintf('%02d', (4 * 10) + 1 + 1);
-		$this->rights[$r][1] = 'Writetevehicules';
+		$this->rights[$r][1] = 'WriteWorkshopVehicules';
 		$this->rights[$r][4] = 'vehicule';
 		$this->rights[$r][5] = 'write';
 		$r++;
 		$this->rights[$r][0] = $this->numero . sprintf('%02d', (4 * 10) + 2 + 1);
-		$this->rights[$r][1] = 'Deletevehicules';
+		$this->rights[$r][1] = 'DeleteWorkshopVehicules';
 		$this->rights[$r][4] = 'vehicule';
 		$this->rights[$r][5] = 'delete';
 		$r++;
@@ -724,8 +724,8 @@ class modWorkshop extends DolibarrModules
 		$this->import_convertvalue_array[$r] = array(
 			't.ref' => array(
 				'rule'=>'getrefifauto',
-				'class'=>(!getDolGlobalString('WORKSHOP_MYOBJECT_ADDON') ? 'mod_vehicule_standard' : getDolGlobalString('WORKSHOP_MYOBJECT_ADDON')),
-				'path'=>"/core/modules/workshop/".(!getDolGlobalString('WORKSHOP_MYOBJECT_ADDON') ? 'mod_vehicule_standard' : getDolGlobalString('WORKSHOP_MYOBJECT_ADDON')).'.php',
+				'class'=>(!getDolGlobalString('WORKSHOP_VEHICULE_ADDON') ? 'mod_vehicule_standard' : getDolGlobalString('WORKSHOP_VEHICULE_ADDON')),
+				'path'=>"/core/modules/workshop/".(!getDolGlobalString('WORKSHOP_VEHICULE_ADDON') ? 'mod_vehicule_standard' : getDolGlobalString('WORKSHOP_VEHICULE_ADDON')).'.php',
 				'classobject'=>'Vehicule',
 				'pathobject'=>'/workshop/class/vehicule.class.php',
 			),
@@ -760,7 +760,7 @@ class modWorkshop extends DolibarrModules
 		include_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
 		$extrafields = new ExtraFields($this->db);
 		$result0=$extrafields->addExtraField('workshop_service_type', "ServiceType", 'link', 200,  '', 'product',   0, 0, '', array('options'=>array('ServiceType:workshop/class/servicetype.class.php'=>null)), 0, '', 1, 0, '', '', 'workshop@workshop', 'isModEnabled("workshop")');
-		$extrafields->addExtraField('doc_obl', "Document obligatoire", 'varchar', 210, 255, 'product', 0, 0, '', '', 1, '', 1, 'WorkshopDocOblHelp', '', 0, 'workshop@workshop', 'isModEnabled("workshop")');
+		$extrafields->addExtraField('doc_obl', "WorkshopDocOblLabel", 'varchar', 210, 255, 'product', 0, 0, '', '', 1, '', 1, 'WorkshopDocOblHelp', '', 0, 'workshop@workshop', 'isModEnabled("workshop")');
 		//$result1=$extrafields->addExtraField('workshop_myattr1', "New Attr 1 label", 'boolean', 1,  3, 'thirdparty',   0, 0, '', '', 1, '', -1, 0, '', '', 'workshop@workshop', 'isModEnabled("workshop")');
 		//$result2=$extrafields->addExtraField('workshop_myattr2', "New Attr 2 label", 'varchar', 1, 10, 'project',      0, 0, '', '', 1, '', -1, 0, '', '', 'workshop@workshop', 'isModEnabled("workshop")');
 		//$result3=$extrafields->addExtraField('workshop_myattr3', "New Attr 3 label", 'varchar', 1, 10, 'bank_account', 0, 0, '', '', 1, '', -1, 0, '', '', 'workshop@workshop', 'isModEnabled("workshop")');
@@ -771,40 +771,6 @@ class modWorkshop extends DolibarrModules
 		$this->remove($options);
 
 		$sql = array();
-
-		// Document templates
-		$moduledir = dol_sanitizeFileName('workshop');
-		$myTmpObjects = array();
-		$myTmpObjects['Vehicule'] = array('includerefgeneration'=>0, 'includedocgeneration'=>0);
-
-		foreach ($myTmpObjects as $myTmpObjectKey => $myTmpObjectArray) {
-			if ($myTmpObjectKey == 'Vehicule') {
-				continue;
-			}
-			if ($myTmpObjectArray['includerefgeneration']) {
-				$src = DOL_DOCUMENT_ROOT.'/install/doctemplates/'.$moduledir.'/template_vehicules.odt';
-				$dirodt = DOL_DATA_ROOT.'/doctemplates/'.$moduledir;
-				$dest = $dirodt.'/template_vehicules.odt';
-
-				if (file_exists($src) && !file_exists($dest)) {
-					require_once DOL_DOCUMENT_ROOT.'/core/lib/files.lib.php';
-					dol_mkdir($dirodt);
-					$result = dol_copy($src, $dest, 0, 0);
-					if ($result < 0) {
-						$langs->load("errors");
-						$this->error = $langs->trans('ErrorFailToCopyFile', $src, $dest);
-						return 0;
-					}
-				}
-
-				$sql = array_merge($sql, array(
-					"DELETE FROM ".MAIN_DB_PREFIX."document_model WHERE nom = 'standard_".strtolower($myTmpObjectKey)."' AND type = '".$this->db->escape(strtolower($myTmpObjectKey))."' AND entity = ".((int) $conf->entity),
-					"INSERT INTO ".MAIN_DB_PREFIX."document_model (nom, type, entity) VALUES('standard_".strtolower($myTmpObjectKey)."', '".$this->db->escape(strtolower($myTmpObjectKey))."', ".((int) $conf->entity).")",
-					"DELETE FROM ".MAIN_DB_PREFIX."document_model WHERE nom = 'generic_".strtolower($myTmpObjectKey)."_odt' AND type = '".$this->db->escape(strtolower($myTmpObjectKey))."' AND entity = ".((int) $conf->entity),
-					"INSERT INTO ".MAIN_DB_PREFIX."document_model (nom, type, entity) VALUES('generic_".strtolower($myTmpObjectKey)."_odt', '".$this->db->escape(strtolower($myTmpObjectKey))."', ".((int) $conf->entity).")"
-				));
-			}
-		}
 
 		// Register default PDF model for Repair Orders (type = 'workshop')
 		$sql = array_merge($sql, array(

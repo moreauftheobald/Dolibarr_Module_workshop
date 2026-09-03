@@ -83,7 +83,9 @@ if (!$user->hasRight("workshop", "vehicule", "readext")) {
 	accessforbidden();
 }
 
-if (!isModEnabled("workshop")) accessforbidden();
+if (!isModEnabled("workshop")) {
+	accessforbidden();
+}
 
 // 'readext' above only allows viewing the list: creating, editing or deleting
 // a record requires the 'write' right.
@@ -250,14 +252,14 @@ if ($action=='delete' && !empty($rowid)) {
 } elseif ($action =='new') {
 	$formquestion[] = array('type'=>'text','label'=>$langs->trans('code'), 'name'=>'code','value'=> $code);
 	$formquestion[] = array('type'=>'text','label'=>$langs->trans('marquelabel'), 'name'=>'label','value'=>$label);
-	$formquestion[] = array('type'=>'select','label'=>$langs->trans('active'), 'name'=>'active','values'=>array('0'=>'Non', '1'=>'Oui'), 'default'=>empty($active)?'1':$active);
+	$formquestion[] = array('type'=>'select','label'=>$langs->trans('active'), 'name'=>'active','values'=>array('0'=>$langs->trans('No'), '1'=>$langs->trans('Yes')), 'default'=>empty($active)?'1':$active);
 	$formconfirm = $form->formconfirm($_SERVER["PHP_SELF"], $langs->trans('NewMarque'), '', 'confirmnew', $formquestion, 'yes', 1, 0, 700);
 } elseif ($action =='edit' && !empty($rowid)) {
 	$dataedit = $marquearray[$rowid];
 	$formquestion[] = array('type'=>'hidden','name'=>'rowid','value'=>$rowid);
 	$formquestion[] = array('type'=>'text','label'=>$langs->trans('code'), 'name'=>'code','value'=> $dataedit->code);
 	$formquestion[] = array('type'=>'text','label'=>$langs->trans('marquelabel'), 'name'=>'label','value'=>$dataedit->label);
-	$formquestion[] = array('type'=>'select','label'=>$langs->trans('active'), 'name'=>'active','values'=>array('0'=>'Non', '1'=>'Oui'), 'default'=>$dataedit->active);
+	$formquestion[] = array('type'=>'select','label'=>$langs->trans('active'), 'name'=>'active','values'=>array('0'=>$langs->trans('No'), '1'=>$langs->trans('Yes')), 'default'=>$dataedit->active);
 	$formconfirm = $form->formconfirm($_SERVER["PHP_SELF"], $langs->trans('EditMarque'), '', 'confirmedit', $formquestion, 'yes', 1, 0, 700);
 }
 

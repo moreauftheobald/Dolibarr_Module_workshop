@@ -770,6 +770,14 @@ class Operationorder extends CommonObject
 		return 1;
 	}
 
+	/**
+	 * Build the extra HTML (tags, third party, vehicle, cross-entity info) shown
+	 * below the ref in the banner of the OR card.
+	 *
+	 * @param  string $action           Current action (e.g. 'editfk_soc', 'editfk_vehicule' trigger inline edit forms)
+	 * @param  int    $permissiontoadd  Whether the current user may edit these fields inline
+	 * @return string                   HTML content for dol_banner_tab()'s $morehtmlref
+	 */
 	public function getBanner($action,$permissiontoadd) {
 		global $conf, $langs;
 

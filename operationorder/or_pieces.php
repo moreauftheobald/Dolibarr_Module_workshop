@@ -155,7 +155,7 @@ if ($action === 'debit-stock' && $permissiontoadd) {
 		$mvt              = new MouvementStock($db);
 		$mvt->origin_type = 'operationorderdet@workshop'; // format classname@modulename pour get_origin()
 		$mvt->origin_id   = (int) $det->id;         // → fk_origin dans llx_stock_mouvement
-		$label = 'Débit sur '.$object->ref;
+		$label = $langs->trans('WorkshopStockDebitOn', $object->ref);
 
 		if ($qtyDebit > 0) {
 			// Débit = sortie de stock (livraison)

@@ -85,7 +85,9 @@ if (!$user->hasRight("workshop", "vehicule", "readext")) {
 	accessforbidden();
 }
 
-if (!isModEnabled("workshop")) accessforbidden();
+if (!isModEnabled("workshop")) {
+	accessforbidden();
+}
 
 // 'readext' above only allows viewing the list: creating, editing or deleting
 // a record requires the 'write' right.
@@ -276,7 +278,7 @@ if ($action=='delete' && !empty($rowid)) {
 	$formquestion[] = array('type'=>'text','label'=>$langs->trans('code'), 'name'=>'code','value'=> $code);
 	$formquestion[] = array('type'=>'select','label'=>$langs->trans('Fkvehiculemark'), 'name'=>'fk_vehicule_mark','values'=>$marksActivDatas);
 	$formquestion[] = array('type'=>'text','label'=>$langs->trans('typectlabel'), 'name'=>'label','value'=>$label);
-	$formquestion[] = array('type'=>'select','label'=>$langs->trans('active'), 'name'=>'active','values'=>array('0'=>'Non', '1'=>'Oui'), 'default'=>empty($active)?'1':$active);
+	$formquestion[] = array('type'=>'select','label'=>$langs->trans('active'), 'name'=>'active','values'=>array('0'=>$langs->trans('No'), '1'=>$langs->trans('Yes')), 'default'=>empty($active)?'1':$active);
 	$formconfirm = $form->formconfirm($_SERVER["PHP_SELF"], $langs->trans('NewTypect'), '', 'confirmnew', $formquestion, 'yes', 1, 0, 700);
 } elseif ($action =='edit' && !empty($rowid)) {
 	$dataedit = $typectarray[$rowid];
@@ -298,7 +300,7 @@ if ($action=='delete' && !empty($rowid)) {
 			'default'=>$dataedit->fk_vehicule_mark);
 	}
 	$formquestion[] = array('type'=>'text','label'=>$langs->trans('typectlabel'), 'name'=>'label','value'=>$dataedit->label);
-	$formquestion[] = array('type'=>'select','label'=>$langs->trans('active'), 'name'=>'active','values'=>array('0'=>'Non', '1'=>'Oui'), 'default'=>$dataedit->active);
+	$formquestion[] = array('type'=>'select','label'=>$langs->trans('active'), 'name'=>'active','values'=>array('0'=>$langs->trans('No'), '1'=>$langs->trans('Yes')), 'default'=>$dataedit->active);
 	$formconfirm = $form->formconfirm($_SERVER["PHP_SELF"], $langs->trans('EditTypect'), '', 'confirmedit', $formquestion, 'yes', 1, 0, 700);
 }
 

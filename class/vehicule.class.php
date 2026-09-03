@@ -238,8 +238,8 @@ class Vehicule extends CommonObject
 			'default' => 0,
 			'position' => 160,
 			'arrayofkeyval' => array(
-				0 => 'Non',
-				1 => 'Oui'
+				0 => 'No',
+				1 => 'Yes'
 			)
 		),
 		'nb_pneu' => array(
@@ -393,7 +393,7 @@ class Vehicule extends CommonObject
 	 * Vehicule constructor.
 	 * @param DoliDB $db Database connector
 	 */
-	public function __construct($db)
+	public function __construct(DoliDB $db)
 	{
 		$this->db = $db;
 
@@ -471,6 +471,17 @@ class Vehicule extends CommonObject
 	public function fetch($id, $ref = null)
 	{
 		return $this->fetchCommon($id, $ref);
+	}
+
+	/**
+	 * Initialise object with example values
+	 * Id must be 0 if object instance is a specimen
+	 *
+	 * @return int
+	 */
+	public function initAsSpecimen()
+	{
+		return $this->initAsSpecimenCommon();
 	}
 
 	/**
@@ -1106,7 +1117,15 @@ class Vehicule extends CommonObject
 		$langs->load('workshop@workshop');
 
 		$nb     = $this->countordertoplan('all');
+		if ($nb < 0) {
+			setEventMessages($this->error, null, 'errors');
+			$nb = 0;
+		}
 		$nblate = $this->countordertoplan('late');
+		if ($nblate < 0) {
+			setEventMessages($this->error, null, 'errors');
+			$nblate = 0;
+		}
 
 		if ($nblate > 0) {
 			$class = 'class="badge  badge-danger classfortooltip"';
@@ -1131,7 +1150,7 @@ class Vehicule extends CommonObject
 		}
 		$sql .= " AND (op.or_next IS NULL OR op.or_next=0) ";
 		$sql .= " AND op.date_next IS NOT NULL";
-		$sql .= " AND op.date_next < '".$this->db->idate(dol_time_plus_duree(dol_now(), (int) getDolGlobalInt('THEO_NB_MONTH_CHECKING_VEHICULE_BY_ANTICIPATION'), 'm'))."'";
+		$sql .= " AND op.date_next < '".$this->db->idate(dol_time_plus_duree(dol_now(), (int) getDolGlobalInt('WORKSHOP_OPERATION_SEARCH_DELAY_MONTHS'), 'm'))."'";
 
 		$resql = $this->db->query($sql);
 		if ($resql) {
@@ -1141,8 +1160,8 @@ class Vehicule extends CommonObject
 				return $obj->nbop;
 			}
 		} else {
-			setEventMessages($this->db->lasterror(), null, 'errors');
-			return 0;
+			$this->error = $this->db->lasterror();
+			return -1;
 		}
 
 		return 0;
@@ -1169,6 +1188,12 @@ class Vehicule extends CommonObject
 		return $out;
 	}
 
+	/**
+	 * Build the extra HTML (mark, type, third party, cross-entity info) shown
+	 * below the ref in the banner of the vehicle card.
+	 *
+	 * @return string HTML content for dol_banner_tab()'s $morehtmlref
+	 */
 	public function getBanner() {
 		global $conf, $langs;
 		// Build morehtmlref (marque, type, tiers)
