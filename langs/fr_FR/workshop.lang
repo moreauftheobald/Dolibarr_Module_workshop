@@ -28,19 +28,19 @@ operationorders=Ordres de réparation
 # Rights
 #
 #Ordres de reparation
-Readoperationorders=Lire les ordres de réparation
-Createoperationorders=Créer des ordres de réparation
-Deleteoperationorders=Supprimer les ordres de réparation
+ReadWorkshopOperationOrders=Lire les ordres de réparation
+CreateWorkshopOperationOrders=Créer des ordres de réparation
+DeleteWorkshopOperationOrders=Supprimer les ordres de réparation
 ReadWorkshopPlanning=Lire le Planning Atelier
 WriteWorkshopPlanning=Modifier le Planning Atelier
 ReadWorkshopMecanicsPlanning=Lire le Planning de pointage
 WriteWorkshopMecanicsPlanning=Modifier le planning de pointage
-Readworkshopsext=Atelier - Permission de gestion avancée
+ReadWorkshopOperationOrdersExt=Atelier - Permission de gestion avancée
 # Vehicules
-Readvehicules=Lire les véhicules
-Readvehiculesext=Vehicule - Permission de gestion avancée
-Writetevehicules=Créer les véhicules
-Deletevehicules=Supprimer les véhicules
+ReadWorkshopVehicules=Lire les véhicules
+ReadWorkshopVehiculesExt=Vehicule - Permission de gestion avancée
+WriteWorkshopVehicules=Créer les véhicules
+DeleteWorkshopVehicules=Supprimer les véhicules
 
 
 #

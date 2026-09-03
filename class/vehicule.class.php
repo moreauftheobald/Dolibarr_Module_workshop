@@ -393,7 +393,7 @@ class Vehicule extends CommonObject
 	 * Vehicule constructor.
 	 * @param DoliDB $db Database connector
 	 */
-	public function __construct($db)
+	public function __construct(DoliDB $db)
 	{
 		$this->db = $db;
 
@@ -1169,6 +1169,12 @@ class Vehicule extends CommonObject
 		return $out;
 	}
 
+	/**
+	 * Build the extra HTML (mark, type, third party, cross-entity info) shown
+	 * below the ref in the banner of the vehicle card.
+	 *
+	 * @return string HTML content for dol_banner_tab()'s $morehtmlref
+	 */
 	public function getBanner() {
 		global $conf, $langs;
 		// Build morehtmlref (marque, type, tiers)

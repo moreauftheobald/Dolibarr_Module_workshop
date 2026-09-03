@@ -85,7 +85,9 @@ if (!$user->hasRight("workshop", "vehicule", "readext")) {
 	accessforbidden();
 }
 
-if (!isModEnabled("workshop")) accessforbidden();
+if (!isModEnabled("workshop")) {
+	accessforbidden();
+}
 
 // 'readext' above only allows viewing the list: creating, editing or deleting
 // a record requires the 'write' right.

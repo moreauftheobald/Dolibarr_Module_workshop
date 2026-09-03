@@ -429,7 +429,7 @@ if ($action == 'create') {
 	print '<form method="POST" action="'.dol_escape_htmltag($_SERVER["PHP_SELF"]).'">';
 	print '<input type="hidden" name="token" value="'.newToken().'">';
 	print '<input type="hidden" name="action" value="add">';
-	print '<input type="hidden" name="backtopage" value="'.$backtopage.'">';
+	print '<input type="hidden" name="backtopage" value="'.dol_escape_htmltag($backtopage).'">';
 
 	print dol_get_fiche_head(array(), '');
 	print '<table class="border centpercent">'."\n";
@@ -453,7 +453,7 @@ if ($action == 'create') {
 			print '<form method="POST" action="'.dol_escape_htmltag($_SERVER["PHP_SELF"]).'">';
 			print '<input type="hidden" name="token" value="'.newToken().'">';
 			print '<input type="hidden" name="action" value="update">';
-			print '<input type="hidden" name="backtopage" value="'.$backtopage.'">';
+			print '<input type="hidden" name="backtopage" value="'.dol_escape_htmltag($backtopage).'">';
 			print '<input type="hidden" name="id" value="'.$object->id.'">';
 
 			$head = vehiculePrepareHead($object);

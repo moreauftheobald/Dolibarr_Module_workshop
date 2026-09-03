@@ -47,7 +47,7 @@ class modWorkshop extends DolibarrModules
 
 		// Id for module (must be unique).
 		// Use here a free id (See in Home -> System information -> Dolibarr for list of used modules id).
-		$this->numero = 437872; // TODO Go on page https://wiki.dolibarr.org/index.php/List_of_modules_id to reserve an id number for your module
+		$this->numero = 437872;
 
 		// Key text used to identify module (for permissions, menus, etc...)
 		$this->rights_class = 'workshop';
@@ -291,22 +291,22 @@ class modWorkshop extends DolibarrModules
 		// Add here entries to declare new permissions
 		/* BEGIN MODULEBUILDER PERMISSIONS */
 		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + 0 + 1);
-		$this->rights[$r][1] = 'Readoperationorders';
+		$this->rights[$r][1] = 'ReadWorkshopOperationOrders';
 		$this->rights[$r][4] = 'operationorders';
 		$this->rights[$r][5] = 'read';
 		$r++;
 		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + 1 + 1);
-		$this->rights[$r][1] = 'Createoperationorders';
+		$this->rights[$r][1] = 'CreateWorkshopOperationOrders';
 		$this->rights[$r][4] = 'operationorders';
 		$this->rights[$r][5] = 'write';
 		$r++;
 		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + 2 + 1);
-		$this->rights[$r][1] = 'Deleteoperationorders';
+		$this->rights[$r][1] = 'DeleteWorkshopOperationOrders';
 		$this->rights[$r][4] = 'operationorders';
 		$this->rights[$r][5] = 'delete';
 		$r++;
 		$this->rights[$r][0] = $this->numero . sprintf('%02d', (0 * 10) + 3 + 1);
-		$this->rights[$r][1] = 'Readworkshopsext';
+		$this->rights[$r][1] = 'ReadWorkshopOperationOrdersExt';
 		$this->rights[$r][4] = 'operationorders';
 		$this->rights[$r][5] = 'readext';
 		$r++;
@@ -331,22 +331,22 @@ class modWorkshop extends DolibarrModules
 		$this->rights[$r][5] = 'write';
 		$r++;
 		$this->rights[$r][0] = $this->numero . sprintf('%02d', (4 * 10) + 0 + 1);
-		$this->rights[$r][1] = 'Readvehicules';
+		$this->rights[$r][1] = 'ReadWorkshopVehicules';
 		$this->rights[$r][4] = 'vehicule';
 		$this->rights[$r][5] = 'read';
 		$r++;
 		$this->rights[$r][0] = $this->numero . sprintf('%02d', (3 * 10) + 0 + 1);
-		$this->rights[$r][1] = 'Readvehiculesext';
+		$this->rights[$r][1] = 'ReadWorkshopVehiculesExt';
 		$this->rights[$r][4] = 'vehicule';
 		$this->rights[$r][5] = 'readext';
 		$r++;
 		$this->rights[$r][0] = $this->numero . sprintf('%02d', (4 * 10) + 1 + 1);
-		$this->rights[$r][1] = 'Writetevehicules';
+		$this->rights[$r][1] = 'WriteWorkshopVehicules';
 		$this->rights[$r][4] = 'vehicule';
 		$this->rights[$r][5] = 'write';
 		$r++;
 		$this->rights[$r][0] = $this->numero . sprintf('%02d', (4 * 10) + 2 + 1);
-		$this->rights[$r][1] = 'Deletevehicules';
+		$this->rights[$r][1] = 'DeleteWorkshopVehicules';
 		$this->rights[$r][4] = 'vehicule';
 		$this->rights[$r][5] = 'delete';
 		$r++;

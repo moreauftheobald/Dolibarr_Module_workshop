@@ -23,6 +23,22 @@ ModuleWorkshopName = Workshop
 ModuleWorkshopDesc = Workshop description
 
 #
+# Rights
+#
+ReadWorkshopOperationOrders=Read repair orders
+CreateWorkshopOperationOrders=Create repair orders
+DeleteWorkshopOperationOrders=Delete repair orders
+ReadWorkshopPlanning=Read the Workshop Planning
+WriteWorkshopPlanning=Modify the Workshop Planning
+ReadWorkshopMecanicsPlanning=Read the mechanics time-tracking planning
+WriteWorkshopMecanicsPlanning=Modify the mechanics time-tracking planning
+ReadWorkshopOperationOrdersExt=Workshop - Advanced management permission
+ReadWorkshopVehicules=Read vehicles
+ReadWorkshopVehiculesExt=Vehicle - Advanced management permission
+WriteWorkshopVehicules=Create vehicles
+DeleteWorkshopVehicules=Delete vehicles
+
+#
 # Admin page - Entity sharing (multicompany)
 #
 Multicompany=Multicompany
