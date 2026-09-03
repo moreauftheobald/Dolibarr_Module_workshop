@@ -168,6 +168,7 @@ print '<div class="div-table-responsive">';
 print '<table id="workshop-or-status-list" class="liste">';
 print '<thead>';
 print '<tr class="liste_titre">';
+print '<th class="center maxwidthsearch">' . $selectedfields . '</th>';
 print '<th>' . $langs->trans('Code') . '</th>';
 print '<th>' . $langs->trans('Label') . '</th>';
 if (!empty($arrayfields['color']['checked'])) {
@@ -189,7 +190,7 @@ foreach ($object->TGroupRightsType as $rightType) {
 if (!empty($arrayfields['status']['checked'])) {
     print '<th>' . $langs->trans('Status') . '</th>';
 }
-print '<th class="center maxwidthsearch">' . $selectedfields . '</th>';
+print '<th></th>';
 print '</tr>';
 print '</thead>';
 print '<tbody>';
@@ -204,6 +205,7 @@ if (!empty($Tlist)) {
 
     foreach ($Tlist as $oStatus) {
         print '<tr data-lineid="' . $oStatus->id . '">';
+		print '<td class="linecolmove"></td>';
         print '<td><a href="' . $oStatus->getCardUrl() . '">' . dol_escape_htmltag($oStatus->code) . '</a></td>';
         print '<td><a href="' . $oStatus->getCardUrl() . '">' . $oStatus->getBadge() . '</a></td>';
 
@@ -264,7 +266,6 @@ if (!empty($Tlist)) {
             print '<td>' . $oStatus->getLibStatut(2) . '</td>';
         }
 
-        print '<td class="linecolmove"></td>';
         print '</tr>';
     }
 
