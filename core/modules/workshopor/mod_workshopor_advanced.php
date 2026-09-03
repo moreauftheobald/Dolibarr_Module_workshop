@@ -21,16 +21,16 @@
  */
 
 /**
- * \file       htdocs/core/modules/operationorder/mod_operationorder_advanced.php
- * \ingroup    operationorder
- * \brief      File containing class for advanced numbering model of OperationOrder
+ * \file       workshop/core/modules/workshopor/mod_workshopor_advanced.php
+ * \ingroup    workshop
+ * \brief      File containing class for advanced (mask-based) numbering model of Workshop Ordres de Réparation
  */
 
-dol_include_once('/operationorder/core/modules/operationorder/modules_operationorder.php');
+dol_include_once('/workshop/core/modules/workshopor/modules_workshopor.php');
 
 
 /**
- *	Class to manage customer Bom numbering rules advanced
+ *	Class to manage the Advanced (mask-based) numbering rule for Workshop OR
  */
 class mod_workshopor_advanced extends ModeleNumRefWorkshopOR
 {
@@ -48,7 +48,7 @@ class mod_workshopor_advanced extends ModeleNumRefWorkshopOR
 	/**
 	 * @var string name
 	 */
-	public $name='advanced';
+	public $name = 'advanced';
 
 
 	/**
@@ -68,7 +68,7 @@ class mod_workshopor_advanced extends ModeleNumRefWorkshopOR
 		$texte.= '<form action="'.$_SERVER["PHP_SELF"].'" method="POST">';
 		$texte.= '<input type="hidden" name="token" value="'.newToken().'">';
 		$texte.= '<input type="hidden" name="action" value="updateMask">';
-		$texte.= '<input type="hidden" name="maskconstOperationOrder" value="OPERATIONORDER_ADVANCED_MASK">';
+		$texte.= '<input type="hidden" name="maskconstWorkshopOR" value="WORKSHOPOR_ADVANCED_MASK">';
 		$texte.= '<table class="nobordernopadding" width="100%">';
 
 		$tooltip=$langs->trans("GenericMaskCodes", $langs->transnoentities("OperationOrder"), $langs->transnoentities("OperationOrder"));
@@ -79,7 +79,7 @@ class mod_workshopor_advanced extends ModeleNumRefWorkshopOR
 
 		// Parametrage du prefix
 		$texte.= '<tr><td>'.$langs->trans("Mask").':</td>';
-		$texte.= '<td class="right">'.$form->textwithpicto('<input type="text" class="flat" size="24" name="maskOperationOrder" value="'.getDolGlobalString("OPERATIONORDER_ADVANCED_MASK") .'">', $tooltip, 1, 1).'</td>';
+		$texte.= '<td class="right">'.$form->textwithpicto('<input type="text" class="flat" size="24" name="maskWorkshopOR" value="'.getDolGlobalString("WORKSHOPOR_ADVANCED_MASK") .'">', $tooltip, 1, 1).'</td>';
 
 		$texte.= '<td class="left" rowspan="2">&nbsp; <input type="submit" class="button" value="'.$langs->trans("Modify").'" name="Button"></td>';
 
@@ -104,7 +104,11 @@ class mod_workshopor_advanced extends ModeleNumRefWorkshopOR
 		$old_code_type=$mysoc->typent_code;
 		$mysoc->code_client='CCCCCCCCCC';
 		$mysoc->typent_code='TTTTTTTTTT';
-		$numExample = $this->getNextValue('');
+
+		$objectExample = new stdClass();
+		$objectExample->date_creation = dol_now();
+
+		$numExample = $this->getNextValue($objectExample);
 		$mysoc->code_client=$old_code_client;
 		$mysoc->typent_code=$old_code_type;
 
@@ -122,35 +126,20 @@ class mod_workshopor_advanced extends ModeleNumRefWorkshopOR
 	 */
 	public function getNextValue($object)
 	{
-		global $db,$conf;
+		global $db;
 
 		require_once DOL_DOCUMENT_ROOT . '/core/lib/functions2.lib.php';
 
-		if ($object->entity == 1) {
-			// We get cursor rule
-			$mask = getDolGlobalString("WORKSHOPOR_ADVANCED_MASK");
-		} else {
-			$sql = 'SELECT value
-				FROM ' . $db->prefix() . 'const
-				WHERE name="OPERATIONORDER_ADVANCED_MASK" AND entity=' . intval($object->entity);
-
-			$resql = $db->query($sql);
-			if (!$resql || $db->num_rows($resql) == 0) {
-				$mask = getDolGlobalString("WORKSHOPOR_ADVANCED_MASK");
-			} else {
-				$obj = $db->fetch_object($resql);
-				$mask = $obj->value;
-			}
-		}
+		$mask = getDolGlobalString("WORKSHOPOR_ADVANCED_MASK");
 
 		if (! $mask) {
 			$this->error='NotConfigured';
 			return 0;
 		}
 
-		$date = $object->date;
+		$date = !empty($object->date_creation) ? $object->date_creation : dol_now();
 
-		$numFinal=get_next_value($db, $mask, 'operationorder', 'ref', '', null, $date);
+		$numFinal=get_next_value($db, $mask, 'workshop_operationorder', 'ref', '', '', $date);
 
 		return  $numFinal;
 	}
