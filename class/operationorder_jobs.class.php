@@ -223,25 +223,15 @@ class Operationorder_jobs extends CommonObject
 
 		dol_include_once('/workshop/class/operationorderdet.class.php');
 
-		$sql  = 'SELECT rowid FROM '.$this->db->prefix().'workshop_operationorderdet';
-		$sql .= ' WHERE fk_operationorder_jobs = '.((int) $this->id);
-		$sql .= ' ORDER BY rang ASC, rowid ASC';
-
-		$resql = $this->db->query($sql);
-		if ($resql) {
-			while ($obj = $this->db->fetch_object($resql)) {
-				$line = new Operationorderdet($this->db);
-				$result = $line->fetch($obj->rowid);
-				if ($result > 0) {
-					$this->lines[] = $line;
-				}
-			}
-			$this->db->free($resql);
-			return 1;
-		} else {
-			$this->error = $this->db->lasterror();
+		$detObj = new Operationorderdet($this->db);
+		$lines = $detObj->fetchAllByJob($this->id);
+		if (!is_array($lines)) {
+			$this->error = $detObj->error ?: implode(',', $detObj->errors);
 			return -1;
 		}
+
+		$this->lines = array_values($lines);
+		return 1;
 	}
 
 	/**
@@ -260,25 +250,36 @@ class Operationorder_jobs extends CommonObject
 			return -1;
 		}
 
-		$updated = 0;
-		foreach ($jobs as $job) {
-			$job->remise_percent = $remise_percent;
-			$job->computeMO();
-			// Recalculate total_ht including parts/services already in DB
-			$sqlTot  = 'SELECT';
+		// Recalculate total_ht including parts/services already in DB, for all jobs in one query.
+		$sums = array();
+		if (!empty($jobs)) {
+			$jobIds = array_map(function ($j) {
+				return (int) $j->id;
+			}, $jobs);
+			$sqlTot  = 'SELECT fk_operationorder_jobs,';
 			$sqlTot .= '  COALESCE(SUM(total_ht_part), 0)   AS total_ht_part,';
 			$sqlTot .= '  COALESCE(SUM(total_ht_service), 0) AS total_ht_service,';
 			$sqlTot .= '  COALESCE(SUM(total_ht_refund), 0)  AS total_ht_refund';
 			$sqlTot .= ' FROM '.$this->db->prefix().'workshop_operationorderdet';
-			$sqlTot .= ' WHERE fk_operationorder_jobs = '.((int) $job->id);
+			$sqlTot .= ' WHERE fk_operationorder_jobs IN ('.implode(',', $jobIds).')';
+			$sqlTot .= ' GROUP BY fk_operationorder_jobs';
 			$resTot = $this->db->query($sqlTot);
 			if ($resTot) {
-				$objTot = $this->db->fetch_object($resTot);
-				$job->total_ht_part    = (float) $objTot->total_ht_part;
-				$job->total_ht_service = (float) $objTot->total_ht_service;
-				$job->total_ht_refund  = (float) $objTot->total_ht_refund;
+				while ($objTot = $this->db->fetch_object($resTot)) {
+					$sums[(int) $objTot->fk_operationorder_jobs] = $objTot;
+				}
 				$this->db->free($resTot);
 			}
+		}
+
+		$updated = 0;
+		foreach ($jobs as $job) {
+			$job->remise_percent = $remise_percent;
+			$job->computeMO();
+			$objTot = isset($sums[$job->id]) ? $sums[$job->id] : null;
+			$job->total_ht_part    = $objTot ? (float) $objTot->total_ht_part : 0.0;
+			$job->total_ht_service = $objTot ? (float) $objTot->total_ht_service : 0.0;
+			$job->total_ht_refund  = $objTot ? (float) $objTot->total_ht_refund : 0.0;
 			$job->total_ht = $job->total_ht_mo + $job->total_ht_part + $job->total_ht_service + (float) $job->total_ht_external + $job->total_ht_refund;
 			if ($job->updateCommon($user, 1) > 0) {
 				$updated++;
@@ -546,22 +547,29 @@ class Operationorder_jobs extends CommonObject
 	 */
 	public function linkMaintenanceOperations(array $ids): int
 	{
-		$inserted = 0;
+		$idVos = array();
 		foreach ($ids as $idVo) {
 			$idVo = (int) $idVo;
-			if ($idVo <= 0) {
-				continue;
+			if ($idVo > 0) {
+				$idVos[] = $idVo;
 			}
-			$sql  = 'INSERT IGNORE INTO '.$this->db->prefix().'workshop_operationorder_jobs_maintenance';
-			$sql .= ' (fk_job, fk_vehicule_operation) VALUES ('.((int) $this->id).', '.$idVo.')';
-			if (!$this->db->query($sql)) {
-				$this->error = $this->db->lasterror();
-				dol_syslog(__METHOD__.' '.$this->error, LOG_ERR);
-				return -1;
-			}
-			$inserted++;
 		}
-		return $inserted;
+		if (empty($idVos)) {
+			return 0;
+		}
+
+		$values = array();
+		foreach ($idVos as $idVo) {
+			$values[] = '('.((int) $this->id).', '.$idVo.')';
+		}
+		$sql  = 'INSERT IGNORE INTO '.$this->db->prefix().'workshop_operationorder_jobs_maintenance';
+		$sql .= ' (fk_job, fk_vehicule_operation) VALUES '.implode(', ', $values);
+		if (!$this->db->query($sql)) {
+			$this->error = $this->db->lasterror();
+			dol_syslog(__METHOD__.' '.$this->error, LOG_ERR);
+			return -1;
+		}
+		return count($idVos);
 	}
 
 	/**

@@ -516,12 +516,12 @@ class WorkshopPointage extends CommonObject
 	{
 		global $conf;
 
-		$sql  = 'SELECT rowid FROM '.$this->db->prefix().$this->table_element;
-		$sql .= ' WHERE fk_user = '.((int) $fk_user);
-		$sql .= ' AND entity = '.((int) $conf->entity);
-		$sql .= " AND date_start >= '".$this->db->idate($date_start)."'";
-		$sql .= " AND date_start <= '".$this->db->idate($date_end)."'";
-		$sql .= ' ORDER BY date_start ASC';
+		$sql  = 'SELECT '.$this->getFieldList('t').' FROM '.$this->db->prefix().$this->table_element.' as t';
+		$sql .= ' WHERE t.fk_user = '.((int) $fk_user);
+		$sql .= ' AND t.entity = '.((int) $conf->entity);
+		$sql .= " AND t.date_start >= '".$this->db->idate($date_start)."'";
+		$sql .= " AND t.date_start <= '".$this->db->idate($date_end)."'";
+		$sql .= ' ORDER BY t.date_start ASC';
 
 		$resql = $this->db->query($sql);
 		if (!$resql) {
@@ -532,8 +532,8 @@ class WorkshopPointage extends CommonObject
 		$ret = array();
 		while ($obj = $this->db->fetch_object($resql)) {
 			$tmp = new WorkshopPointage($this->db);
-			$tmp->fetch($obj->rowid);
-			$ret[$obj->rowid] = $tmp;
+			$tmp->setVarsFromFetchObj($obj);
+			$ret[$tmp->id] = $tmp;
 		}
 		$this->db->free($resql);
 

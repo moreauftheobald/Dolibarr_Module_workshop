@@ -468,7 +468,7 @@ class modWorkshop extends DolibarrModules
 			'prefix' => img_picto('', 'fa-warehouse', 'class="pictofixedwidth valignmiddle paddingright"'),
 			'mainmenu'=>'workshop',
 			'leftmenu'=>'workshop_main',
-			'url'=>'/workshop/workshop.php',
+			'url'=>'/workshop/workshopindex.php',
 			'langs'=>'workshop@workshop',	        // Lang file to use (without .lang) by module. File must be in langs/code_CODE/ directory.
 			'position'=>1000+$r,
 			'enabled'=>'isModEnabled("workshop") && getDolGlobalInt("WORKSHOP_USE_OR")',

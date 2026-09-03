@@ -84,7 +84,7 @@ if (getDolGlobalInt('WORKSHOP_USE_OR')) {
 		if ($maskconstor) {
 			$res = dolibarr_set_const($db, $maskconstor, $maskor, 'chaine', 0, '', $conf->entity);
 		}
-		if (!$res > 0) {
+		if (!($res > 0)) {
 			$error++;
 		}
 		if (!$error) {

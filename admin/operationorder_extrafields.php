@@ -63,6 +63,8 @@ $type2label = ExtraFields::getListOfTypesLabels();
 $action = GETPOST('action', 'aZ09');
 $attrname = GETPOST('attrname', 'alpha');
 $elementtype = 'workshop_operationorder'; //Must be the $table_element of the class that manage extrafield
+$title = "WorkshopSetup";
+$subtab = GETPOST('subtab', 'aZ09') ?: 'general';
 
 if (!$user->admin) {
 	accessforbidden();

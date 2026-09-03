@@ -183,7 +183,10 @@ if (in_array($action, ['save_vehicule_sharing','save_or_sharing'])) {
 		foreach ($shareData as $entityId => $shared) {
 			$shared = array_map('intval', $shared);
 			if ($dao->fetch($entityId) > 0) {
-				$shared = array_unique(array_merge($dao->options['sharings'][$elementOR], $dao->options['sharings'][$elementVehicule]));
+				$shared = array_unique(array_merge(
+					(array) ($dao->options['sharings'][$elementOR] ?? array()),
+					(array) ($dao->options['sharings'][$elementVehicule] ?? array())
+				));
 				$dao->options['sharings']['workshop'] = $shared;
 				if ($dao->update($entityId, $user) < 1) {
 					setEventMessages($langs->trans('Error'), null, 'errors');

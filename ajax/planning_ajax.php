@@ -344,10 +344,15 @@ if ($action === 'create_pointage') {
 		$pt->type   = WorkshopPointage::TYPE_JOB;
 		$pt->fk_job = $fk_job ?: null;
 		if ($fk_job > 0) {
-			$sqlj = 'SELECT fk_operationorder FROM '.$db->prefix().'workshop_operationorder_jobs WHERE rowid = '.((int) $fk_job);
+			$sqlj  = 'SELECT j.fk_operationorder FROM '.$db->prefix().'workshop_operationorder_jobs as j';
+			$sqlj .= ' INNER JOIN '.$db->prefix().'workshop_operationorder as o ON o.rowid = j.fk_operationorder';
+			$sqlj .= ' WHERE j.rowid = '.((int) $fk_job);
+			$sqlj .= ' AND o.entity IN ('.getEntity('workshop').')';
 			$resj = $db->query($sqlj);
 			if ($resj && ($oj = $db->fetch_object($resj))) {
 				$pt->fk_operationorder = (int) $oj->fk_operationorder;
+			} else {
+				wp_json(array('success' => false, 'error' => $langs->trans('ErrorRecordNotFound')));
 			}
 		}
 	}
@@ -423,10 +428,15 @@ if ($action === 'update_pointage') {
 		$pt->impro_code = null;
 		$pt->fk_job     = $fk_job ?: null;
 		if ($fk_job > 0) {
-			$sqlj = 'SELECT fk_operationorder FROM '.$db->prefix().'workshop_operationorder_jobs WHERE rowid = '.((int) $fk_job);
+			$sqlj  = 'SELECT j.fk_operationorder FROM '.$db->prefix().'workshop_operationorder_jobs as j';
+			$sqlj .= ' INNER JOIN '.$db->prefix().'workshop_operationorder as o ON o.rowid = j.fk_operationorder';
+			$sqlj .= ' WHERE j.rowid = '.((int) $fk_job);
+			$sqlj .= ' AND o.entity IN ('.getEntity('workshop').')';
 			$resj = $db->query($sqlj);
 			if ($resj && ($oj = $db->fetch_object($resj))) {
 				$pt->fk_operationorder = (int) $oj->fk_operationorder;
+			} else {
+				wp_json(array('success' => false, 'error' => $langs->trans('ErrorRecordNotFound')));
 			}
 		}
 	}
@@ -558,9 +568,11 @@ if ($action === 'get_jobs_for_or') {
 	$or_id = GETPOSTINT('or_id');
 	$list  = array();
 	if ($or_id > 0) {
-		$sql  = 'SELECT rowid, label FROM '.$db->prefix().'workshop_operationorder_jobs';
-		$sql .= ' WHERE fk_operationorder = '.((int) $or_id);
-		$sql .= ' ORDER BY rang ASC';
+		$sql  = 'SELECT j.rowid, j.label FROM '.$db->prefix().'workshop_operationorder_jobs as j';
+		$sql .= ' INNER JOIN '.$db->prefix().'workshop_operationorder as o ON o.rowid = j.fk_operationorder';
+		$sql .= ' WHERE j.fk_operationorder = '.((int) $or_id);
+		$sql .= ' AND o.entity IN ('.getEntity('workshop').')';
+		$sql .= ' ORDER BY j.rang ASC';
 		$resql = $db->query($sql);
 		if ($resql) {
 			while ($o = $db->fetch_object($resql)) {
@@ -752,11 +764,22 @@ if ($action === 'create_or_quick') {
 	// Derive third party from the vehicle when provided
 	if ($fk_vehicule > 0) {
 		$veh = new Vehicule($db);
-		if ($veh->fetch($fk_vehicule) > 0 && !empty($veh->fk_soc)) {
+		if ($veh->fetch($fk_vehicule) <= 0 || (int) $veh->entity !== (int) $conf->entity) {
+			wp_json(array('success' => false, 'error' => $langs->trans('ErrorRecordNotFound')));
+		}
+		if (!empty($veh->fk_soc)) {
 			$fk_soc = (int) $veh->fk_soc;
 		}
 	}
 	if ($fk_soc <= 0) {
+		wp_json(array('success' => false, 'error' => $langs->trans('ErrInvalidSocid')));
+	}
+	// The third party may have been supplied directly (no vehicle) — check it belongs to the current entity.
+	$sqlsoc = 'SELECT rowid FROM '.$db->prefix().'societe';
+	$sqlsoc .= ' WHERE rowid = '.((int) $fk_soc);
+	$sqlsoc .= ' AND entity IN ('.getEntity('societe').')';
+	$ressoc = $db->query($sqlsoc);
+	if (!$ressoc || !$db->fetch_object($ressoc)) {
 		wp_json(array('success' => false, 'error' => $langs->trans('ErrInvalidSocid')));
 	}
 

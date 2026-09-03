@@ -274,12 +274,12 @@ class WorkshopImpro extends CommonObject
 		$sf = !empty($sortfield) ? $this->db->sanitize($sortfield) : 'label';
 		$so = !empty($sortorder) ? $this->db->sanitize($sortorder) : 'ASC';
 
-		$sql  = 'SELECT rowid FROM '.$this->db->prefix().$this->table_element;
-		$sql .= ' WHERE entity = '.((int) $conf->entity);
+		$sql  = 'SELECT '.$this->getFieldList('t').' FROM '.$this->db->prefix().$this->table_element.' as t';
+		$sql .= ' WHERE t.entity = '.((int) $conf->entity);
 		if ($activeonly) {
-			$sql .= ' AND active = 1';
+			$sql .= ' AND t.active = 1';
 		}
-		$sql .= ' ORDER BY '.$sf.' '.$so;
+		$sql .= ' ORDER BY t.'.$sf.' '.$so;
 
 		$resql = $this->db->query($sql);
 		if (!$resql) {
@@ -290,8 +290,8 @@ class WorkshopImpro extends CommonObject
 		$ret = array();
 		while ($obj = $this->db->fetch_object($resql)) {
 			$tmp = new WorkshopImpro($this->db);
-			$tmp->fetch($obj->rowid);
-			$ret[$obj->rowid] = $tmp;
+			$tmp->setVarsFromFetchObj($obj);
+			$ret[$tmp->id] = $tmp;
 		}
 		$this->db->free($resql);
 

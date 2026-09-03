@@ -321,26 +321,37 @@ class Operationorder extends CommonObject
 		$this->lines = array();
 
 		dol_include_once('/workshop/class/operationorder_jobs.class.php');
+		dol_include_once('/workshop/class/operationorderdet.class.php');
 
-		$sql  = 'SELECT rowid FROM '.$this->db->prefix().'workshop_operationorder_jobs';
-		$sql .= ' WHERE fk_operationorder = '.((int) $this->id);
-		$sql .= ' ORDER BY rang ASC, rowid ASC';
-
-		$resql = $this->db->query($sql);
-		if ($resql) {
-			while ($obj = $this->db->fetch_object($resql)) {
-				$line = new Operationorder_jobs($this->db);
-				$result = $line->fetch($obj->rowid);
-				if ($result > 0) {
-					$this->lines[] = $line;
-				}
-			}
-			$this->db->free($resql);
-			return 1;
-		} else {
-			$this->error = $this->db->lasterror();
+		// One query for all jobs of this OR, then one query for all their detail lines
+		// (grouped in PHP), instead of one fetch() per job cascading into one fetch()
+		// per detail line.
+		$jobObj = new Operationorder_jobs($this->db);
+		$jobs = $jobObj->fetchAllByOperationorder($this->id);
+		if (!is_array($jobs)) {
+			$this->error = $jobObj->error ?: implode(',', $jobObj->errors);
 			return -1;
 		}
+
+		$linesByJob = array();
+		if (!empty($jobs)) {
+			$detObj = new Operationorderdet($this->db);
+			$detLines = $detObj->fetchAllByOperationorder($this->id);
+			if (!is_array($detLines)) {
+				$this->error = $detObj->error ?: implode(',', $detObj->errors);
+				return -1;
+			}
+			foreach ($detLines as $detLine) {
+				$linesByJob[(int) $detLine->fk_operationorder_jobs][] = $detLine;
+			}
+		}
+
+		foreach ($jobs as $job) {
+			$job->lines = isset($linesByJob[$job->id]) ? $linesByJob[$job->id] : array();
+			$this->lines[] = $job;
+		}
+
+		return 1;
 	}
 
 	/**
@@ -579,7 +590,7 @@ class Operationorder extends CommonObject
 					$linkclose = ($morecss ? ' class="' . $morecss . '"' : '');
 				}
 
-				if ($save_lastsearch_value == -1 && preg_match('/list\.php/', $_SERVER['PHP_SELF'])) {
+				if ($save_lastsearch_value == -1 && preg_match('/list\.php/', dol_escape_htmltag($_SERVER['PHP_SELF']))) {
 					$save_lastsearch_value = 1;
 				}
 				if ($save_lastsearch_value == 1) {
@@ -762,6 +773,7 @@ class Operationorder extends CommonObject
 	public function getBanner($action,$permissiontoadd) {
 		global $conf, $langs;
 
+		$morehtmlref = '';
 
 		// Tags de l'OR — pastilles colorées juste sous le numéro
 		$orTagObj  = new OperationorderTag($this->db);
@@ -774,18 +786,18 @@ class Operationorder extends CommonObject
 			$morehtmlref .= '</div>';
 		}
 
-		$morehtmlref = '<div class="refidno">';
+		$morehtmlref .= '<div class="refidno">';
 
 		// Société (modifiable en ligne)
 		$morehtmlref .= $langs->trans('ThirdParty').': ';
 		if ($action == 'editfk_soc' && $permissiontoadd) {
-			$morehtmlref .= '<form method="POST" action="'.$_SERVER['PHP_SELF'].'" style="display:inline-block">';
+			$morehtmlref .= '<form method="POST" action="'.dol_escape_htmltag($_SERVER['PHP_SELF']).'" style="display:inline-block">';
 			$morehtmlref .= '<input type="hidden" name="token" value="'.newToken().'">';
 			$morehtmlref .= '<input type="hidden" name="action" value="save_fk_soc">';
 			$morehtmlref .= '<input type="hidden" name="id" value="'.$this->id.'">';
 			$morehtmlref .= $this->showInputField($this->fields['fk_soc'], 'fk_soc', $this->fk_soc, '', '', '', 'minwidth200');
 			$morehtmlref .= ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
-			$morehtmlref .= ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$this->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
+			$morehtmlref .= ' <a href="'.dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$this->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
 			$morehtmlref .= '</form>';
 		} else {
 			if ($this->fk_soc > 0) {
@@ -796,7 +808,7 @@ class Operationorder extends CommonObject
 				$morehtmlref .= '<span class="opacitymedium">'.$langs->trans('None').'</span>';
 			}
 			if ($permissiontoadd) {
-				$morehtmlref .= ' <a class="editfielda" href="'.$_SERVER['PHP_SELF'].'?id='.$this->id.'&action=editfk_soc">'.img_edit().'</a>';
+				$morehtmlref .= ' <a class="editfielda" href="'.dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$this->id.'&action=editfk_soc">'.img_edit().'</a>';
 			}
 		}
 
@@ -805,18 +817,18 @@ class Operationorder extends CommonObject
 		// Référence client (modifiable en ligne)
 		$morehtmlref .= $langs->trans('RefClient').': ';
 		if ($action == 'editref_client' && $permissiontoadd) {
-			$morehtmlref .= '<form method="POST" action="'.$_SERVER['PHP_SELF'].'" style="display:inline-block">';
+			$morehtmlref .= '<form method="POST" action="'.dol_escape_htmltag($_SERVER['PHP_SELF']).'" style="display:inline-block">';
 			$morehtmlref .= '<input type="hidden" name="token" value="'.newToken().'">';
 			$morehtmlref .= '<input type="hidden" name="action" value="save_ref_client">';
 			$morehtmlref .= '<input type="hidden" name="id" value="'.$this->id.'">';
 			$morehtmlref .= '<input type="text" name="ref_client" class="minwidth200" value="'.dol_escape_htmltag((string) $this->ref_client).'">';
 			$morehtmlref .= ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
-			$morehtmlref .= ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$this->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
+			$morehtmlref .= ' <a href="'.dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$this->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
 			$morehtmlref .= '</form>';
 		} else {
 			$morehtmlref .= (!empty($this->ref_client) ? dol_escape_htmltag($this->ref_client) : '<span class="opacitymedium">'.$langs->trans('None').'</span>');
 			if ($permissiontoadd) {
-				$morehtmlref .= ' <a class="editfielda" href="'.$_SERVER['PHP_SELF'].'?id='.$this->id.'&action=editref_client">'.img_edit().'</a>';
+				$morehtmlref .= ' <a class="editfielda" href="'.dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$this->id.'&action=editref_client">'.img_edit().'</a>';
 			}
 		}
 
@@ -825,13 +837,13 @@ class Operationorder extends CommonObject
 		// Véhicule (modifiable en ligne)
 		$morehtmlref .= $langs->trans('Vehicule').': ';
 		if ($action == 'editfk_vehicule' && $permissiontoadd) {
-			$morehtmlref .= '<form method="POST" action="'.$_SERVER['PHP_SELF'].'" style="display:inline-block">';
+			$morehtmlref .= '<form method="POST" action="'.dol_escape_htmltag($_SERVER['PHP_SELF']).'" style="display:inline-block">';
 			$morehtmlref .= '<input type="hidden" name="token" value="'.newToken().'">';
 			$morehtmlref .= '<input type="hidden" name="action" value="save_fk_vehicule">';
 			$morehtmlref .= '<input type="hidden" name="id" value="'.$this->id.'">';
 			$morehtmlref .= $this->showInputField($this->fields['fk_vehicule'], 'fk_vehicule', $this->fk_vehicule, '', '', '', 'minwidth200');
 			$morehtmlref .= ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
-			$morehtmlref .= ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$this->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
+			$morehtmlref .= ' <a href="'.dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$this->id.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
 			$morehtmlref .= '</form>';
 		} else {
 			if ($this->fk_vehicule > 0) {
@@ -843,7 +855,7 @@ class Operationorder extends CommonObject
 				$morehtmlref .= '<span class="opacitymedium">'.$langs->trans('None').'</span>';
 			}
 			if ($permissiontoadd) {
-				$morehtmlref .= ' <a class="editfielda" href="'.$_SERVER['PHP_SELF'].'?id='.$this->id.'&action=editfk_vehicule">'.img_edit().'</a>';
+				$morehtmlref .= ' <a class="editfielda" href="'.dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$this->id.'&action=editfk_vehicule">'.img_edit().'</a>';
 			}
 		}
 

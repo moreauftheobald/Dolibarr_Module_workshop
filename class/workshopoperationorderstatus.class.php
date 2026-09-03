@@ -998,6 +998,7 @@ class WorkshopOperationOrderStatus extends CommonObject
 		$sql  = 'UPDATE ' . $db->prefix() . 'workshop_operationorder_status';
 		$sql .= ' SET rang = ' . (int) $rank;
 		$sql .= ' WHERE rowid = ' . (int) $rowid;
+		$sql .= ' AND entity IN (' . getEntity('workshop') . ')';
 
 		if (!$db->query($sql)) {
 			dol_print_error($db);

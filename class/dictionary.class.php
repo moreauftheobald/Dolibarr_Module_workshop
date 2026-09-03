@@ -233,20 +233,20 @@ abstract class dictionary extends CommonObject
 	 */
 	public function fetchAll($sortorder = '', $sortfield = '', $limit = 0, $offset = 0, $filter = array(), $filtermode = 'AND')
 	{
-		$sql = 'SELECT rowid FROM '.$this->db->prefix().$this->table_element;
+		$sql = 'SELECT '.$this->getFieldList('t').' FROM '.$this->db->prefix().$this->table_element.' as t';
 		if ($this->ismultientitymanaged) {
-			$sql .= ' WHERE entity IN (0, '.getEntity($this->module).')';
+			$sql .= ' WHERE t.entity IN (0, '.getEntity($this->module).')';
 		} else {
 			$sql .= ' WHERE 1=1';
 		}
 
 		if (!empty($sortfield)) {
-			$sql .= ' ORDER BY '.$this->db->sanitize($sortfield);
+			$sql .= ' ORDER BY t.'.$this->db->sanitize($sortfield);
 			if (!empty($sortorder)) {
 				$sql .= ' '.$this->db->sanitize($sortorder);
 			}
 		} else {
-			$sql .= ' ORDER BY label ASC';
+			$sql .= ' ORDER BY t.label ASC';
 		}
 
 		if ($limit > 0) {
@@ -262,9 +262,10 @@ abstract class dictionary extends CommonObject
 		$ret = array();
 		while ($obj = $this->db->fetch_object($resql)) {
 			$tmp = new static($this->db);
-			$tmp->fetch($obj->rowid);
-			$ret[$obj->rowid] = $tmp;
+			$tmp->setVarsFromFetchObj($obj);
+			$ret[$tmp->id] = $tmp;
 		}
+		$this->db->free($resql);
 
 		return $ret;
 	}
@@ -277,6 +278,6 @@ abstract class dictionary extends CommonObject
 	 */
 	public function getNomUrl($withpicto = 0)
 	{
-		return $this->label;
+		return dol_escape_htmltag($this->label);
 	}
 }
