@@ -373,19 +373,32 @@ class Operationorderdet extends CommonObject
 	{
 		global $langs;
 
-		// Retrieve the parent OR ref via a single join query
+		// Retrieve the parent OR ref via a single join query, cached per job id for the
+		// duration of the request (getNomUrl() is typically called once per line of the
+		// same job, which would otherwise re-run the same query for every line).
+		static $orRefCache = array();
+
 		$orRef  = '';
 		$orId   = 0;
 		if (!empty($this->fk_operationorder_jobs)) {
-			$sql  = 'SELECT o.rowid, o.ref';
-			$sql .= ' FROM '.MAIN_DB_PREFIX.'workshop_operationorder o';
-			$sql .= ' INNER JOIN '.MAIN_DB_PREFIX.'workshop_operationorder_jobs j ON j.fk_operationorder = o.rowid';
-			$sql .= ' WHERE j.rowid = '.((int) $this->fk_operationorder_jobs);
-			$resql = $this->db->query($sql);
-			if ($resql && ($obj = $this->db->fetch_object($resql))) {
-				$orId  = (int) $obj->rowid;
-				$orRef = $obj->ref;
-				$this->db->free($resql);
+			$jobId = (int) $this->fk_operationorder_jobs;
+			if (!array_key_exists($jobId, $orRefCache)) {
+				$sql  = 'SELECT o.rowid, o.ref';
+				$sql .= ' FROM '.MAIN_DB_PREFIX.'workshop_operationorder o';
+				$sql .= ' INNER JOIN '.MAIN_DB_PREFIX.'workshop_operationorder_jobs j ON j.fk_operationorder = o.rowid';
+				$sql .= ' WHERE j.rowid = '.$jobId;
+				$resql = $this->db->query($sql);
+				$orRefCache[$jobId] = null;
+				if ($resql) {
+					if ($obj = $this->db->fetch_object($resql)) {
+						$orRefCache[$jobId] = array('id' => (int) $obj->rowid, 'ref' => $obj->ref);
+					}
+					$this->db->free($resql);
+				}
+			}
+			if ($orRefCache[$jobId] !== null) {
+				$orId  = $orRefCache[$jobId]['id'];
+				$orRef = $orRefCache[$jobId]['ref'];
 			}
 		}
 

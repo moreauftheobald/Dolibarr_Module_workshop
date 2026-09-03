@@ -568,15 +568,15 @@ class Vehicule extends CommonObject
 
 		$act = new WorkshopVehiculeActivity($this->db);
 
-		$sql = "SELECT rowid FROM ".$this->db->prefix().$act->table_element;
-		$sql .= " WHERE fk_vehicule = ".((int) $this->id);
+		$sql = "SELECT ".$act->getFieldList('t')." FROM ".$this->db->prefix().$act->table_element." as t";
+		$sql .= " WHERE t.fk_vehicule = ".((int) $this->id);
 		if (!empty($date_end)) {
-			$sql .= " AND date_start < '".$this->db->idate($date_end)."'";
+			$sql .= " AND t.date_start < '".$this->db->idate($date_end)."'";
 		}
 		if (!empty($date_start)) {
-			$sql .= " AND date_end > '".$this->db->idate($date_start)."'";
+			$sql .= " AND t.date_end > '".$this->db->idate($date_start)."'";
 		}
-		$sql .= " ORDER BY date_start ASC";
+		$sql .= " ORDER BY t.date_start ASC";
 
 		$resql = $this->db->query($sql);
 		if ($resql) {
@@ -584,14 +584,11 @@ class Vehicule extends CommonObject
 			if ($num) {
 				while ($obj = $this->db->fetch_object($resql)) {
 					$act = new WorkshopVehiculeActivity($this->db);
-					$ret = $act->fetch($obj->rowid);
-					if ($ret > 0) {
-						$this->activities[$obj->rowid] = $act;
-					} else {
-						$this->error = $act->error;
-					}
+					$act->setVarsFromFetchObj($obj);
+					$this->activities[$act->id] = $act;
 				}
 			}
+			$this->db->free($resql);
 
 			return $num;
 		}
@@ -881,9 +878,10 @@ class Vehicule extends CommonObject
 	{
 		$this->operations = array();
 
-		$sql = "SELECT rowid FROM ".$this->db->prefix().$this->table_element."_operation";
-		$sql .= " WHERE fk_vehicule = ".((int) $this->id);
-		$sql .= " ORDER BY rang ASC";
+		$opeTmp = new WorkshopVehiculeOperation($this->db);
+		$sql = "SELECT ".$opeTmp->getFieldList('t')." FROM ".$this->db->prefix().$this->table_element."_operation as t";
+		$sql .= " WHERE t.fk_vehicule = ".((int) $this->id);
+		$sql .= " ORDER BY t.rang ASC";
 
 		$resql = $this->db->query($sql);
 		if ($resql) {
@@ -891,15 +889,11 @@ class Vehicule extends CommonObject
 			if ($num) {
 				while ($obj = $this->db->fetch_object($resql)) {
 					$ope = new WorkshopVehiculeOperation($this->db);
-					$ret = $ope->fetch($obj->rowid);
-					if ($ret >= 0) {
-						$this->operations[] = $ope;
-					} else {
-						$this->error = $ope->error;
-						return $ret;
-					}
+					$ope->setVarsFromFetchObj($obj);
+					$this->operations[] = $ope;
 				}
 			}
+			$this->db->free($resql);
 
 			return $num;
 		} else {
