@@ -253,19 +253,16 @@ if ($action === 'get_planning_day') {
 
 	// --- Unassigned jobs (no mechanic) belonging to plannable ORs ---
 	$unassigned = array();
-	//$woJosStatus = new WorkshopOperationOrderStatus($db);
 	$sqlu  = 'SELECT j.rowid, j.label, j.fk_operationorder, o.ref';
 	$sqlu .= ' FROM '.$db->prefix().'workshop_operationorder_jobs as j';
 	$sqlu .= ' INNER JOIN '.$db->prefix().'workshop_operationorder as o ON o.rowid = j.fk_operationorder';
 	$sqlu .= ' INNER JOIN '.$db->prefix().'workshop_operationorder_status as sj ON sj.rowid = j.status AND sj.planable = 1 AND sj.status_type='.WorkshopOperationOrderStatus::TYPE_OR_AND_JOB;
 	$sqlu .= ' INNER JOIN '.$db->prefix().'workshop_operationorder_status as so ON so.rowid = o.status AND so.rowid = '.getDolGlobalInt('WORKSHOP_OR_STATUS_ON_PLANNED').' AND so.status_type='.WorkshopOperationOrderStatus::TYPE_OR_AND_JOB;
 	$sqlu .= ' WHERE (j.fk_user_assign IS NULL OR j.fk_user_assign = 0)';
-	$sqlu .= " AND ((o.date_start BETWEEN '" . $db->jdate($day_start) . "' AND '" . $db->jdate($day_end) . "')";
-	$sqlu .= "  OR  (o.date_end   BETWEEN '" . $db->jdate($day_start) . "' AND '" . $db->jdate($day_end) . "'))";
+	$sqlu .= " AND ((o.date_start BETWEEN '" . $db->idate($day_start) . "' AND '" . $db->idate($day_end) . "')";
+	$sqlu .= "  OR  (o.date_end   BETWEEN '" . $db->idate($day_start) . "' AND '" . $db->idate($day_end) . "'))";
 	$sqlu .= ' AND o.entity IN ('.getEntity('workshop').')';
 	$sqlu .= ' ORDER BY o.ref ASC, j.rang ASC';
-	print $sqlu;
-	exit;
 	$sqlu .= $db->plimit(100);
 	$resu = $db->query($sqlu);
 	if ($resu) {
