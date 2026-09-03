@@ -126,6 +126,7 @@ if (empty($reshook)) {
             $object->label   = GETPOST('label', 'alpha');
             $object->color   = GETPOST('color', 'alpha');
             $object->status_type          = GETPOSTINT('status_type');
+            $object->job_behaviour          = GETPOSTINT('job_behaviour');
             $object->rang                 = GETPOST('rang', 'int');
             $object->planable             = GETPOST('planable', 'int');
             $object->clean_event          = GETPOST('clean_event', 'int');
@@ -199,6 +200,34 @@ $form = new Form($db);
 
 llxHeader('', $langs->trans('WorkshopORStatus'), '');
 
+// Example : Adding jquery code
+ print '<script type="text/javascript">
+ $(document).ready(function() {
+ 	$("#status_type").change(function() {
+ 		if ($(this).val() == \''.WorkshopOperationOrderStatus::TYPE_OR.'\') {
+ 			$(".field_job_behaviour").hide();
+	 	} else {
+		 	$(".field_job_behaviour").show();
+		}
+ 	});
+	$("#status_type").change();
+ });
+ </script>';
+
+
+// Champs booléens comportement
+$boolFields = array(
+	'planable',
+	'clean_event',
+	'display_on_planning',
+	'check_virtual_stock',
+	'or_pointable',
+	'save_date_cloture',
+	'require_planned_date',
+	'update_vehicule_info',
+	'require_conf',
+);
+
 // ============================================================
 // FORMULAIRE DE CRÉATION
 // ============================================================
@@ -214,7 +243,7 @@ if ($action === 'create') {
     print dol_get_fiche_head(array(), '');
     print '<table class="border centpercent">' . "\n";
 
-    _printStatusFormFields($object, $form, $langs, $TGroupCan, $TStatusAllowed);
+    _printStatusFormFields($object, $form, $langs, $TGroupCan, $TStatusAllowed, $boolFields);
 
     print '</table>' . "\n";
     print dol_get_fiche_end();
@@ -246,7 +275,7 @@ if ($action === 'create') {
 
     print '<table class="border centpercent">' . "\n";
 
-    _printStatusFormFields($object, $form, $langs, $object->TGroupCan, $object->TStatusAllowed);
+    _printStatusFormFields($object, $form, $langs, $object->TGroupCan, $object->TStatusAllowed, $boolFields);
 
     print '</table>';
     print dol_get_fiche_end();
@@ -288,9 +317,9 @@ if ($action === 'create') {
     dol_banner_tab($object, 'rowid', $linkback, 0, 'rowid', 'code', $morehtmlref, '', 0, '', '');
 
     print '<div class="fichecenter">';
+	print '<div class="underbanner clearboth"></div>';
     print '<div class="fichehalfleft">';
-    print '<div class="underbanner clearboth"></div>';
-    print '<table class="border tableforfield" width="100%">' . "\n";
+    print '<table class="border centpercent tableforfield">' . "\n";
 
     // Code
     print '<tr class="oddeven"><td class="titlefield">' . $langs->trans('Code') . '</td>';
@@ -312,26 +341,21 @@ if ($action === 'create') {
     print '<tr class="oddeven"><td>' . $langs->trans('Rank') . '</td>';
     print '<td>' . (int) $object->rang . '</td></tr>';
 
-    // Champs booléens comportement
-    $boolViewFields = array(
-        'planable'            => 'Planable',
-        'clean_event'         => 'WorkshopCleanEvent',
-        'display_on_planning' => 'WorkshopDisplayOnPlanning',
-        'check_virtual_stock' => 'WorkshopCheckVirtualStock',
-        'or_pointable'        => 'WorkshopOrPointable',
-        'save_date_cloture'   => 'WorkshopSaveDateCloture',
-        'require_planned_date'=> 'WorkshopRequirePlannedDate',
-        'update_vehicule_info'=> 'WorkshopUpdateVehiculeInfo',
-        'require_conf'        => 'WorkshopRequireConf',
-    );
-    foreach ($boolViewFields as $fieldName => $labelKey) {
-        print '<tr class="oddeven"><td>' . $langs->trans($labelKey) . '</td>';
+
+    foreach ($boolFields as $fieldName) {
+        print '<tr class="oddeven"><td>' . $langs->trans($object->fields[$fieldName]['label']) . '</td>';
         print '<td>' . yn(!empty($object->$fieldName) ? 1 : 0) . '</td></tr>';
     }
+	print '</table>';
+	print '</div>';
+	print '<div class="fichehalfright">';
+	print '<table class="border centpercent tableforfield">' . "\n";
 
-    // Statut (actif/désactivé)
-    print '<tr class="oddeven"><td>' . $langs->trans('Status') . '</td>';
-    print '<td>' . $object->getLibStatut(2) . '</td></tr>';
+	if ($object->status_type==WorkshopOperationOrderStatus::TYPE_OR_AND_JOB) {
+		print '<tr class="oddeven"><td>' . $langs->trans($object->fields['job_behaviour']['label']) . '</td><td>';
+		print $object->getLibJobBehaviour();
+		print '</td></tr>';
+	}
 
     // ---- Droits des groupes par entité ----
     foreach ($object->TGroupRightsType as $rightType) {
@@ -406,7 +430,7 @@ $db->close();
  * @param array                        $TGroupCan     Droits groupes courants
  * @param array                        $TStatusAllowed Transitions courantes
  */
-function _printStatusFormFields($object, $form, $langs, $TGroupCan, $TStatusAllowed)
+function _printStatusFormFields($object, $form, $langs, $TGroupCan, $TStatusAllowed, $boolFields)
 {
     global $db, $conf;
 
@@ -431,26 +455,21 @@ function _printStatusFormFields($object, $form, $langs, $TGroupCan, $TStatusAllo
     ), (isset($object->status_type) ? (int) $object->status_type : WorkshopOperationOrderStatus::TYPE_OR));
     print '</td></tr>';
 
+	print '<tr class="oddeven field_job_behaviour"><td>' . $langs->trans($object->fields['job_behaviour']['label']) . '</td><td>';
+	print $form->selectarray('job_behaviour', array(
+		WorkshopOperationOrderStatus::JOB_BEHAVIOUR_ANY => $langs->trans('WorkshopStatusJobBehaviourAny'),
+		WorkshopOperationOrderStatus::JOB_BEHAVIOUR_ALL => $langs->trans('WorkshopStatusJobBehaviourAll'),
+	), ((int) $object->job_behaviour));
+	print '</td></tr>';
+
     // Rang
     print '<tr class="oddeven"><td>' . $langs->trans('Rank') . '</td>';
     print '<td><input type="number" name="rang" value="' . (int) $object->rang . '"></td></tr>';
 
-    // Champs booléens comportement
-    $boolFields = array(
-        'planable'            => 'Planable',
-        'clean_event'         => 'WorkshopCleanEvent',
-        'display_on_planning' => 'WorkshopDisplayOnPlanning',
-        'check_virtual_stock' => 'WorkshopCheckVirtualStock',
-        'or_pointable'        => 'WorkshopOrPointable',
-        'save_date_cloture'   => 'WorkshopSaveDateCloture',
-        'require_planned_date'=> 'WorkshopRequirePlannedDate',
-        'update_vehicule_info'=> 'WorkshopUpdateVehiculeInfo',
-        'require_conf'        => 'WorkshopRequireConf',
-    );
-    foreach ($boolFields as $fieldName => $labelKey) {
+    foreach ($boolFields as $fieldName) {
         $checked = !empty($object->$fieldName) ? ' checked' : '';
         $help = isset($object->fields[$fieldName]['help']) ? $object->fields[$fieldName]['help'] : '';
-        print '<tr class="oddeven"><td>' . $langs->trans($labelKey);
+        print '<tr class="oddeven"><td>' . $langs->trans($object->fields[$fieldName]['label']);
         if ($help) {
             print ' ' . $form->textwithtooltip('', $langs->trans($help), 2, 1, img_help(1, ''));
         }

@@ -69,6 +69,11 @@ class WorkshopOperationOrderStatus extends CommonObject
 	/** Type de statut : concerne l'ordre de réparation et les Jobs */
 	const TYPE_OR_AND_JOB = 2;
 
+	/** Comportement : l'OR prend ce statut dès qu'un Job a ce statut */
+	const JOB_BEHAVIOUR_ANY = 1;
+	/** Comportement : l'OR prend ce statut quand tous les Jobs ont ce statut */
+	const JOB_BEHAVIOUR_ALL = 2;
+
 	/** @var array Libellés des statuts de l'objet statut lui-même */
 	public static $TStatus = array(
 		self::STATUS_DISABLED => 'WorkshopORStatusDisabled',
@@ -154,6 +159,18 @@ class WorkshopOperationOrderStatus extends CommonObject
 			'arrayofkeyval' => array(
 				self::TYPE_OR         => 'WorkshopStatusTypeOR',
 				self::TYPE_OR_AND_JOB => 'WorkshopStatusTypeORAndJob',
+			),
+		),
+		'job_behaviour' => array(
+			'type'          => 'smallint',
+			'label'         => 'WorkshopStatusJobBehaviour',
+			'enabled'       => 1,
+			'position'      => 26,
+			'notnull'       => 0,
+			'visible'       => 1,
+			'arrayofkeyval' => array(
+				self::JOB_BEHAVIOUR_ANY => 'WorkshopStatusJobBehaviourAny',
+				self::JOB_BEHAVIOUR_ALL => 'WorkshopStatusJobBehaviourAll',
 			),
 		),
 		'rang' => array(
@@ -288,6 +305,8 @@ class WorkshopOperationOrderStatus extends CommonObject
 	public $color;
 	/** @var int Portée du statut : 1 = statut d'OR, 2 = statut d'OR et de Job */
 	public $status_type = self::TYPE_OR;
+	/** @var int|null Règle de déduction du statut OR depuis les Jobs (NULL si status_type = TYPE_OR) */
+	public $job_behaviour;
 	/** @var int Rang d'affichage */
 	public $rang;
 	/** @var int|bool Planifiable */
@@ -382,8 +401,25 @@ class WorkshopOperationOrderStatus extends CommonObject
 		if (empty($this->status_type)) {
 			$this->status_type = self::TYPE_OR;
 		}
+		$this->normalizeJobBehaviour();
 
 		return $this->createCommon($user, $notrigger);
+	}
+
+	/**
+	 * Normaliser le comportement Job du statut.
+	 * job_behaviour est toujours NULL quand le statut ne concerne que l'OR (status_type = TYPE_OR),
+	 * et une valeur vide (0, '', etc.) est ramenée à NULL.
+	 *
+	 * @return void
+	 */
+	protected function normalizeJobBehaviour()
+	{
+		if ((int) $this->status_type === self::TYPE_OR || empty($this->job_behaviour)) {
+			$this->job_behaviour = null;
+		} else {
+			$this->job_behaviour = (int) $this->job_behaviour;
+		}
 	}
 
 	/**
@@ -451,6 +487,8 @@ class WorkshopOperationOrderStatus extends CommonObject
 	 */
 	public function update(User $user, $notrigger = false)
 	{
+		$this->normalizeJobBehaviour();
+
 		return $this->updateCommon($user, $notrigger);
 	}
 
@@ -1052,6 +1090,28 @@ class WorkshopOperationOrderStatus extends CommonObject
 		$key = isset($map[(int) $this->status_type]) ? $map[(int) $this->status_type] : $map[self::TYPE_OR];
 
 		return $langs->trans($key);
+	}
+
+	/**
+	 * Libellé traduit du comportement du statut de l'OR vis-à-vis des Jobs.
+	 * Chaîne vide si non défini (statut d'OR seul).
+	 *
+	 * @return string
+	 */
+	public function getLibJobBehaviour()
+	{
+		global $langs;
+		$langs->load('workshop@workshop');
+
+		$map = array(
+			self::JOB_BEHAVIOUR_ANY => 'WorkshopStatusJobBehaviourAny',
+			self::JOB_BEHAVIOUR_ALL => 'WorkshopStatusJobBehaviourAll',
+		);
+		if (empty($this->job_behaviour) || !isset($map[(int) $this->job_behaviour])) {
+			return '';
+		}
+
+		return $langs->trans($map[(int) $this->job_behaviour]);
 	}
 
 	/**
