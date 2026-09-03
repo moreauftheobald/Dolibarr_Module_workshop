@@ -22,6 +22,7 @@ CREATE TABLE llx_workshop_operationorder_status (
   code                  varchar(128) NOT NULL DEFAULT '',
   label                 varchar(128) NOT NULL DEFAULT '',
   color                 varchar(16) NOT NULL DEFAULT '#3c8dbc',
+  status_type           smallint NOT NULL DEFAULT 1,
   rang                  integer DEFAULT 0,
   status                smallint NOT NULL DEFAULT 1,
   planable              tinyint(1) DEFAULT 0,

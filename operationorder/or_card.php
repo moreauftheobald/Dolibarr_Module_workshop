@@ -1153,6 +1153,7 @@ if ($id > 0) {
 	print '</div>'; // fichehalfright
 	print '</div>'; // fichecenter
 
+	print '<div class="clearboth"></div>';
 	print dol_get_fiche_end();
 
 	// ═══════════════════════════════════════════════════════════════════════
@@ -1210,13 +1211,16 @@ if ($id > 0) {
 
 			if ($isActive) {
 				$btnStyle = !empty($targetStatus->color) ? ' style="background-color:'.dol_escape_htmltag($targetStatus->color).';border-color:'.dol_escape_htmltag($targetStatus->color).';"' : '';
-				print '<form method="POST" action="'.$_SERVER['PHP_SELF'].'" style="display:inline-block;margin:2px;">'."\n";
-				print '<input type="hidden" name="token" value="'.newToken().'">'."\n";
-				print '<input type="hidden" name="action" value="setStatus">'."\n";
-				print '<input type="hidden" name="id" value="'.$object->id.'">'."\n";
-				print '<input type="hidden" name="fk_status" value="'.$targetStatusId.'">'."\n";
-				print '<input type="submit" class="butAction"'.$btnStyle.' value="'.dol_escape_htmltag($targetStatus->label).'">'."\n";
-				print '</form>'."\n";
+				print '<a class="butAction" "'.$btnStyle.'" href="'.$_SERVER['PHP_SELF'].'?action=setStatus&id='.$object->id.'&fk_status='.$targetStatusId.'&token='.newToken().'">';
+				print $targetStatus->label;
+				print '</a>'."\n";
+//				print '<form method="POST" action="'..'" style="display:inline-block;margin:2px;">'."\n";
+//				print '<input type="hidden" name="token" value="'.newToken().'">'."\n";
+//				print '<input type="hidden" name="action" value="setStatus">'."\n";
+//				print '<input type="hidden" name="id" value="'.$object->id.'">'."\n";
+//				print '<input type="hidden" name="fk_status" value="'.$targetStatusId.'">'."\n";
+//				print '<input type="submit" class="butAction"'.$btnStyle.' value="'.dol_escape_htmltag($targetStatus->label).'">'."\n";
+//				print '</form>'."\n";
 			} else {
 				$tooltip = !$canChange ? $langs->trans('NotEnoughPermissions') : $langs->trans('PlanningDateRequired');
 				print '<a class="butActionRefused classfortooltip" title="'.dol_escape_htmltag($tooltip).'">';

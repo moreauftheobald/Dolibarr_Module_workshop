@@ -125,6 +125,7 @@ if (empty($reshook)) {
             $object->code    = GETPOST('code', 'alpha');
             $object->label   = GETPOST('label', 'alpha');
             $object->color   = GETPOST('color', 'alpha');
+            $object->status_type          = GETPOSTINT('status_type');
             $object->rang                 = GETPOST('rang', 'int');
             $object->planable             = GETPOST('planable', 'int');
             $object->clean_event          = GETPOST('clean_event', 'int');
@@ -303,6 +304,10 @@ if ($action === 'create') {
     print '<tr class="oddeven"><td>' . $langs->trans('Color') . '</td>';
     print '<td><input disabled type="color" value="' . dol_escape_htmltag($object->color) . '"></td></tr>';
 
+    // Type de statut
+    print '<tr class="oddeven"><td>' . $langs->trans('WorkshopStatusType') . '</td>';
+    print '<td>' . $object->getLibStatusType() . '</td></tr>';
+
     // Rang
     print '<tr class="oddeven"><td>' . $langs->trans('Rank') . '</td>';
     print '<td>' . (int) $object->rang . '</td></tr>';
@@ -417,6 +422,14 @@ function _printStatusFormFields($object, $form, $langs, $TGroupCan, $TStatusAllo
     $color = $object->color ?: '#3c8dbc';
     print '<tr class="oddeven"><td>' . $langs->trans('Color') . '</td>';
     print '<td><input type="color" name="color" value="' . dol_escape_htmltag($color) . '"></td></tr>';
+
+    // Type de statut
+    print '<tr class="oddeven"><td>' . $langs->trans('WorkshopStatusType') . '</td><td>';
+    print $form->selectarray('status_type', array(
+        WorkshopOperationOrderStatus::TYPE_OR         => $langs->trans('WorkshopStatusTypeOR'),
+        WorkshopOperationOrderStatus::TYPE_OR_AND_JOB => $langs->trans('WorkshopStatusTypeORAndJob'),
+    ), (isset($object->status_type) ? (int) $object->status_type : WorkshopOperationOrderStatus::TYPE_OR));
+    print '</td></tr>';
 
     // Rang
     print '<tr class="oddeven"><td>' . $langs->trans('Rank') . '</td>';

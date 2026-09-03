@@ -53,6 +53,8 @@ if (!$res) {
 }
 
 require_once DOL_DOCUMENT_ROOT . '/core/lib/functions.lib.php';
+require_once DOL_DOCUMENT_ROOT . '/core/class/html.form.class.php';
+require_once DOL_DOCUMENT_ROOT . '/user/class/usergroup.class.php';
 dol_include_once('/workshop/class/workshopoperationorderstatus.class.php');
 dol_include_once('/workshop/lib/workshop_operationorder.lib.php');
 
@@ -64,7 +66,10 @@ $langs->loadLangs(array('workshop@workshop'));
 
 $object = new WorkshopOperationOrderStatus($db);
 
-$hookmanager->initHooks(array('workshopoperationorderstatuslist'));
+$action      = GETPOST('action', 'aZ09');
+$contextpage = 'workshopoperationorderstatuslist';
+
+$hookmanager->initHooks(array($contextpage));
 
 /*
  * Actions
@@ -78,6 +83,11 @@ $parameters = array();
 $reshook    = $hookmanager->executeHooks('doActions', $parameters, $object);
 if ($reshook < 0) {
     setEventMessages($hookmanager->error, $hookmanager->errors, 'errors');
+}
+
+if (empty($reshook)) {
+    // Enregistrement du choix des colonnes affichées (sélecteur de colonnes standard Dolibarr)
+    include DOL_DOCUMENT_ROOT . '/core/actions_changeselectedfields.inc.php';
 }
 
 if (!empty($confirmmassaction) && $massaction === 'delete' && !empty($toselect)) {
@@ -111,28 +121,160 @@ $newcardbutton = dolGetButtonTitle(
 
 print load_fiche_titre($langs->trans('WorkshopORStatusList'), $newcardbutton, 'fa-traffic-light');
 
-$Tlist = $object->fetchAll(0, false, array('status' => WorkshopOperationOrderStatus::STATUS_ACTIVE));
+$Tlist = $object->fetchAll(0, true, array('status' => WorkshopOperationOrderStatus::STATUS_ACTIVE));
 
+// Champs booléens de comportement (identiques à ceux de la fiche)
+$boolCols = array(
+    'planable'             => 'Planable',
+    'clean_event'          => 'WorkshopCleanEvent',
+    'display_on_planning'  => 'WorkshopDisplayOnPlanning',
+    'check_virtual_stock'  => 'WorkshopCheckVirtualStock',
+    'or_pointable'         => 'WorkshopOrPointable',
+    'save_date_cloture'    => 'WorkshopSaveDateCloture',
+    'require_planned_date' => 'WorkshopRequirePlannedDate',
+    'update_vehicule_info' => 'WorkshopUpdateVehiculeInfo',
+    'require_conf'         => 'WorkshopRequireConf',
+);
+
+// Définition des colonnes optionnelles pilotées par le sélecteur de colonnes standard Dolibarr.
+// Les colonnes Code et Libellé restent toujours affichées (identité de la ligne).
+$arrayfields = array(
+    'status_type' => array('label' => 'WorkshopStatusType', 'checked' => '1', 'enabled' => '1', 'position' => 25),
+    'color'       => array('label' => 'Color', 'checked' => '1', 'enabled' => '1', 'position' => 30),
+);
+$posfield = 40;
+foreach ($boolCols as $fieldName => $labelKey) {
+    $arrayfields[$fieldName] = array('label' => $labelKey, 'checked' => '1', 'enabled' => '1', 'position' => $posfield);
+    $posfield += 5;
+}
+$arrayfields['transitions'] = array('label' => 'WorkshopTargetableStatus', 'checked' => '1', 'enabled' => '1', 'position' => 200);
+$posfield = 210;
+foreach ($object->TGroupRightsType as $rightType) {
+    $arrayfields['gr_' . $rightType['code']] = array('label' => $rightType['label'], 'checked' => '1', 'enabled' => '1', 'position' => $posfield);
+    $posfield += 5;
+}
+$arrayfields['status'] = array('label' => 'Status', 'checked' => '1', 'enabled' => '1', 'position' => 1000);
+
+$form = new Form($db);
+$varpage = $contextpage;
+// Applique la sélection enregistrée de l'utilisateur et retourne le sélecteur HTML
+$selectedfields = $form->multiSelectArrayWithCheckbox('selectedfields', $arrayfields, $varpage, $conf->main_checkbox_left_column);
+
+print '<form method="POST" id="searchFormList" action="' . $_SERVER['PHP_SELF'] . '">';
+print '<input type="hidden" name="token" value="' . newToken() . '">';
+print '<input type="hidden" name="formfilteraction" id="formfilteraction" value="list">';
+print '<input type="hidden" name="action" value="list">';
+
+print '<div class="div-table-responsive">';
 print '<table id="workshop-or-status-list" class="liste">';
 print '<thead>';
 print '<tr class="liste_titre">';
+print '<th class="center maxwidthsearch">' . $selectedfields . '</th>';
 print '<th>' . $langs->trans('Code') . '</th>';
 print '<th>' . $langs->trans('Label') . '</th>';
-print '<th>' . $langs->trans('Color') . '</th>';
-print '<th>' . $langs->trans('Status') . '</th>';
+if (!empty($arrayfields['status_type']['checked'])) {
+    print '<th>' . $langs->trans('WorkshopStatusType') . '</th>';
+}
+if (!empty($arrayfields['color']['checked'])) {
+    print '<th>' . $langs->trans('Color') . '</th>';
+}
+foreach ($boolCols as $fieldName => $labelKey) {
+    if (!empty($arrayfields[$fieldName]['checked'])) {
+        print '<th class="center">' . $langs->trans($labelKey) . '</th>';
+    }
+}
+if (!empty($arrayfields['transitions']['checked'])) {
+    print '<th>' . $langs->trans('WorkshopTargetableStatus') . '</th>';
+}
+foreach ($object->TGroupRightsType as $rightType) {
+    if (!empty($arrayfields['gr_' . $rightType['code']]['checked'])) {
+        print '<th>' . $langs->trans($rightType['label']) . '</th>';
+    }
+}
+if (!empty($arrayfields['status']['checked'])) {
+    print '<th>' . $langs->trans('Status') . '</th>';
+}
 print '<th></th>';
 print '</tr>';
 print '</thead>';
 print '<tbody>';
 
 if (!empty($Tlist)) {
+    // Badges (avec lien) de tous les statuts actifs, pour l'affichage des transitions
+    $statusBadges = array();
+    foreach ($Tlist as $sBadge) {
+        $statusBadges[$sBadge->id] = $sBadge->getNomUrl(0);
+    }
+    $groupNameCache = array();
+
     foreach ($Tlist as $oStatus) {
         print '<tr data-lineid="' . $oStatus->id . '">';
+		print '<td class="linecolmove"></td>';
         print '<td><a href="' . $oStatus->getCardUrl() . '">' . dol_escape_htmltag($oStatus->code) . '</a></td>';
         print '<td><a href="' . $oStatus->getCardUrl() . '">' . $oStatus->getBadge() . '</a></td>';
-        print '<td><input disabled type="color" value="' . dol_escape_htmltag($oStatus->color) . '"></td>';
-        print '<td>' . $oStatus->getLibStatut(2) . '</td>';
-        print '<td class="linecolmove"></td>';
+
+        // Type de statut
+        if (!empty($arrayfields['status_type']['checked'])) {
+            print '<td>' . dol_escape_htmltag($oStatus->getLibStatusType()) . '</td>';
+        }
+
+        // Couleur
+        if (!empty($arrayfields['color']['checked'])) {
+            print '<td><input disabled type="color" value="' . dol_escape_htmltag($oStatus->color) . '"></td>';
+        }
+
+        // Champs booléens de comportement
+        foreach ($boolCols as $fieldName => $labelKey) {
+            if (empty($arrayfields[$fieldName]['checked'])) {
+                continue;
+            }
+            print '<td class="center">' . yn(!empty($oStatus->$fieldName) ? 1 : 0) . '</td>';
+        }
+
+        // Transitions autorisées vers d'autres statuts
+        if (!empty($arrayfields['transitions']['checked'])) {
+            print '<td>';
+            if (!empty($oStatus->TStatusAllowed)) {
+                foreach ($oStatus->TStatusAllowed as $fkTarget) {
+                    if (isset($statusBadges[$fkTarget])) {
+                        print $statusBadges[$fkTarget] . ' ';
+                    } else {
+                        $statusTarget = new WorkshopOperationOrderStatus($db);
+                        if ($statusTarget->fetch((int) $fkTarget, false) > 0) {
+                            print $statusTarget->getNomUrl(0) . ' ';
+                        }
+                    }
+                }
+            }
+            print '</td>';
+        }
+
+        // Droits des groupes par action, pour l'entité courante
+        foreach ($object->TGroupRightsType as $rightType) {
+            $code = $rightType['code'];
+            if (empty($arrayfields['gr_' . $code]['checked'])) {
+                continue;
+            }
+            print '<td>';
+            if (!empty($oStatus->TGroupCan[$code])) {
+                foreach ($oStatus->TGroupCan[$code] as $fkGroup) {
+                    if (!isset($groupNameCache[$fkGroup])) {
+                        $group = new UserGroup($db);
+                        $groupNameCache[$fkGroup] = ($group->fetch((int) $fkGroup) > 0) ? $group->name : '';
+                    }
+                    if ($groupNameCache[$fkGroup] !== '') {
+                        print dolGetBadge($groupNameCache[$fkGroup], '', 'secondary') . ' ';
+                    }
+                }
+            }
+            print '</td>';
+        }
+
+        // Statut actif / désactivé
+        if (!empty($arrayfields['status']['checked'])) {
+            print '<td>' . $oStatus->getLibStatut(2) . '</td>';
+        }
+
         print '</tr>';
     }
 
@@ -188,6 +330,8 @@ if (!empty($Tlist)) {
 
 print '</tbody>';
 print '</table>';
+print '</div>';
+print '</form>';
 
 llxFooter();
 $db->close();
