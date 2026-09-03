@@ -916,39 +916,54 @@ if ($mode === 'dashboard') {
 	if ($user->hasRight('workshop', 'workshopplanning', 'write')) {
 		// Load all OR currently at the "create" status, ready to be scheduled
 		$or_to_plan       = array();
-		$status_create_id = getDolGlobalInt('WORKSHOP_OR_STATUS_ON_CREATE');
 		$status_planned_id = getDolGlobalInt('WORKSHOP_OR_STATUS_ON_PLANNED');
 
-		if ($status_create_id > 0 && $status_planned_id > 0) {
-			$status_perms_toplan =  new WorkshopOperationOrderStatus($db);
-			$res = $status_perms_toplan->fetch($status_create_id);
-			if ($res == null) {
-				$check_perms_toplan=true;
-			} else {
-				$check_perms_toplan=$status_perms_toplan->userCan($user, 'edit');
+		$statusPlanable=[];
+		$status_ToPlann =  new WorkshopOperationOrderStatus($db);
+		$resPlanable = $status_ToPlann->fetchAll(0,false,['planable'=>1,'status_type'=>WorkshopOperationOrderStatus::TYPE_OR_AND_JOB]);
+		if (!is_array($resPlanable) && $resPlanable<0) {
+			setEventMessages($status_ToPlann->error, $status_ToPlann->errors, 'errors');
+		}
+
+		if (is_array($resPlanable) && !empty($resPlanable) && $status_planned_id > 0) {
+
+			$check_perms_toplan=true;
+			foreach($resPlanable as $row){
+				$status_perms_toplan =  new WorkshopOperationOrderStatus($db);
+				$res = $status_perms_toplan->fetch($row->id);
+				if ($res == null) {
+					$check_perms_toplan=false;
+				} else {
+					$statusPlanable[]=$row->id;
+					$check_perms_toplan = $check_perms_toplan && $status_perms_toplan->userCan($user, 'edit');
+				}
 			}
 			$status_perms_planned =  new WorkshopOperationOrderStatus($db);
-			$res = $status_perms_toplan->fetch($status_planned_id);
+			$res = $status_perms_planned->fetch($status_planned_id);
 			if ($res == null) {
 				$check_perms_planned=true;
 			} else {
-				$check_perms_planned=$status_perms_toplan->userCan($user,'changeToThisStatus');
+				$check_perms_planned=$status_perms_planned->userCan($user,'changeToThisStatus');
 			}
 			if ($check_perms_toplan && $check_perms_planned) {
-				$sql_pl = 'SELECT o.rowid, o.ref, o.date_planned, v.immatriculation, soc.nom AS soc_name';
-				$sql_pl .= ' FROM ' . $db->prefix() . 'workshop_operationorder o';
-				$sql_pl .= ' LEFT JOIN ' . $db->prefix() . 'workshop_vehicule v ON v.rowid = o.fk_vehicule';
-				$sql_pl .= ' LEFT JOIN ' . $db->prefix() . 'societe soc ON soc.rowid = o.fk_soc';
-				$sql_pl .= ' WHERE o.entity IN (' . getEntity('workshop') . ')';
-				$sql_pl .= ' AND o.status = ' . (int)$status_create_id;
-				$sql_pl .= ' ORDER BY o.date_planned ASC, o.ref ASC';
-				$resql_pl = $db->query($sql_pl);
-				if ($resql_pl) {
-					while ($obj = $db->fetch_object($resql_pl)) {
+				if ($check_perms_toplan && $check_perms_planned) {
+					$sql_pl = 'SELECT o.rowid, o.ref, o.date_planned, v.immatriculation, soc.nom AS soc_name';
+					$sql_pl .= ' FROM ' . $db->prefix() . 'workshop_operationorder o';
+					$sql_pl .= ' INNER JOIN ' . $db->prefix() . 'workshop_operationorder_jobs j ON o.rowid = j.fk_operationorder';
+					$sql_pl .= ' LEFT JOIN ' . $db->prefix() . 'workshop_vehicule v ON v.rowid = o.fk_vehicule';
+					$sql_pl .= ' LEFT JOIN ' . $db->prefix() . 'societe soc ON soc.rowid = o.fk_soc';
+					$sql_pl .= ' WHERE o.entity IN (' . getEntity('workshop') . ')';
+					$sql_pl .= ' AND o.status IN (' . join(', ', $statusPlanable) . ')';
+					$sql_pl .= ' AND j.status IN (' . join(', ', $statusPlanable) . ')';
+					$sql_pl .= ' ORDER BY o.date_planned ASC, o.ref ASC';
+					$resql_pl = $db->query($sql_pl);
+					if ($resql_pl) {
+						while ($obj = $db->fetch_object($resql_pl)) {
 
-						$or_to_plan[] = $obj;
+							$or_to_plan[] = $obj;
+						}
+						$db->free($resql_pl);
 					}
-					$db->free($resql_pl);
 				}
 			}
 		}
@@ -1051,7 +1066,6 @@ if ($mode === 'dashboard') {
 	}
 
 }
-
 print dol_get_fiche_end();
 
 llxFooter();

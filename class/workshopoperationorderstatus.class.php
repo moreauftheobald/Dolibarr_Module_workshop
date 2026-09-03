@@ -1027,7 +1027,7 @@ class WorkshopOperationOrderStatus extends CommonObject
 	 * @param  int   $limit     Limite
 	 * @param  bool  $loadChild Charger droits et transitions
 	 * @param  array $TFilter   Filtres additionnels (ex: ['status' => 1])
-	 * @return WorkshopOperationOrderStatus[]
+	 * @return WorkshopOperationOrderStatus[]|int
 	 */
 	public function fetchAll($limit = 0, $loadChild = true, $TFilter = array())
 	{
@@ -1065,6 +1065,10 @@ class WorkshopOperationOrderStatus extends CommonObject
 				$o->TGroupCan      = isset($TGroupCanByStatus[$id]) ? $TGroupCanByStatus[$id] : array();
 				$o->TStatusAllowed = isset($TStatusAllowedByStatus[$id]) ? $TStatusAllowedByStatus[$id] : array();
 			}
+		} else {
+			$this->error = $this->db->lasterror();
+			$this->errors[] = $this->error;
+			return -1;
 		}
 
 		return $TRes;
