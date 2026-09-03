@@ -608,6 +608,46 @@ class WorkshopOperationOrderStatus extends CommonObject
 	}
 
 	/**
+	 * Batch version of fetchGroupRights() for several statuses at once (avoids
+	 * one query per status when loading a list, e.g. from fetchAll()).
+	 *
+	 * @param  int[] $ids    Status ids
+	 * @param  int   $entity Entity id (0 = current entity)
+	 * @return array         Map: status id => TGroupCan array (code => array(rowid => fk_usergroup))
+	 */
+	public static function fetchGroupRightsForIds(array $ids, $entity = 0)
+	{
+		global $db, $conf;
+
+		$result = array();
+		foreach ($ids as $id) {
+			$result[(int) $id] = array();
+		}
+		if (empty($ids)) {
+			return $result;
+		}
+
+		$entityFilter = ($entity > 0) ? (int) $entity : (int) $conf->entity;
+		$idsList = implode(',', array_map('intval', $ids));
+
+		$sql  = 'SELECT fk_workshop_operationorderstatus, rowid, code, fk_usergroup';
+		$sql .= ' FROM ' . $db->prefix() . 'workshop_operationorder_status_usergroup_rights';
+		$sql .= ' WHERE fk_workshop_operationorderstatus IN (' . $idsList . ')';
+		$sql .= ' AND entity = ' . $entityFilter;
+
+		$resql = $db->query($sql);
+		if ($resql) {
+			while ($row = $db->fetch_object($resql)) {
+				$sid = (int) $row->fk_workshop_operationorderstatus;
+				$result[$sid][$row->code][$row->rowid] = (int) $row->fk_usergroup;
+			}
+			$db->free($resql);
+		}
+
+		return $result;
+	}
+
+	/**
 	 * Vérifier si un utilisateur appartient à un groupe autorisé à effectuer $action
 	 * sur ce statut pour l'entité courante.
 	 *
@@ -780,6 +820,43 @@ class WorkshopOperationOrderStatus extends CommonObject
 		}
 
 		return $this->TStatusAllowed;
+	}
+
+	/**
+	 * Batch version of fetchStatusAllowed() for several statuses at once
+	 * (avoids one query per status when loading a list, e.g. from fetchAll()).
+	 *
+	 * @param  int[] $ids Status ids
+	 * @return array      Map: status id => TStatusAllowed array (rowid => fk_workshop_operationorderstatus_target)
+	 */
+	public static function fetchStatusAllowedForIds(array $ids)
+	{
+		global $db;
+
+		$result = array();
+		foreach ($ids as $id) {
+			$result[(int) $id] = array();
+		}
+		if (empty($ids)) {
+			return $result;
+		}
+
+		$idsList = implode(',', array_map('intval', $ids));
+
+		$sql  = 'SELECT fk_workshop_operationorderstatus, rowid, fk_workshop_operationorderstatus_target';
+		$sql .= ' FROM ' . $db->prefix() . 'workshop_operationorder_status_target';
+		$sql .= ' WHERE fk_workshop_operationorderstatus IN (' . $idsList . ')';
+
+		$resql = $db->query($sql);
+		if ($resql) {
+			while ($row = $db->fetch_object($resql)) {
+				$sid = (int) $row->fk_workshop_operationorderstatus;
+				$result[$sid][$row->rowid] = (int) $row->fk_workshop_operationorderstatus_target;
+			}
+			$db->free($resql);
+		}
+
+		return $result;
 	}
 
 	/**
@@ -956,13 +1033,13 @@ class WorkshopOperationOrderStatus extends CommonObject
 	{
 		$TRes = array();
 
-		$sql  = 'SELECT rowid FROM ' . $this->db->prefix() . $this->table_element . ' WHERE 1';
+		$sql  = 'SELECT ' . $this->getFieldList('t') . ' FROM ' . $this->db->prefix() . $this->table_element . ' as t WHERE 1';
 
 		foreach ($TFilter as $field => $value) {
-			$sql .= ' AND ' . $this->db->sanitize($field) . ' = ' . (is_string($value) ? '\'' . $this->db->escape($value) . '\'' : (int) $value);
+			$sql .= ' AND t.' . $this->db->sanitize($field) . ' = ' . (is_string($value) ? '\'' . $this->db->escape($value) . '\'' : (int) $value);
 		}
 
-		$sql .= ' ORDER BY rang ASC';
+		$sql .= ' ORDER BY t.rang ASC';
 
 		if ($limit > 0) {
 			$sql .= ' LIMIT ' . (int) $limit;
@@ -972,8 +1049,21 @@ class WorkshopOperationOrderStatus extends CommonObject
 		if ($resql) {
 			while ($obj = $this->db->fetch_object($resql)) {
 				$o = new self($this->db);
-				$o->fetch((int) $obj->rowid, $loadChild);
-				$TRes[(int) $obj->rowid] = $o;
+				$o->setVarsFromFetchObj($obj);
+				$TRes[$o->id] = $o;
+			}
+			$this->db->free($resql);
+		}
+
+		// One query for every status' group rights, one for every status' allowed
+		// transitions, instead of fetch()'s two queries repeated per status.
+		if ($loadChild && !empty($TRes)) {
+			$ids = array_keys($TRes);
+			$TGroupCanByStatus      = self::fetchGroupRightsForIds($ids);
+			$TStatusAllowedByStatus = self::fetchStatusAllowedForIds($ids);
+			foreach ($TRes as $id => $o) {
+				$o->TGroupCan      = isset($TGroupCanByStatus[$id]) ? $TGroupCanByStatus[$id] : array();
+				$o->TStatusAllowed = isset($TStatusAllowedByStatus[$id]) ? $TStatusAllowedByStatus[$id] : array();
 			}
 		}
 
