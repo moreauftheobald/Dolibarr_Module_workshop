@@ -56,7 +56,7 @@ if (!$res) {
 }
 
 require_once DOL_DOCUMENT_ROOT.'/core/class/extrafields.class.php';
-require_once '../lib/workshop.lib.php';
+dol_include_once('/workshop/lib/workshop.lib.php');
 
 // Load translation files required by the page
 $langs->loadLangs(array('workshop@workshop', 'admin'));

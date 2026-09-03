@@ -410,7 +410,7 @@ if (empty($reshook)) {
 			}
 
 			// Determine next rang
-			$sqlRang = 'SELECT MAX(rang) as maxrang FROM '.MAIN_DB_PREFIX.'workshop_operationorder_jobs';
+			$sqlRang = 'SELECT MAX(rang) as maxrang FROM '.$db->prefix().'workshop_operationorder_jobs';
 			$sqlRang .= ' WHERE fk_operationorder = '.(int) $id;
 			$resRang = $db->query($sqlRang);
 			$nextRang = 1;
@@ -509,7 +509,7 @@ if (empty($reshook)) {
 				$product_label = $product->label;
 			}
 
-			$sqlRang  = 'SELECT MAX(rang) as maxrang FROM '.MAIN_DB_PREFIX.'workshop_operationorderdet';
+			$sqlRang  = 'SELECT MAX(rang) as maxrang FROM '.$db->prefix().'workshop_operationorderdet';
 			$sqlRang .= ' WHERE fk_operationorder_jobs = '.((int) $jobid);
 			$resRang  = $db->query($sqlRang);
 			$objRang  = $resRang ? $db->fetch_object($resRang) : null;
@@ -718,7 +718,7 @@ if (empty($reshook)) {
 						$noteLines[] = $langs->trans('VIN').' : '.dol_escape_htmltag($vehicule->vin);
 					}
 					if (!empty($vehicule->fk_vehicule_mark)) {
-						$sqlMark  = 'SELECT label FROM '.MAIN_DB_PREFIX.'workshop_vehicule_c_vehicule_mark';
+						$sqlMark  = 'SELECT label FROM '.$db->prefix().'workshop_vehicule_c_vehicule_mark';
 						$sqlMark .= ' WHERE rowid = '.(int) $vehicule->fk_vehicule_mark;
 						$resMark  = $db->query($sqlMark);
 						if ($resMark && ($oMark = $db->fetch_object($resMark))) {
@@ -730,7 +730,7 @@ if (empty($reshook)) {
 						$noteLines[] = $langs->trans('modele').' : '.dol_escape_htmltag($vehicule->modele);
 					}
 					if (!empty($vehicule->fk_contract_type)) {
-						$sqlCt  = 'SELECT label FROM '.MAIN_DB_PREFIX.'workshop_vehicule_c_contract_type';
+						$sqlCt  = 'SELECT label FROM '.$db->prefix().'workshop_vehicule_c_contract_type';
 						$sqlCt .= ' WHERE rowid = '.(int) $vehicule->fk_contract_type;
 						$resCt  = $db->query($sqlCt);
 						if ($resCt && ($oCt = $db->fetch_object($resCt))) {
@@ -752,8 +752,8 @@ if (empty($reshook)) {
 				$opLabels = array();
 				foreach ($scOpsIds as $voId) {
 					$sqlOp  = 'SELECT cmo.code, cmo.label AS op_label';
-					$sqlOp .= ' FROM '.MAIN_DB_PREFIX.'workshop_vehicule_operation vo';
-					$sqlOp .= ' LEFT JOIN '.MAIN_DB_PREFIX.'workshop_vehicule_c_maintenance_operation cmo';
+					$sqlOp .= ' FROM '.$db->prefix().'workshop_vehicule_operation vo';
+					$sqlOp .= ' LEFT JOIN '.$db->prefix().'workshop_vehicule_c_maintenance_operation cmo';
 					$sqlOp .= '   ON cmo.rowid = vo.fk_maintenance_operation';
 					$sqlOp .= ' WHERE vo.rowid = '.(int) $voId;
 					$resOp = $db->query($sqlOp);
@@ -811,7 +811,7 @@ if (empty($reshook)) {
 
 			if (!$error) {
 				// Lien job ↔ commande fournisseur (raw SQL : job n'est pas un objet natif Dolibarr)
-				$sqlLink  = "INSERT INTO ".MAIN_DB_PREFIX."element_element";
+				$sqlLink  = "INSERT INTO ".$db->prefix()."element_element";
 				$sqlLink .= " (fk_source, sourcetype, fk_target, targettype)";
 				$sqlLink .= " VALUES (".(int) $job->id.", '".$db->escape($job->element)."'";
 				$sqlLink .= ", ".(int) $supplierOrder->id.", 'order_supplier')";
@@ -1318,7 +1318,7 @@ if ($id > 0) {
 			}
 		}
 
-		$sqlST  = 'SELECT rowid, label, prix_mo, tva_tx_mo, tva_tx_st FROM '.MAIN_DB_PREFIX.'workshop_c_servicetype';
+		$sqlST  = 'SELECT rowid, label, prix_mo, tva_tx_mo, tva_tx_st FROM '.$db->prefix().'workshop_c_servicetype';
 		$sqlST .= ' WHERE active = 1 ORDER BY label ASC';
 		$resST  = $db->query($sqlST);
 
@@ -1347,8 +1347,8 @@ if ($id > 0) {
 			$_voRaw        = GETPOST('job_vehicule_operations', 'array');
 			$selectedVoIds = is_array($_voRaw) ? array_values(array_filter(array_map('intval', $_voRaw))) : array_values(array_filter(array_map('intval', explode(',', (string) $_voRaw))));
 			$sqlVO  = 'SELECT vo.rowid, cmo.code, cmo.label AS op_label, vo.date_next';
-			$sqlVO .= ' FROM '.MAIN_DB_PREFIX.'workshop_vehicule_operation vo';
-			$sqlVO .= ' LEFT JOIN '.MAIN_DB_PREFIX.'workshop_vehicule_c_maintenance_operation cmo';
+			$sqlVO .= ' FROM '.$db->prefix().'workshop_vehicule_operation vo';
+			$sqlVO .= ' LEFT JOIN '.$db->prefix().'workshop_vehicule_c_maintenance_operation cmo';
 			$sqlVO .= '   ON cmo.rowid = vo.fk_maintenance_operation';
 			$sqlVO .= ' WHERE vo.fk_vehicule = '.((int) $object->fk_vehicule);
 			$sqlVO .= ' AND vo.status != '.WorkshopVehiculeOperation::STATUS_DONE;
@@ -1446,7 +1446,7 @@ if ($id > 0) {
 
 		if ($editJobId > 0 && $editJob->fetch($editJobId) > 0 && (int) $editJob->fk_operationorder === (int) $id) {
 			// ServiceType select pre-selecting current value
-			$sqlST  = 'SELECT rowid, label, prix_mo, tva_tx_mo, tva_tx_st FROM '.MAIN_DB_PREFIX.'workshop_c_servicetype';
+			$sqlST  = 'SELECT rowid, label, prix_mo, tva_tx_mo, tva_tx_st FROM '.$db->prefix().'workshop_c_servicetype';
 			$sqlST .= ' WHERE active = 1 ORDER BY label ASC';
 			$resST  = $db->query($sqlST);
 
@@ -1486,8 +1486,8 @@ if ($id > 0) {
 					}
 				}
 				$sqlVO  = 'SELECT vo.rowid, cmo.code, cmo.label AS op_label, vo.date_next';
-				$sqlVO .= ' FROM '.MAIN_DB_PREFIX.'workshop_vehicule_operation vo';
-				$sqlVO .= ' LEFT JOIN '.MAIN_DB_PREFIX.'workshop_vehicule_c_maintenance_operation cmo';
+				$sqlVO .= ' FROM '.$db->prefix().'workshop_vehicule_operation vo';
+				$sqlVO .= ' LEFT JOIN '.$db->prefix().'workshop_vehicule_c_maintenance_operation cmo';
 				$sqlVO .= '   ON cmo.rowid = vo.fk_maintenance_operation';
 				$sqlVO .= ' WHERE vo.fk_vehicule = '.((int) $object->fk_vehicule);
 				$sqlVO .= ' AND vo.status != '.WorkshopVehiculeOperation::STATUS_DONE;
@@ -1738,9 +1738,9 @@ if ($id > 0) {
 			// Sélecteur entrepôt (produits physiques uniquement)
 			if ($detFkProduct > 0 && $detProductType === 0) {
 				$sqlWh  = "SELECT e.rowid, e.ref, COALESCE(ps.reel, 0) as qty, p.fk_default_warehouse";
-				$sqlWh .= " FROM ".MAIN_DB_PREFIX."entrepot e";
-				$sqlWh .= " LEFT JOIN ".MAIN_DB_PREFIX."product_stock ps ON (ps.fk_entrepot = e.rowid AND ps.fk_product = ".(int) $detFkProduct.")";
-				$sqlWh .= " LEFT JOIN ".MAIN_DB_PREFIX."product p ON (p.rowid = ".(int) $detFkProduct.")";
+				$sqlWh .= " FROM ".$db->prefix()."entrepot e";
+				$sqlWh .= " LEFT JOIN ".$db->prefix()."product_stock ps ON (ps.fk_entrepot = e.rowid AND ps.fk_product = ".(int) $detFkProduct.")";
+				$sqlWh .= " LEFT JOIN ".$db->prefix()."product p ON (p.rowid = ".(int) $detFkProduct.")";
 				$sqlWh .= " WHERE e.entity IN (".getEntity('stock').")";
 				$sqlWh .= " AND e.statut >= 0";
 				$sqlWh .= " ORDER BY CASE WHEN e.rowid = p.fk_default_warehouse THEN 0 ELSE 1 END ASC,";
@@ -1813,8 +1813,8 @@ if ($id > 0) {
 		$scVoOptions = array();
 		if (!empty($object->fk_vehicule)) {
 			$sqlVo  = 'SELECT vo.rowid, cmo.code, cmo.label AS op_label, vo.date_next';
-			$sqlVo .= ' FROM '.MAIN_DB_PREFIX.'workshop_vehicule_operation vo';
-			$sqlVo .= ' LEFT JOIN '.MAIN_DB_PREFIX.'workshop_vehicule_c_maintenance_operation cmo';
+			$sqlVo .= ' FROM '.$db->prefix().'workshop_vehicule_operation vo';
+			$sqlVo .= ' LEFT JOIN '.$db->prefix().'workshop_vehicule_c_maintenance_operation cmo';
 			$sqlVo .= '   ON cmo.rowid = vo.fk_maintenance_operation';
 			$sqlVo .= ' WHERE vo.fk_vehicule = '.(int) $object->fk_vehicule;
 			$sqlVo .= ' AND vo.status != '.WorkshopVehiculeOperation::STATUS_DONE;
@@ -1948,7 +1948,7 @@ if ($id > 0) {
 	if (!empty($jobsList)) {
 		$allJobIds = array_map(function ($j) { return (int) $j->id; }, $jobsList);
 		$sqlJLO  = 'SELECT ee.fk_source AS job_id, ee.fk_target AS order_id';
-		$sqlJLO .= ' FROM '.MAIN_DB_PREFIX.'element_element ee';
+		$sqlJLO .= ' FROM '.$db->prefix().'element_element ee';
 		$sqlJLO .= ' WHERE ee.fk_source IN ('.implode(',', $allJobIds).')';
 		$sqlJLO .= " AND ee.sourcetype = 'operationorder_jobs'";
 		$sqlJLO .= " AND ee.targettype = 'order_supplier'";
@@ -1969,9 +1969,9 @@ if ($id > 0) {
 	$detQtyDebitedMap  = array();
 	$_detElemType      = 'operationorderdet@workshop'; // format classname@modulename pour get_origin()
 	$_sqlQtyDebit      = 'SELECT d.rowid, COALESCE(-SUM(sm.value), 0) as qty_debited';
-	$_sqlQtyDebit     .= ' FROM '.MAIN_DB_PREFIX.'workshop_operationorderdet d';
-	$_sqlQtyDebit     .= ' INNER JOIN '.MAIN_DB_PREFIX.'workshop_operationorder_jobs j ON j.rowid = d.fk_operationorder_jobs';
-	$_sqlQtyDebit     .= ' LEFT JOIN '.MAIN_DB_PREFIX.'stock_mouvement sm';
+	$_sqlQtyDebit     .= ' FROM '.$db->prefix().'workshop_operationorderdet d';
+	$_sqlQtyDebit     .= ' INNER JOIN '.$db->prefix().'workshop_operationorder_jobs j ON j.rowid = d.fk_operationorder_jobs';
+	$_sqlQtyDebit     .= ' LEFT JOIN '.$db->prefix().'stock_mouvement sm';
 	$_sqlQtyDebit     .= "   ON sm.fk_origin = d.rowid AND sm.origintype IN ('".$db->escape($_detElemType)."', 'workshop_operationorderdet')";
 	$_sqlQtyDebit     .= ' WHERE j.fk_operationorder = '.((int) $object->id);
 	$_sqlQtyDebit     .= ' AND d.product_type = '.((int) Operationorderdet::TYPE_PRODUCT);

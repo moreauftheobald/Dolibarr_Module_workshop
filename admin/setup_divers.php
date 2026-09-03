@@ -50,7 +50,7 @@ if (!$res) {
 global $langs, $user;
 
 require_once DOL_DOCUMENT_ROOT."/core/lib/admin.lib.php";
-require_once '../lib/workshop.lib.php';
+dol_include_once('/workshop/lib/workshop.lib.php');
 
 $langs->loadLangs(array("admin", "workshop@workshop"));
 

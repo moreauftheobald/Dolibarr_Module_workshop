@@ -579,7 +579,7 @@ class Operationorder extends CommonObject
 			if ($option != 'nolink') {
 				$linkclose = '';
 				if (empty($notooltip)) {
-					if (!empty($conf->global->MAIN_OPTIMIZEFORTEXTBROWSER)) {
+					if (getDolGlobalBool('MAIN_OPTIMIZEFORTEXTBROWSER')) {
 						$label = $langs->trans("ShowOperationorder");
 						$linkclose = ' alt="' . dol_escape_htmltag($label, 1) . '"';
 					}
@@ -924,7 +924,7 @@ class Operationorder extends CommonObject
 	public function info($id)
 	{
 		$sql  = 'SELECT rowid, date_creation as datec, tms as datem, fk_user_creat, fk_user_modif, fk_user_valid';
-		$sql .= ' FROM '.MAIN_DB_PREFIX.$this->table_element.' as t';
+		$sql .= ' FROM '.$this->db->prefix().$this->table_element.' as t';
 		$sql .= ' WHERE t.rowid = '.((int) $id);
 
 		$result = $this->db->query($sql);

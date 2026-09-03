@@ -60,7 +60,7 @@ if (!$res) {
 	die("Include of main fails");
 }
 
-require_once '../lib/workshop_planning.lib.php';
+dol_include_once('/workshop/lib/workshop_planning.lib.php');
 dol_include_once('/workshop/class/workshoppointage.class.php');
 dol_include_once('/workshop/class/workshopimpro.class.php');
 

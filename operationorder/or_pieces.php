@@ -217,9 +217,9 @@ dol_banner_tab($object, 'ref', $linkback, 1, 'ref', 'ref', '');
 $sqlLines  = 'SELECT d.rowid as det_id, d.fk_product, d.label, d.qty, d.fk_warehouse,';
 $sqlLines .= ' j.rowid as job_id, j.label as job_label,';
 $sqlLines .= ' COALESCE(-SUM(sm.value), 0) as qty_debited';
-$sqlLines .= ' FROM '.MAIN_DB_PREFIX.'workshop_operationorderdet d';
-$sqlLines .= ' INNER JOIN '.MAIN_DB_PREFIX.'workshop_operationorder_jobs j ON j.rowid = d.fk_operationorder_jobs';
-$sqlLines .= ' LEFT JOIN '.MAIN_DB_PREFIX.'stock_mouvement sm';
+$sqlLines .= ' FROM '.$db->prefix().'workshop_operationorderdet d';
+$sqlLines .= ' INNER JOIN '.$db->prefix().'workshop_operationorder_jobs j ON j.rowid = d.fk_operationorder_jobs';
+$sqlLines .= ' LEFT JOIN '.$db->prefix().'stock_mouvement sm';
 $sqlLines .= "   ON sm.fk_origin = d.rowid AND sm.origintype IN ('".$db->escape($detElementType)."', 'workshop_operationorderdet')";
 $sqlLines .= ' WHERE j.fk_operationorder = '.((int) $object->id);
 $sqlLines .= ' AND d.product_type = '.((int) Operationorderdet::TYPE_PRODUCT);
@@ -316,17 +316,17 @@ print '<div class="fichecenter">';
 print load_fiche_titre($langs->trans('StockMovements'), '', 'stock');
 
 // Sous-requête : rowids des lignes det appartenant à cet OR
-$sqlDetIds  = 'SELECT d.rowid FROM '.MAIN_DB_PREFIX.'workshop_operationorderdet d';
-$sqlDetIds .= ' INNER JOIN '.MAIN_DB_PREFIX.'workshop_operationorder_jobs j ON j.rowid = d.fk_operationorder_jobs';
+$sqlDetIds  = 'SELECT d.rowid FROM '.$db->prefix().'workshop_operationorderdet d';
+$sqlDetIds .= ' INNER JOIN '.$db->prefix().'workshop_operationorder_jobs j ON j.rowid = d.fk_operationorder_jobs';
 $sqlDetIds .= ' WHERE j.fk_operationorder = '.((int) $object->id);
 $sqlDetIds .= ' AND d.product_type = '.((int) Operationorderdet::TYPE_PRODUCT);
 
 $sqlHisto  = 'SELECT sm.rowid, sm.datem, sm.fk_product, p.ref as product_ref, p.label as product_label,';
 $sqlHisto .= ' sm.fk_entrepot, e.lieu as entrepot_label,';
 $sqlHisto .= ' sm.fk_user_author, sm.label as mvt_label, sm.value, sm.fk_origin';
-$sqlHisto .= ' FROM '.MAIN_DB_PREFIX.'stock_mouvement sm';
-$sqlHisto .= ' INNER JOIN '.MAIN_DB_PREFIX.'product p ON p.rowid = sm.fk_product';
-$sqlHisto .= ' LEFT JOIN '.MAIN_DB_PREFIX.'entrepot e ON e.rowid = sm.fk_entrepot';
+$sqlHisto .= ' FROM '.$db->prefix().'stock_mouvement sm';
+$sqlHisto .= ' INNER JOIN '.$db->prefix().'product p ON p.rowid = sm.fk_product';
+$sqlHisto .= ' LEFT JOIN '.$db->prefix().'entrepot e ON e.rowid = sm.fk_entrepot';
 $sqlHisto .= " WHERE sm.origintype IN ('".$db->escape($detElementType)."', 'workshop_operationorderdet')";
 $sqlHisto .= ' AND sm.fk_origin IN ('.$sqlDetIds.')';
 $sqlHisto .= ' ORDER BY sm.datem DESC';

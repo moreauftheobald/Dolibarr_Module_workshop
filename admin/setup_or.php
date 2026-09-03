@@ -51,7 +51,7 @@ global $langs, $user;
 
 require_once DOL_DOCUMENT_ROOT."/core/lib/admin.lib.php";
 require_once DOL_DOCUMENT_ROOT."/core/lib/pdf.lib.php";
-require_once '../lib/workshop.lib.php';
+dol_include_once('/workshop/lib/workshop.lib.php');
 dol_include_once('/workshop/class/operationorder.class.php');
 dol_include_once('/workshop/class/workshopoperationorderstatus.class.php');
 
@@ -376,7 +376,7 @@ if (getDolGlobalInt('WORKSHOP_USE_OR')) {
 
 	if ($subtab == 'general') {
 		// Build mechanic group select
-		$sqlGrp = "SELECT rowid, nom FROM ".MAIN_DB_PREFIX."usergroup WHERE entity IN (0, ".((int) $conf->entity).") ORDER BY nom";
+		$sqlGrp = "SELECT rowid, nom FROM ".$db->prefix()."usergroup WHERE entity IN (0, ".((int) $conf->entity).") ORDER BY nom";
 		$resGrp  = $db->query($sqlGrp);
 		$grpOpts = '<option value="0">--- '.$langs->trans('None').' ---</option>';
 		if ($resGrp) {

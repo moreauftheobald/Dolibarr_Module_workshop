@@ -51,7 +51,7 @@ if (!$res) {
 global $langs, $user;
 
 require_once DOL_DOCUMENT_ROOT."/core/lib/admin.lib.php";
-require_once '../lib/workshop.lib.php';
+dol_include_once('/workshop/lib/workshop.lib.php');
 
 $langs->loadLangs(array("admin", "workshop@workshop"));
 
@@ -117,7 +117,7 @@ print dol_get_fiche_head($head, 'vehicules', $langs->trans($title), -1, "worksho
 
 // Build vehicle types multi-select
 $currentTractorTypes = array_filter(explode(',', getDolGlobalString('WORKSHOP_TRACTOR_VEHICLE_TYPES')));
-$sqlTypes = "SELECT rowid, label FROM ".MAIN_DB_PREFIX."workshop_vehicule_c_vehicule_type WHERE active = 1 ORDER BY label";
+$sqlTypes = "SELECT rowid, label FROM ".$db->prefix()."workshop_vehicule_c_vehicule_type WHERE active = 1 ORDER BY label";
 $resTypes = $db->query($sqlTypes);
 $tractorTypesArray = array();
 if ($resTypes) {
