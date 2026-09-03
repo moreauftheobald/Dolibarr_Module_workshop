@@ -139,7 +139,8 @@ $boolCols = array(
 // Définition des colonnes optionnelles pilotées par le sélecteur de colonnes standard Dolibarr.
 // Les colonnes Code et Libellé restent toujours affichées (identité de la ligne).
 $arrayfields = array(
-    'color' => array('label' => 'Color', 'checked' => '1', 'enabled' => '1', 'position' => 30),
+    'status_type' => array('label' => 'WorkshopStatusType', 'checked' => '1', 'enabled' => '1', 'position' => 25),
+    'color'       => array('label' => 'Color', 'checked' => '1', 'enabled' => '1', 'position' => 30),
 );
 $posfield = 40;
 foreach ($boolCols as $fieldName => $labelKey) {
@@ -171,6 +172,9 @@ print '<tr class="liste_titre">';
 print '<th class="center maxwidthsearch">' . $selectedfields . '</th>';
 print '<th>' . $langs->trans('Code') . '</th>';
 print '<th>' . $langs->trans('Label') . '</th>';
+if (!empty($arrayfields['status_type']['checked'])) {
+    print '<th>' . $langs->trans('WorkshopStatusType') . '</th>';
+}
 if (!empty($arrayfields['color']['checked'])) {
     print '<th>' . $langs->trans('Color') . '</th>';
 }
@@ -208,6 +212,11 @@ if (!empty($Tlist)) {
 		print '<td class="linecolmove"></td>';
         print '<td><a href="' . $oStatus->getCardUrl() . '">' . dol_escape_htmltag($oStatus->code) . '</a></td>';
         print '<td><a href="' . $oStatus->getCardUrl() . '">' . $oStatus->getBadge() . '</a></td>';
+
+        // Type de statut
+        if (!empty($arrayfields['status_type']['checked'])) {
+            print '<td>' . dol_escape_htmltag($oStatus->getLibStatusType()) . '</td>';
+        }
 
         // Couleur
         if (!empty($arrayfields['color']['checked'])) {

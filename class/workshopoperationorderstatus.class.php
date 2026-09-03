@@ -64,6 +64,11 @@ class WorkshopOperationOrderStatus extends CommonObject
 	/** Statut désactivé */
 	const STATUS_DISABLED = 0;
 
+	/** Type de statut : concerne uniquement l'ordre de réparation */
+	const TYPE_OR = 1;
+	/** Type de statut : concerne l'ordre de réparation et les Jobs */
+	const TYPE_OR_AND_JOB = 2;
+
 	/** @var array Libellés des statuts de l'objet statut lui-même */
 	public static $TStatus = array(
 		self::STATUS_DISABLED => 'WorkshopORStatusDisabled',
@@ -137,6 +142,19 @@ class WorkshopOperationOrderStatus extends CommonObject
 			'notnull'  => 1,
 			'visible'  => 1,
 			'default'  => '#3c8dbc',
+		),
+		'status_type' => array(
+			'type'          => 'smallint',
+			'label'         => 'WorkshopStatusType',
+			'enabled'       => 1,
+			'position'      => 25,
+			'notnull'       => 1,
+			'visible'       => 1,
+			'default'       => 1,
+			'arrayofkeyval' => array(
+				self::TYPE_OR         => 'WorkshopStatusTypeOR',
+				self::TYPE_OR_AND_JOB => 'WorkshopStatusTypeORAndJob',
+			),
 		),
 		'rang' => array(
 			'type'     => 'int',
@@ -268,6 +286,8 @@ class WorkshopOperationOrderStatus extends CommonObject
 	public $label;
 	/** @var string Couleur hexadécimale (#rrggbb) */
 	public $color;
+	/** @var int Portée du statut : 1 = statut d'OR, 2 = statut d'OR et de Job */
+	public $status_type = self::TYPE_OR;
 	/** @var int Rang d'affichage */
 	public $rang;
 	/** @var int|bool Planifiable */
@@ -358,6 +378,10 @@ class WorkshopOperationOrderStatus extends CommonObject
 	public function create(User $user, $notrigger = false)
 	{
 		$this->entity = 0; // toujours entity 0
+
+		if (empty($this->status_type)) {
+			$this->status_type = self::TYPE_OR;
+		}
 
 		return $this->createCommon($user, $notrigger);
 	}
@@ -1008,6 +1032,25 @@ class WorkshopOperationOrderStatus extends CommonObject
 			return dolGetStatus($langs->trans('WorkshopORStatusActive'), $langs->trans('WorkshopORStatusActive'), '', 'status4', $mode);
 		}
 		return dolGetStatus($langs->trans('WorkshopORStatusDisabled'), $langs->trans('WorkshopORStatusDisabled'), '', 'status9', $mode);
+	}
+
+	/**
+	 * Libellé traduit du type de statut (statut d'OR / statut d'OR et de Job).
+	 *
+	 * @return string
+	 */
+	public function getLibStatusType()
+	{
+		global $langs;
+		$langs->load('workshop@workshop');
+
+		$map = array(
+			self::TYPE_OR         => 'WorkshopStatusTypeOR',
+			self::TYPE_OR_AND_JOB => 'WorkshopStatusTypeORAndJob',
+		);
+		$key = isset($map[(int) $this->status_type]) ? $map[(int) $this->status_type] : $map[self::TYPE_OR];
+
+		return $langs->trans($key);
 	}
 
 	/**

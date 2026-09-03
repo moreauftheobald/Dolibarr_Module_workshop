@@ -354,6 +354,7 @@ function ensureStatus($db, $user, $oldStatusId, &$cache, $verbose)
 	$newStatus->code               = $code;
 	$newStatus->label              = !empty($oldStatus->label) ? $oldStatus->label : $code;
 	$newStatus->color              = !empty($oldStatus->color) ? $oldStatus->color : '#3c8dbc';
+	$newStatus->status_type        = WorkshopOperationOrderStatus::TYPE_OR; // l'ancien module n'a pas de portée Job
 	$newStatus->rang               = (int) $oldStatus->rang;
 	$newStatus->status             = !empty($oldStatus->status) ? (int) $oldStatus->status : 1;
 	$newStatus->planable           = (int) $oldStatus->planable;
