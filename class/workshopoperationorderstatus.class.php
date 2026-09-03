@@ -1053,6 +1053,10 @@ class WorkshopOperationOrderStatus extends CommonObject
 				$TRes[$o->id] = $o;
 			}
 			$this->db->free($resql);
+		} else {
+			$this->error = $this->db->lasterror();
+			$this->errors[] = $this->error;
+			return -1;
 		}
 
 		// One query for every status' group rights, one for every status' allowed
@@ -1065,10 +1069,6 @@ class WorkshopOperationOrderStatus extends CommonObject
 				$o->TGroupCan      = isset($TGroupCanByStatus[$id]) ? $TGroupCanByStatus[$id] : array();
 				$o->TStatusAllowed = isset($TStatusAllowedByStatus[$id]) ? $TStatusAllowedByStatus[$id] : array();
 			}
-		} else {
-			$this->error = $this->db->lasterror();
-			$this->errors[] = $this->error;
-			return -1;
 		}
 
 		return $TRes;
