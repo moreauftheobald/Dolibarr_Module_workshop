@@ -199,8 +199,8 @@ $users_by_group = array(); // gid => array(uid => stdClass)
 if (!empty($planning_group_ids)) {
 	$gid_list = implode(',', array_map('intval', $planning_group_ids));
 	$sqlU  = 'SELECT u.rowid, u.firstname, u.lastname, u.login, ugu.fk_usergroup';
-	$sqlU .= ' FROM ' . MAIN_DB_PREFIX . 'user u';
-	$sqlU .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'usergroup_user ugu ON ugu.fk_user = u.rowid';
+	$sqlU .= ' FROM ' . $db->prefix() . 'user u';
+	$sqlU .= ' INNER JOIN ' . $db->prefix() . 'usergroup_user ugu ON ugu.fk_user = u.rowid';
 	$sqlU .= ' WHERE ugu.fk_usergroup IN (' . $gid_list . ')';
 	$sqlU .= ' AND ugu.entity IN (0, ' . (int) $conf->entity . ')';
 	$sqlU .= ' AND u.statut = 1';
@@ -262,7 +262,7 @@ function workshopComputeBusinessHours($db, $group_ids, $user_ids = array())
 		$conditions[] = "(fk_object = " . (int) $uid . " AND object_type = 'user')";
 	}
 
-	$sql  = 'SELECT * FROM ' . MAIN_DB_PREFIX . 'workshop_planning';
+	$sql  = 'SELECT * FROM ' . $db->prefix() . 'workshop_planning';
 	$sql .= ' WHERE entity = ' . (int) $conf->entity;
 	$sql .= ' AND (' . implode(' OR ', $conditions) . ')';
 
@@ -589,8 +589,8 @@ if ($mode === 'dashboard') {
 
 	// Metric 1: vehicles present (active OR overlapping the day, with a vehicle)
 	$nb_vehicules = 0;
-	$sqlm = 'SELECT COUNT(DISTINCT o.fk_vehicule) AS nb FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder o';
-	$sqlm .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder_status s ON s.rowid = o.status AND s.display_on_planning = 1';
+	$sqlm = 'SELECT COUNT(DISTINCT o.fk_vehicule) AS nb FROM ' . $db->prefix() . 'workshop_operationorder o';
+	$sqlm .= ' INNER JOIN ' . $db->prefix() . 'workshop_operationorder_status s ON s.rowid = o.status AND s.display_on_planning = 1';
 	$sqlm .= ' WHERE o.entity IN (' . $ent . ') AND o.fk_vehicule > 0';
 	$sqlm .= " AND o.date_start IS NOT NULL AND o.date_start <= '" . $db->escape($day_hi) . "'";
 	$sqlm .= " AND (o.date_end IS NULL OR o.date_end >= '" . $db->escape($day_lo) . "')";
@@ -599,25 +599,25 @@ if ($mode === 'dashboard') {
 
 	// Metric 2: unplanned ORs (no date_planned, visible on planning)
 	$nb_unplanned = 0;
-	$sqlm = 'SELECT COUNT(*) AS nb FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder o';
-	$sqlm .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder_status s ON s.rowid = o.status AND s.display_on_planning = 1';
+	$sqlm = 'SELECT COUNT(*) AS nb FROM ' . $db->prefix() . 'workshop_operationorder o';
+	$sqlm .= ' INNER JOIN ' . $db->prefix() . 'workshop_operationorder_status s ON s.rowid = o.status AND s.display_on_planning = 1';
 	$sqlm .= ' WHERE o.entity IN (' . $ent . ') AND (o.date_planned IS NULL OR o.date_planned = 0)';
 	$resm = $db->query($sqlm);
 	if ($resm && ($o = $db->fetch_object($resm))) { $nb_unplanned = (int) $o->nb; }
 
 	// Metric 3: jobs without a mechanic on plannable ORs
 	$nb_jobs_nomec = 0;
-	$sqlm = 'SELECT COUNT(*) AS nb FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder_jobs j';
-	$sqlm .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder o ON o.rowid = j.fk_operationorder';
-	$sqlm .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder_status s ON s.rowid = o.status AND s.display_on_planning = 1';
+	$sqlm = 'SELECT COUNT(*) AS nb FROM ' . $db->prefix() . 'workshop_operationorder_jobs j';
+	$sqlm .= ' INNER JOIN ' . $db->prefix() . 'workshop_operationorder o ON o.rowid = j.fk_operationorder';
+	$sqlm .= ' INNER JOIN ' . $db->prefix() . 'workshop_operationorder_status s ON s.rowid = o.status AND s.display_on_planning = 1';
 	$sqlm .= ' WHERE o.entity IN (' . $ent . ') AND (j.fk_user_assign IS NULL OR j.fk_user_assign = 0)';
 	$resm = $db->query($sqlm);
 	if ($resm && ($o = $db->fetch_object($resm))) { $nb_jobs_nomec = (int) $o->nb; }
 
 	// Metric 4: workshop load = planned time of the day / capacity
 	$sum_planned = 0;
-	$sqlm = 'SELECT SUM(j.time_planned) AS tot FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder_jobs j';
-	$sqlm .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder o ON o.rowid = j.fk_operationorder';
+	$sqlm = 'SELECT SUM(j.time_planned) AS tot FROM ' . $db->prefix() . 'workshop_operationorder_jobs j';
+	$sqlm .= ' INNER JOIN ' . $db->prefix() . 'workshop_operationorder o ON o.rowid = j.fk_operationorder';
 	$sqlm .= ' WHERE o.entity IN (' . $ent . ')';
 	$sqlm .= " AND j.date_start IS NOT NULL AND j.date_start >= '" . $db->escape($day_lo) . "' AND j.date_start <= '" . $db->escape($day_hi) . "'";
 	$resm = $db->query($sqlm);
@@ -643,12 +643,12 @@ if ($mode === 'dashboard') {
 
 	$sqlo  = 'SELECT o.rowid, o.ref, o.status, s.label AS status_label, s.color AS status_color,';
 	$sqlo .= ' v.immatriculation, soc.nom AS soc_name,';
-	$sqlo .= ' (SELECT SUM(time_spent) FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder_jobs WHERE fk_operationorder = o.rowid) AS spent,';
-	$sqlo .= ' (SELECT SUM(time_planned) FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder_jobs WHERE fk_operationorder = o.rowid) AS planned';
-	$sqlo .= ' FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder o';
-	$sqlo .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder_status s ON s.rowid = o.status AND s.display_on_planning = 1';
-	$sqlo .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'workshop_vehicule v ON v.rowid = o.fk_vehicule';
-	$sqlo .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'societe soc ON soc.rowid = o.fk_soc';
+	$sqlo .= ' (SELECT SUM(time_spent) FROM ' . $db->prefix() . 'workshop_operationorder_jobs WHERE fk_operationorder = o.rowid) AS spent,';
+	$sqlo .= ' (SELECT SUM(time_planned) FROM ' . $db->prefix() . 'workshop_operationorder_jobs WHERE fk_operationorder = o.rowid) AS planned';
+	$sqlo .= ' FROM ' . $db->prefix() . 'workshop_operationorder o';
+	$sqlo .= ' INNER JOIN ' . $db->prefix() . 'workshop_operationorder_status s ON s.rowid = o.status AND s.display_on_planning = 1';
+	$sqlo .= ' LEFT JOIN ' . $db->prefix() . 'workshop_vehicule v ON v.rowid = o.fk_vehicule';
+	$sqlo .= ' LEFT JOIN ' . $db->prefix() . 'societe soc ON soc.rowid = o.fk_soc';
 	$sqlo .= ' WHERE o.entity IN (' . $ent . ')';
 	$sqlo .= " AND ((o.date_planned >= '" . $db->escape($day_lo) . "' AND o.date_planned <= '" . $db->escape($day_hi) . "')";
 	$sqlo .= "   OR (o.date_start IS NOT NULL AND o.date_start <= '" . $db->escape($day_hi) . "' AND (o.date_end IS NULL OR o.date_end >= '" . $db->escape($day_lo) . "')))";
@@ -792,10 +792,10 @@ if ($mode === 'dashboard') {
 	$sql .= ' s.color AS status_color, s.label AS status_label,';
 	$sql .= ' v.immatriculation,';
 	$sql .= ' soc.nom AS soc_name';
-	$sql .= ' FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder o';
-	$sql .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'workshop_operationorder_status s ON s.rowid = o.status AND s.display_on_planning = 1';
-	$sql .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'workshop_vehicule v ON v.rowid = o.fk_vehicule';
-	$sql .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'societe soc ON soc.rowid = o.fk_soc';
+	$sql .= ' FROM ' . $db->prefix() . 'workshop_operationorder o';
+	$sql .= ' INNER JOIN ' . $db->prefix() . 'workshop_operationorder_status s ON s.rowid = o.status AND s.display_on_planning = 1';
+	$sql .= ' LEFT JOIN ' . $db->prefix() . 'workshop_vehicule v ON v.rowid = o.fk_vehicule';
+	$sql .= ' LEFT JOIN ' . $db->prefix() . 'societe soc ON soc.rowid = o.fk_soc';
 	$sql .= ' WHERE o.entity IN (' . getEntity('workshop') . ')';
 	$sql .= ' AND o.date_start IS NOT NULL AND o.date_end IS NOT NULL';
 	// Either date_start or date_end must fall inside the displayed interval
@@ -823,7 +823,7 @@ if ($mode === 'dashboard') {
 	$gantt_or_jobs = array(); // or_id => array of job labels
 	if (!empty($gantt_or_rows)) {
 		$or_ids = array_map(function ($r) { return (int) $r->rowid; }, $gantt_or_rows);
-		$sql_jobs  = 'SELECT fk_operationorder, label FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder_jobs';
+		$sql_jobs  = 'SELECT fk_operationorder, label FROM ' . $db->prefix() . 'workshop_operationorder_jobs';
 		$sql_jobs .= ' WHERE fk_operationorder IN (' . implode(',', $or_ids) . ')';
 		$sql_jobs .= ' ORDER BY rang ASC, rowid ASC';
 		$resql_jobs = $db->query($sql_jobs);
@@ -936,9 +936,9 @@ if ($mode === 'dashboard') {
 			}
 			if ($check_perms_toplan && $check_perms_planned) {
 				$sql_pl = 'SELECT o.rowid, o.ref, o.date_planned, v.immatriculation, soc.nom AS soc_name';
-				$sql_pl .= ' FROM ' . MAIN_DB_PREFIX . 'workshop_operationorder o';
-				$sql_pl .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'workshop_vehicule v ON v.rowid = o.fk_vehicule';
-				$sql_pl .= ' LEFT JOIN ' . MAIN_DB_PREFIX . 'societe soc ON soc.rowid = o.fk_soc';
+				$sql_pl .= ' FROM ' . $db->prefix() . 'workshop_operationorder o';
+				$sql_pl .= ' LEFT JOIN ' . $db->prefix() . 'workshop_vehicule v ON v.rowid = o.fk_vehicule';
+				$sql_pl .= ' LEFT JOIN ' . $db->prefix() . 'societe soc ON soc.rowid = o.fk_soc';
 				$sql_pl .= ' WHERE o.entity IN (' . getEntity('workshop') . ')';
 				$sql_pl .= ' AND o.status = ' . (int)$status_create_id;
 				$sql_pl .= ' ORDER BY o.date_planned ASC, o.ref ASC';

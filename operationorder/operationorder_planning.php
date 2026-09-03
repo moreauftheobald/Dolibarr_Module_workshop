@@ -82,8 +82,8 @@ foreach ($planning_group_ids as $gid) {
 $group_users = array();
 if ($fk_group > 0) {
 	$sqlUsers  = 'SELECT u.rowid, u.firstname, u.lastname, u.login';
-	$sqlUsers .= ' FROM ' . MAIN_DB_PREFIX . 'user u';
-	$sqlUsers .= ' INNER JOIN ' . MAIN_DB_PREFIX . 'usergroup_user ugu ON ugu.fk_user = u.rowid';
+	$sqlUsers .= ' FROM ' . $db->prefix() . 'user u';
+	$sqlUsers .= ' INNER JOIN ' . $db->prefix() . 'usergroup_user ugu ON ugu.fk_user = u.rowid';
 	$sqlUsers .= ' WHERE ugu.fk_usergroup = ' . ((int) $fk_group);
 	$sqlUsers .= ' AND ugu.entity IN (0, ' . ((int) $conf->entity) . ')';
 	$sqlUsers .= ' AND u.statut = 1';

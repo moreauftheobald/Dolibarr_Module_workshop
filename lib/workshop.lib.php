@@ -407,7 +407,7 @@ function getWorkshopColorPalette(): array
 function getWorkshopVatRateOptions(DoliDB $db): array
 {
 	$options = array('' => '—');
-	$sql  = 'SELECT DISTINCT taux FROM '.MAIN_DB_PREFIX.'c_tva';
+	$sql  = 'SELECT DISTINCT taux FROM '.$db->prefix().'c_tva';
 	$sql .= ' WHERE active = 1';
 	$sql .= ' ORDER BY taux ASC';
 	$resql = $db->query($sql);

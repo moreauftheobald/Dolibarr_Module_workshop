@@ -384,8 +384,8 @@ class Operationorderdet extends CommonObject
 			$jobId = (int) $this->fk_operationorder_jobs;
 			if (!array_key_exists($jobId, $orRefCache)) {
 				$sql  = 'SELECT o.rowid, o.ref';
-				$sql .= ' FROM '.MAIN_DB_PREFIX.'workshop_operationorder o';
-				$sql .= ' INNER JOIN '.MAIN_DB_PREFIX.'workshop_operationorder_jobs j ON j.fk_operationorder = o.rowid';
+				$sql .= ' FROM '.$this->db->prefix().'workshop_operationorder o';
+				$sql .= ' INNER JOIN '.$this->db->prefix().'workshop_operationorder_jobs j ON j.fk_operationorder = o.rowid';
 				$sql .= ' WHERE j.rowid = '.$jobId;
 				$resql = $this->db->query($sql);
 				$orRefCache[$jobId] = null;
@@ -471,7 +471,7 @@ class Operationorderdet extends CommonObject
 	public function info($id)
 	{
 		$sql  = 'SELECT rowid, date_creation as datec, tms as datem, fk_user_creat, fk_user_modif';
-		$sql .= ' FROM '.MAIN_DB_PREFIX.$this->table_element.' as t';
+		$sql .= ' FROM '.$this->db->prefix().$this->table_element.' as t';
 		$sql .= ' WHERE t.rowid = '.((int) $id);
 
 		$result = $this->db->query($sql);

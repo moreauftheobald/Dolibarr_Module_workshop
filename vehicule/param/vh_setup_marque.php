@@ -191,7 +191,7 @@ $limit = 25;
 $offset = $limit * $page;
 
 $sql  = "SELECT p.rowid as rowid, p.code as code, p.label as label, p.active as active ";
-$sql .= "FROM ".MAIN_DB_PREFIX. $object->table_element . " as p ";
+$sql .= "FROM ".$db->prefix(). $object->table_element . " as p ";
 $sql .= "WHERE 1=1";
 
 $nbtotalofrecords = 0;
