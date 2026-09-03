@@ -658,3 +658,28 @@ WorkshopCreateAndOpenOR=Create and open the RO
 Vehicle=Vehicle
 
 WorkshopGanttNoOR=No repair order planned for this week.
+
+#
+# i18n cleanup - step 6
+#
+WorkshopDocOblLabel=Mandatory document
+WorkshopDocOblHelp=Name (without extension) of the PDF file that must be present in the service type's document template directory, and will be automatically inserted into the OR's PDF.
+WorkshopMandatoryDocMissingOrProtected=Mandatory document not found or protected for service type #%s: %s.pdf
+WorkshopMandatoryDocMissingForServiceType=Mandatory document not found for service type #%s: %s.pdf
+WorkshopMandatoryDocMissingForProduct=Mandatory document not found for product %s: %s.pdf
+WorkshopStockDebitOn=Debit on %s
+WorkshopColorRed=Red
+WorkshopColorRedOrange=Red-orange
+WorkshopColorOrange=Orange
+WorkshopColorYellow=Yellow
+WorkshopColorLightGreen=Light green
+WorkshopColorGreen=Green
+WorkshopColorTurquoise=Turquoise
+WorkshopColorCyan=Cyan
+WorkshopColorBlue=Blue
+WorkshopColorBrightBlue=Bright blue
+WorkshopColorPurple=Purple
+WorkshopColorPink=Pink
+WorkshopColorGrey=Grey
+WorkshopColorDarkGrey=Dark grey
+WorkshopColorBlack=Black

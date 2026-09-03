@@ -169,6 +169,8 @@ class pdf_standard_or extends ModelePDFWorkshop
 		// phpcs:enable
 		global $user, $langs, $conf, $mysoc, $hookmanager;
 
+		$langs->load('workshop@workshop');
+
 		if (!is_object($outputlangs)) {
 			$outputlangs = $langs;
 		}
@@ -316,13 +318,13 @@ class pdf_standard_or extends ModelePDFWorkshop
 							$pdf->useTemplate($tplIdx);
 						} else {
 							dol_syslog('pdf_standard_or::write_file impossible d\'importer la page '.$i.' de '.$infile, LOG_WARNING);
-							setEventMessages('Document obligatoire introuvable ou protégé pour le type de service #'.$fk_st.' : '.$docname.'.pdf', null, 'warnings');
+							setEventMessages($langs->trans('WorkshopMandatoryDocMissingOrProtected', $fk_st, $docname), null, 'warnings');
 							break;
 						}
 					}
 				} else {
 					dol_syslog('pdf_standard_or::write_file fichier introuvable : '.$infile, LOG_WARNING);
-					setEventMessages('Document obligatoire introuvable pour le type de service #'.$fk_st.' : '.$docname.'.pdf', null, 'warnings');
+					setEventMessages($langs->trans('WorkshopMandatoryDocMissingForServiceType', $fk_st, $docname), null, 'warnings');
 				}
 			}
 		}
@@ -1311,7 +1313,9 @@ class pdf_standard_or extends ModelePDFWorkshop
 	 */
 	protected function _addAttachedDoc(&$pdf, $productref, $docname, $producttype, $productentity)
 	{
-		global $conf;
+		global $conf, $langs;
+
+		$langs->load('workshop@workshop');
 
 		// Construire la liste des répertoires candidats (service et produit)
 		// En fonction de la configuration Dolibarr, un service peut être stocké
@@ -1339,7 +1343,7 @@ class pdf_standard_or extends ModelePDFWorkshop
 
 		if ($infile === '') {
 			dol_syslog(__METHOD__.' fichier introuvable dans les répertoires candidats pour '.$subpath, LOG_WARNING);
-			setEventMessages('Document obligatoire introuvable pour le produit '.$productref.' : '.$docname.'.pdf', null, 'warnings');
+			setEventMessages($langs->trans('WorkshopMandatoryDocMissingForProduct', $productref, $docname), null, 'warnings');
 			return 0;
 		}
 

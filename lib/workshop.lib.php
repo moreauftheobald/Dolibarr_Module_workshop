@@ -371,28 +371,31 @@ function workshopUnifiedParamPrepareHead(string $context = ''): array
 
 /**
  * Returns the predefined colour palette available for tag/label colour fields.
- * Keys are lowercase 7-character hex codes (#rrggbb); values are French labels.
+ * Keys are lowercase 7-character hex codes (#rrggbb); values are translated labels.
  *
  * @return array<string,string>
  */
 function getWorkshopColorPalette(): array
 {
+	global $langs;
+	$langs->load('workshop@workshop');
+
 	return array(
-		'#dc3545' => 'Rouge',
-		'#e8561a' => 'Rouge orangé',
-		'#fd7e14' => 'Orange',
-		'#ffc107' => 'Jaune',
-		'#8bc34a' => 'Vert clair',
-		'#28a745' => 'Vert',
-		'#20c997' => 'Turquoise',
-		'#17a2b8' => 'Cyan',
-		'#3c7dc4' => 'Bleu',
-		'#007bff' => 'Bleu vif',
-		'#6f42c1' => 'Violet',
-		'#e83e8c' => 'Rose',
-		'#6c757d' => 'Gris',
-		'#343a40' => 'Gris foncé',
-		'#212529' => 'Noir',
+		'#dc3545' => $langs->trans('WorkshopColorRed'),
+		'#e8561a' => $langs->trans('WorkshopColorRedOrange'),
+		'#fd7e14' => $langs->trans('WorkshopColorOrange'),
+		'#ffc107' => $langs->trans('WorkshopColorYellow'),
+		'#8bc34a' => $langs->trans('WorkshopColorLightGreen'),
+		'#28a745' => $langs->trans('WorkshopColorGreen'),
+		'#20c997' => $langs->trans('WorkshopColorTurquoise'),
+		'#17a2b8' => $langs->trans('WorkshopColorCyan'),
+		'#3c7dc4' => $langs->trans('WorkshopColorBlue'),
+		'#007bff' => $langs->trans('WorkshopColorBrightBlue'),
+		'#6f42c1' => $langs->trans('WorkshopColorPurple'),
+		'#e83e8c' => $langs->trans('WorkshopColorPink'),
+		'#6c757d' => $langs->trans('WorkshopColorGrey'),
+		'#343a40' => $langs->trans('WorkshopColorDarkGrey'),
+		'#212529' => $langs->trans('WorkshopColorBlack'),
 	);
 }
 

@@ -712,3 +712,28 @@ QtyDebited=Qté débitée
 QtyPlanned=Qté. plannifiée
 
 ServiceType=Type de Job
+
+#
+# i18n cleanup - étape 6
+#
+WorkshopDocOblLabel=Document obligatoire
+WorkshopDocOblHelp=Nom (sans extension) du fichier PDF qui doit être présent dans le répertoire des modèles de documents du type de service et sera automatiquement inséré dans le PDF de l'OR.
+WorkshopMandatoryDocMissingOrProtected=Document obligatoire introuvable ou protégé pour le type de service #%s : %s.pdf
+WorkshopMandatoryDocMissingForServiceType=Document obligatoire introuvable pour le type de service #%s : %s.pdf
+WorkshopMandatoryDocMissingForProduct=Document obligatoire introuvable pour le produit %s : %s.pdf
+WorkshopStockDebitOn=Débit sur %s
+WorkshopColorRed=Rouge
+WorkshopColorRedOrange=Rouge orangé
+WorkshopColorOrange=Orange
+WorkshopColorYellow=Jaune
+WorkshopColorLightGreen=Vert clair
+WorkshopColorGreen=Vert
+WorkshopColorTurquoise=Turquoise
+WorkshopColorCyan=Cyan
+WorkshopColorBlue=Bleu
+WorkshopColorBrightBlue=Bleu vif
+WorkshopColorPurple=Violet
+WorkshopColorPink=Rose
+WorkshopColorGrey=Gris
+WorkshopColorDarkGrey=Gris foncé
+WorkshopColorBlack=Noir
