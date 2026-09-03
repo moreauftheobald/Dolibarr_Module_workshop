@@ -246,7 +246,7 @@ $sql .= ' AND t.entity IN ('.getEntity('workshop', 1).')';
 $sql .= ' AND t.status = 1';
 
 if ($conf->entity != 1) {
-	$sql .= " AND o.date_next < '".$db->idate(dol_time_plus_duree(dol_now(), (int) getDolGlobalInt("THEO_NB_MONTH_CHECKING_VEHICULE_BY_ANTICIPATION"), 'm'))."'";
+	$sql .= " AND o.date_next < '".$db->idate(dol_time_plus_duree(dol_now(), (int) getDolGlobalInt("WORKSHOP_OPERATION_SEARCH_DELAY_MONTHS"), 'm'))."'";
 	$sql .= ' AND t.atelier IN ('.$conf->entity.')';
 }
 

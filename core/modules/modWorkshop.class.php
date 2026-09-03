@@ -724,8 +724,8 @@ class modWorkshop extends DolibarrModules
 		$this->import_convertvalue_array[$r] = array(
 			't.ref' => array(
 				'rule'=>'getrefifauto',
-				'class'=>(!getDolGlobalString('WORKSHOP_MYOBJECT_ADDON') ? 'mod_vehicule_standard' : getDolGlobalString('WORKSHOP_MYOBJECT_ADDON')),
-				'path'=>"/core/modules/workshop/".(!getDolGlobalString('WORKSHOP_MYOBJECT_ADDON') ? 'mod_vehicule_standard' : getDolGlobalString('WORKSHOP_MYOBJECT_ADDON')).'.php',
+				'class'=>(!getDolGlobalString('WORKSHOP_VEHICULE_ADDON') ? 'mod_vehicule_standard' : getDolGlobalString('WORKSHOP_VEHICULE_ADDON')),
+				'path'=>"/core/modules/workshop/".(!getDolGlobalString('WORKSHOP_VEHICULE_ADDON') ? 'mod_vehicule_standard' : getDolGlobalString('WORKSHOP_VEHICULE_ADDON')).'.php',
 				'classobject'=>'Vehicule',
 				'pathobject'=>'/workshop/class/vehicule.class.php',
 			),

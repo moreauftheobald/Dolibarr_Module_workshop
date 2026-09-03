@@ -183,7 +183,7 @@ abstract class dictionary extends CommonObject
 
 		$sql = 'SELECT rowid';
 		if (!empty($field)) {
-			$sql .= ', '.$this->db->escape($field);
+			$sql .= ', '.$this->db->sanitize($field);
 		}
 		$sql .= ' FROM '.$this->db->prefix().$this->table_element;
 		$sql .= ' WHERE active = 1';
