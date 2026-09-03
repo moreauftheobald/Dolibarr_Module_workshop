@@ -846,3 +846,4 @@ WorkshopJobStatusOnCreate=Status to use when creating a Job for an OR
 WorkshopJobStatusOnCreateHelp=This status will be automatically assigned to a Job when it is created.
 Rang=Rank
 Missingmarquelabel=Missing mark name
+WorkshopUploadError=Error while uploading the file

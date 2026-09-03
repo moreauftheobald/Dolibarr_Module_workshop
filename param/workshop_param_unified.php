@@ -508,6 +508,12 @@ print '  }'."\n";
 print '})();'."\n";
 print '</script>'."\n";
 
+// Variables JS injectées pour workshop_param_unified.js
+print '<script>'."\n";
+print 'window.workshopUploadErrorMsg = '.json_encode($langs->trans('WorkshopUploadError')).';'."\n";
+print '</script>'."\n";
+print '<script src="'.dol_escape_htmltag(dol_buildpath('/workshop/js/workshop_param_unified.js', 1)).'"></script>'."\n";
+
 // End of page
 llxFooter();
 $db->close();
