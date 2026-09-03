@@ -97,7 +97,7 @@ $fk_user_filter = GETPOSTINT('fk_user');
 
 // Validate date: must be YYYY-MM-DD, default to today
 if (empty($date_str) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date_str)) {
-	$date_str = date('Y-m-d');
+	$date_str = dol_print_date(dol_now(), '%Y-%m-%d');
 }
 
 $baseUrl = dol_buildpath('/workshop/workshop_planning.php', 1);
@@ -143,17 +143,17 @@ if ($action === 'plan_or' && $user->hasRight('workshop', 'workshopplanning', 'wr
 	} elseif ($new_status <= 0) {
 		setEventMessages($langs->trans('WorkshopErrorPlannedStatusNotConfigured'), null, 'errors');
 	} else {
-		$ts_start = strtotime($date_start_in);
-		$ts_end   = strtotime($date_end_in);
-		if ($ts_start === false || $ts_end === false || $ts_end < $ts_start) {
+		$ts_start = dol_stringtotime($date_start_in, 'tzuserrel');
+		$ts_end   = dol_stringtotime($date_end_in, 'tzuserrel');
+		if ($ts_start === '' || $ts_end === '' || $ts_end < $ts_start) {
 			setEventMessages($langs->trans('WorkshopErrorInvalidDates'), null, 'errors');
 		} else {
 			dol_include_once('/workshop/class/operationorder.class.php');
 			$or = new Operationorder($db);
 			if ($or->fetch($or_id) > 0) {
 				// Date-only storage: snap both to 00:00:00 of the chosen day
-				$or->date_start = mktime(0, 0, 0, (int) date('n', $ts_start), (int) date('j', $ts_start), (int) date('Y', $ts_start));
-				$or->date_end   = mktime(0, 0, 0, (int) date('n', $ts_end),   (int) date('j', $ts_end),   (int) date('Y', $ts_end));
+				$or->date_start = dol_mktime(0, 0, 0, (int) dol_print_date($ts_start, '%m'), (int) dol_print_date($ts_start, '%d'), (int) dol_print_date($ts_start, '%Y'));
+				$or->date_end   = dol_mktime(0, 0, 0, (int) dol_print_date($ts_end, '%m'),   (int) dol_print_date($ts_end, '%d'),   (int) dol_print_date($ts_end, '%Y'));
 				$db->begin();
 				$res_upd = $or->update($user);
 				if ($res_upd > 0) {
@@ -324,16 +324,16 @@ function workshopGetDayRange($business_hours)
 	// Apply ±1 hour buffer so that overtime slots before/after normal hours
 	// are visible on the calendar.
 	$base     = '2000-01-01 ';
-	$start_ts = strtotime($base . substr($starts[0], 0, 5)) - 3600;
-	$end_ts   = strtotime($base . substr($ends[0],   0, 5)) + 3600;
-	$midnight = strtotime($base . '00:00:00');
+	$start_ts = dol_stringtotime($base . substr($starts[0], 0, 5), 'tzuserrel') - 3600;
+	$end_ts   = dol_stringtotime($base . substr($ends[0],   0, 5), 'tzuserrel') + 3600;
+	$midnight = dol_stringtotime($base . '00:00:00', 'tzuserrel');
 	$eod      = $midnight + 86400; // equivalent of 24:00
 
 	$start_ts = max($start_ts, $midnight);
 	$end_ts   = min($end_ts, $eod);
 
-	$start_str = date('H:i:s', $start_ts);
-	$end_str   = ($end_ts >= $eod) ? '24:00:00' : date('H:i:s', $end_ts);
+	$start_str = dol_print_date($start_ts, '%H:%M:%S');
+	$end_str   = ($end_ts >= $eod) ? '24:00:00' : dol_print_date($end_ts, '%H:%M:%S');
 
 	return array('start' => $start_str, 'end' => $end_str);
 }
@@ -351,10 +351,10 @@ function workshopGetTimeSlots($start, $end, $interval_minutes = 30)
 {
 	$slots      = array();
 	$base       = '2000-01-01 ';
-	$current_ts = strtotime($base . substr($start, 0, 5));
-	$end_ts     = strtotime($base . substr($end, 0, 5));
+	$current_ts = dol_stringtotime($base . substr($start, 0, 5), 'tzuserrel');
+	$end_ts     = dol_stringtotime($base . substr($end, 0, 5), 'tzuserrel');
 	while ($current_ts < $end_ts) {
-		$slots[]    = date('H:i', $current_ts);
+		$slots[]    = dol_print_date($current_ts, '%H:%M');
 		$current_ts += $interval_minutes * 60;
 	}
 	return $slots;
@@ -381,39 +381,42 @@ $hidden_days = array_values(array_diff(array(0, 1, 2, 3, 4, 5, 6), array_keys($d
 // ---------------------------------------------------------------------------
 // Week / day navigation
 // ---------------------------------------------------------------------------
-$date_ts    = strtotime($date_str);
-$dow        = (int) date('N', $date_ts); // 1=Mon … 7=Sun (ISO-8601)
-$week_start = date('Y-m-d', $date_ts - ($dow - 1) * 86400);
+$date_ts    = dol_stringtotime($date_str, 'tzuserrel');
+$dow        = (int) dol_print_date($date_ts, '%w'); // 0=Sun..6=Sat, timezone-aware
+if ($dow === 0) {
+	$dow = 7; // Convert to ISO (1=Mon..7=Sun)
+}
+$week_start = dol_print_date($date_ts - ($dow - 1) * 86400, '%Y-%m-%d');
 
 // Prev / Next targets differ per mode
 if ($mode === 'dashboard') {
-	$prev_date = date('Y-m-d', $date_ts - 86400);
-	$next_date = date('Y-m-d', $date_ts + 86400);
+	$prev_date = dol_print_date($date_ts - 86400, '%Y-%m-%d');
+	$next_date = dol_print_date($date_ts + 86400, '%Y-%m-%d');
 } elseif ($mode === 'mecaniciens') {
 	if ($submode === 'week') {
-		$prev_date = date('Y-m-d', strtotime($week_start) - 7 * 86400);
-		$next_date = date('Y-m-d', strtotime($week_start) + 7 * 86400);
+		$prev_date = dol_print_date(dol_stringtotime($week_start, 'tzuserrel') - 7 * 86400, '%Y-%m-%d');
+		$next_date = dol_print_date(dol_stringtotime($week_start, 'tzuserrel') + 7 * 86400, '%Y-%m-%d');
 	} else {
-		$prev_date = date('Y-m-d', $date_ts - 86400);
-		$next_date = date('Y-m-d', $date_ts + 86400);
+		$prev_date = dol_print_date($date_ts - 86400, '%Y-%m-%d');
+		$next_date = dol_print_date($date_ts + 86400, '%Y-%m-%d');
 	}
 } elseif ($mode === 'journee') {
-	$prev_date = date('Y-m-d', $date_ts - 86400);
-	$next_date = date('Y-m-d', $date_ts + 86400);
+	$prev_date = dol_print_date($date_ts - 86400, '%Y-%m-%d');
+	$next_date = dol_print_date($date_ts + 86400, '%Y-%m-%d');
 } elseif ($mode === 'atelier') {
 	// Atelier: navigate week by week (4-week view slides by 1 week)
-	$prev_date = date('Y-m-d', strtotime($week_start) - 7 * 86400);
-	$next_date = date('Y-m-d', strtotime($week_start) + 7 * 86400);
+	$prev_date = dol_print_date(dol_stringtotime($week_start, 'tzuserrel') - 7 * 86400, '%Y-%m-%d');
+	$next_date = dol_print_date(dol_stringtotime($week_start, 'tzuserrel') + 7 * 86400, '%Y-%m-%d');
 } else {
-	$prev_date = date('Y-m-d', strtotime($week_start) - 7 * 86400);
-	$next_date = date('Y-m-d', strtotime($week_start) + 7 * 86400);
+	$prev_date = dol_print_date(dol_stringtotime($week_start, 'tzuserrel') - 7 * 86400, '%Y-%m-%d');
+	$next_date = dol_print_date(dol_stringtotime($week_start, 'tzuserrel') + 7 * 86400, '%Y-%m-%d');
 }
 
 // Period end dates for display labels
-$week_end = date('Y-m-d', strtotime($week_start) + 6 * 86400);
+$week_end = dol_print_date(dol_stringtotime($week_start, 'tzuserrel') + 6 * 86400, '%Y-%m-%d');
 // Atelier mode: request 2 weeks (S, S+1) — JSGantt adds ~1 week padding
 // on each side, giving a natural 4-week display (S-1, S, S+1, S+2)
-$period_end = date('Y-m-d', strtotime($week_start) + 13 * 86400);
+$period_end = dol_print_date(dol_stringtotime($week_start, 'tzuserrel') + 13 * 86400, '%Y-%m-%d');
 
 // Time slots only needed for the day view
 $time_slots = array();
@@ -493,15 +496,15 @@ if ($mode === 'dashboard') {
 } elseif ($mode === 'mecaniciens') {
 	print '<span class="wp-period-label">';
 	if ($submode === 'week') {
-		print $langs->trans('WorkshopPlanningWeekOf') . ' ' . dol_print_date(strtotime($week_start), 'day');
+		print $langs->trans('WorkshopPlanningWeekOf') . ' ' . dol_print_date(dol_stringtotime($week_start, 'tzuserrel'), 'day');
 	} else {
 		print $langs->trans('WorkshopPlanningDayOf') . ' ' . dol_print_date($date_ts, 'day');
 	}
 	print '</span>';
 } elseif ($mode === 'atelier') {
 	// "Semaine du xx/xx/xxxx au xx/xx/xxxx" (4-week period)
-	$period_start_label = dol_print_date(strtotime($week_start), 'day');
-	$period_end_label   = dol_print_date(strtotime($week_end), 'day');
+	$period_start_label = dol_print_date(dol_stringtotime($week_start, 'tzuserrel'), 'day');
+	$period_end_label   = dol_print_date(dol_stringtotime($week_end, 'tzuserrel'), 'day');
 	print '<span class="wp-period-label">';
 	print $langs->trans('WorkshopPlanningWeekFromTo', $period_start_label, $period_end_label);
 	print '</span>';
@@ -511,7 +514,7 @@ if ($mode === 'dashboard') {
 	print '</span>';
 } else {
 	print '<span style="font-weight:bold;margin:0 4px;">';
-	print $langs->trans('WorkshopPlanningWeekOf') . ' ' . dol_print_date(strtotime($week_start), 'day');
+	print $langs->trans('WorkshopPlanningWeekOf') . ' ' . dol_print_date(dol_stringtotime($week_start, 'tzuserrel'), 'day');
 	print '</span>';
 }
 
@@ -521,7 +524,7 @@ print img_picto($langs->trans('Next'), 'fa-chevron-right');
 print '</a>';
 
 // "Now" button (all modes)
-$today_str = date('Y-m-d');
+$today_str = dol_print_date(dol_now(), '%Y-%m-%d');
 print '<a class="butAction" style="padding:4px 12px;min-width:auto;margin-left:4px;" href="' . dol_escape_htmltag($nav_base . '&date=' . $today_str) . '">';
 print $langs->trans('WorkshopPlanningNow');
 print '</a>';
@@ -626,7 +629,7 @@ if ($mode === 'dashboard') {
 	$mecs    = workshop_get_mechanics($db, $conf->entity);
 	$nb_mec  = count($mecs);
 	$drange  = workshop_get_day_slot_range($db, $date_ts, $conf->entity);
-	$day_h   = (strtotime('2000-01-01 ' . $drange['max']) - strtotime('2000-01-01 ' . $drange['min'])) / 3600;
+	$day_h   = (dol_stringtotime('2000-01-01 ' . $drange['max'], 'tzuserrel') - dol_stringtotime('2000-01-01 ' . $drange['min'], 'tzuserrel')) / 3600;
 	$capacity = $nb_mec * $day_h * 3600;
 	$charge   = $capacity > 0 ? min(100, round($sum_planned / $capacity * 100)) : 0;
 
@@ -785,8 +788,8 @@ if ($mode === 'dashboard') {
 	// -----------------------------------------------------------------------
 	// Load OR data for the visible period (week_start ± 1 week pad on each side)
 	// -----------------------------------------------------------------------
-	$visible_start = date('Y-m-d', strtotime($week_start)  - 7 * 86400);
-	$visible_end   = date('Y-m-d', strtotime($period_end)  + 7 * 86400);
+	$visible_start = dol_print_date(dol_stringtotime($week_start, 'tzuserrel')  - 7 * 86400, '%Y-%m-%d');
+	$visible_end   = dol_print_date(dol_stringtotime($period_end, 'tzuserrel')  + 7 * 86400, '%Y-%m-%d');
 
 	$sql  = 'SELECT o.rowid, o.ref, o.date_start, o.date_end, o.status,';
 	$sql .= ' s.color AS status_color, s.label AS status_label,';
@@ -839,9 +842,9 @@ if ($mode === 'dashboard') {
 	// Native CSS Gantt grid (7-day week window) — replaces JSGantt
 	// -----------------------------------------------------------------------
 	$g_days   = 7;
-	$g_start   = strtotime($week_start . ' 00:00:00');
+	$g_start   = dol_stringtotime($week_start . ' 00:00:00', 'tzuserrel');
 	$g_end     = $g_start + $g_days * 86400; // exclusive
-	$today_ts0 = strtotime(date('Y-m-d') . ' 00:00:00');
+	$today_ts0 = dol_stringtotime(dol_print_date(dol_now(), '%Y-%m-%d') . ' 00:00:00', 'tzuserrel');
 
 	print '<div class="workshop-gantt" style="--wp-gantt-days:' . $g_days . ';margin-top:4px;">';
 
@@ -857,8 +860,10 @@ if ($mode === 'dashboard') {
 
 	$nb_bars = 0;
 	foreach ($gantt_or_rows as $or) {
-		$os = strtotime($or->date_start);
-		$oe = strtotime($or->date_end);
+		// $or->date_start/date_end are raw DB datetime strings (GMT storage convention),
+		// not passed through $db->jdate() by the query above.
+		$os = dol_stringtotime($or->date_start);
+		$oe = dol_stringtotime($or->date_end);
 		if ($oe < $g_start || $os >= $g_end) {
 			continue; // OR outside the visible week
 		}
@@ -968,7 +973,7 @@ if ($mode === 'dashboard') {
 			}
 		}
 
-		$default_dt = date('Y-m-d', dol_now());
+		$default_dt = dol_print_date(dol_now(), '%Y-%m-%d');
 		$post_url   = $baseUrl . '?mode=atelier&date=' . urlencode($date_str);
 
 		// Modal CSS + JS
@@ -1008,7 +1013,7 @@ if ($mode === 'dashboard') {
 			print '</tr></thead>' . "\n";
 			print '      <tbody>' . "\n";
 			foreach ($or_to_plan as $or) {
-				$dp_label = !empty($or->date_planned) ? dol_print_date(strtotime($or->date_planned), 'day') : '-';
+				$dp_label = !empty($or->date_planned) ? dol_print_date(dol_stringtotime($or->date_planned, 'tzuserrel'), 'day') : '-';
 				print '        <tr>';
 				print '<td>' . dol_escape_htmltag($or->ref) . '</td>';
 				print '<td>' . dol_escape_htmltag($or->immatriculation) . '</td>';

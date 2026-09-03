@@ -92,7 +92,7 @@ function wp_build_ts($date, $time)
 	if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || !preg_match('/^\d{1,2}:\d{2}$/', $time)) {
 		return false;
 	}
-	return strtotime($date.' '.$time.':00');
+	return dol_stringtotime($date.' '.$time.':00', 'tzuserrel');
 }
 
 /**
@@ -125,17 +125,17 @@ $entity = (int) $conf->entity;
 if ($action === 'get_planning_day') {
 	$date = GETPOST('date', 'alpha');
 	if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
-		$date = date('Y-m-d');
+		$date = dol_print_date(dol_now(), '%Y-%m-%d');
 	}
-	$date_ts   = strtotime($date);
-	$day_start = strtotime($date.' 00:00:00');
-	$day_end   = strtotime($date.' 23:59:59');
+	$date_ts   = dol_stringtotime($date, 'tzuserrel');
+	$day_start = dol_stringtotime($date.' 00:00:00', 'tzuserrel');
+	$day_end   = dol_stringtotime($date.' 23:59:59', 'tzuserrel');
 
 	$range   = workshop_get_day_slot_range($db, $date_ts, $entity);
 	$slotmin = $range['min'];
 	$slotmax = $range['max'];
-	$rngstart = strtotime($date.' '.$slotmin.':00');
-	$rngend   = strtotime($date.' '.$slotmax.':00');
+	$rngstart = dol_stringtotime($date.' '.$slotmin.':00', 'tzuserrel');
+	$rngend   = dol_stringtotime($date.' '.$slotmax.':00', 'tzuserrel');
 	$rngtotal = max(1, $rngend - $rngstart);
 
 	// Improductive code → label / is_absence map.
@@ -596,10 +596,13 @@ if ($action === 'get_jobs_for_or') {
 if ($action === 'get_planning_week') {
 	$date = GETPOST('date', 'alpha');
 	if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
-		$date = date('Y-m-d');
+		$date = dol_print_date(dol_now(), '%Y-%m-%d');
 	}
-	$date_ts = strtotime($date);
-	$dow     = (int) date('N', $date_ts); // 1=Mon..7=Sun
+	$date_ts = dol_stringtotime($date, 'tzuserrel');
+	$dow     = (int) dol_print_date($date_ts, '%w'); // 0=Sun..6=Sat, timezone-aware
+	if ($dow === 0) {
+		$dow = 7; // Convert to ISO (1=Mon..7=Sun)
+	}
 	$mon_ts  = $date_ts - ($dow - 1) * 86400;
 
 	// Display Monday..Saturday (6 days)
@@ -607,11 +610,11 @@ if ($action === 'get_planning_week') {
 	$day_labels = array();
 	for ($d = 0; $d < 6; $d++) {
 		$ts = $mon_ts + $d * 86400;
-		$days[]       = date('Y-m-d', $ts);
+		$days[]       = dol_print_date($ts, '%Y-%m-%d');
 		$day_labels[] = dol_print_date($ts, '%a %d');
 	}
-	$week_lo = date('Y-m-d', $mon_ts) . ' 00:00:00';
-	$week_hi = date('Y-m-d', $mon_ts + 5 * 86400) . ' 23:59:59';
+	$week_lo = dol_print_date($mon_ts, '%Y-%m-%d') . ' 00:00:00';
+	$week_hi = dol_print_date($mon_ts + 5 * 86400, '%Y-%m-%d') . ' 23:59:59';
 
 	// Improductive absence flags
 	$impro        = new WorkshopImpro($db);
@@ -656,7 +659,7 @@ if ($action === 'get_planning_week') {
 		while ($p = $db->fetch_object($resw)) {
 			$uid = (int) $p->fk_user;
 			if (!isset($idxByUid[$uid])) { continue; }
-			$dd = date('Y-m-d', $db->jdate($p->date_start));
+			$dd = dol_print_date($db->jdate($p->date_start), '%Y-%m-%d');
 			if (!isset($charge_sec[$dd])) { continue; }
 
 			// Accumulate charge (closed entries only)
@@ -685,20 +688,20 @@ if ($action === 'get_planning_week') {
 	// Charge percentage per day
 	$charges = array();
 	foreach ($days as $dd) {
-		$rng   = workshop_get_day_slot_range($db, strtotime($dd), $entity);
-		$day_h = (strtotime('2000-01-01 '.$rng['max']) - strtotime('2000-01-01 '.$rng['min'])) / 3600;
+		$rng   = workshop_get_day_slot_range($db, dol_stringtotime($dd, 'tzuserrel'), $entity);
+		$day_h = (dol_stringtotime('2000-01-01 '.$rng['max'], 'tzuserrel') - dol_stringtotime('2000-01-01 '.$rng['min'], 'tzuserrel')) / 3600;
 		$cap   = $nb_mec * $day_h * 3600;
 		$charges[$dd] = $cap > 0 ? min(100, (int) round($charge_sec[$dd] / $cap * 100)) : 0;
 	}
 
 	wp_json(array(
 		'success'    => true,
-		'week_start' => date('Y-m-d', $mon_ts),
+		'week_start' => dol_print_date($mon_ts, '%Y-%m-%d'),
 		'days'       => $days,
 		'day_labels' => $day_labels,
 		'mechanics'  => $out,
 		'charges'    => $charges,
-		'today'      => date('Y-m-d'),
+		'today'      => dol_print_date(dol_now(), '%Y-%m-%d'),
 	));
 }
 
