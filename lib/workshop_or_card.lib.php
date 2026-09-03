@@ -120,13 +120,13 @@ function orCardInlineEditTd(string $action, string $fieldName, string $saveActio
 
 	$out = '';
 	if ($action === 'edit'.$fieldName && $canEdit) {
-		$out .= '<form method="POST" action="'.$_SERVER['PHP_SELF'].'">';
+		$out .= '<form method="POST" action="'.dol_escape_htmltag($_SERVER['PHP_SELF']).'">';
 		$out .= '<input type="hidden" name="token" value="'.newToken().'">';
 		$out .= '<input type="hidden" name="action" value="'.$saveAction.'">';
 		$out .= '<input type="hidden" name="id" value="'.$objectId.'">';
 		$out .= $editWidgetHtml;
 		$out .= ' <input type="submit" class="button buttongen smallpaddingimp" value="'.dol_escape_htmltag($langs->trans('Save')).'">';
-		$out .= ' <a href="'.$_SERVER['PHP_SELF'].'?id='.$objectId.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
+		$out .= ' <a href="'.dol_escape_htmltag($_SERVER['PHP_SELF']).'?id='.$objectId.'">'.img_picto($langs->trans('Cancel'), 'undo').'</a>';
 		$out .= '</form>';
 	} else {
 		$out .= $displayHtml;

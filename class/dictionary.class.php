@@ -277,6 +277,6 @@ abstract class dictionary extends CommonObject
 	 */
 	public function getNomUrl($withpicto = 0)
 	{
-		return $this->label;
+		return dol_escape_htmltag($this->label);
 	}
 }
