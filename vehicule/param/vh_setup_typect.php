@@ -149,7 +149,7 @@ if (empty($reshook)) {
 				}
 				if (empty($error)) {
 					if ($action == 'confirmnew') {
-						$object->entity = $conf->entity;
+						$object->entity = 0;
 						$object->code = $code;
 						$object->fk_vehicule_mark = $fk_vehicule_mark;
 						$object->label = $label;

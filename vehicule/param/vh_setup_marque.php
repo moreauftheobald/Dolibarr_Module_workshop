@@ -128,7 +128,7 @@ if (empty($reshook)) {
 				}
 				if (empty($error)) {
 					if ($action == 'confirmnew') {
-						$object->entity = $conf->entity;
+						$object->entity = 0;
 						$object->code = $code;
 						$object->label = $label;
 						$object->active = $active;
