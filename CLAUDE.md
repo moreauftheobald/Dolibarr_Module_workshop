@@ -1,4 +1,4 @@
-# CLAUDE.md — Module Workshop (Dolibarr 21)
+# CLAUDE.md — Module Workshop (Dolibarr 23.0)
 
 > Ce fichier est le guide de référence pour tout développement sur ce module.
 > Il doit être lu intégralement avant toute modification ou création de code.
@@ -7,7 +7,7 @@
 
 ## 1. Contexte du projet
 
-Le module **Workshop** est un module de gestion d'atelier mécanique poids lourds complet pour Dolibarr 21.
+Le module **Workshop** est un module de gestion d'atelier mécanique poids lourds complet pour Dolibarr 23.0
 Il est le résultat de la **fusion et refonte** de deux anciens modules :
 - `dolifleet` (gestion de véhicules et contrats de maintenance)
 - `operationorder` (ordres de réparation)
@@ -88,7 +88,7 @@ Tag / OperationorderTag           → tables: llx_workshop_tag / llx_workshop_op
 
 ### 5.1 Compatibilité obligatoire
 - **PHP 8.0+** minimum (typage strict bienvenu, éviter les constructions dépréciées en PHP 8)
-- **Dolibarr 21** cible — utiliser les APIs et helpers de la v21
+- **Dolibarr 23** cible — utiliser les APIs et helpers de la v23
 - Tester la compatibilité multi-entité (`$this->ismultientitymanaged = 1`)
 
 ### 5.2 Pattern des classes métier
@@ -192,9 +192,9 @@ Déclarer les hooks disponibles dans `modWorkshop.class.php`.
 
 ## 7. Sources de référence — LECTURE SEULE
 
-### 7.1 Repo officiel Dolibarr — branche `21.0`
+### 7.1 Repo officiel Dolibarr — branche `23.0`
 
-**URL de référence :** `https://github.com/Dolibarr/dolibarr/tree/21.0`
+**URL de référence :** `https://github.com/Dolibarr/dolibarr/tree/23.0`
 
 Ce repo est la **source de vérité** pour toutes les conventions Dolibarr.  
 Avant d'implémenter une nouvelle fonctionnalité, consulter les chemins suivants sur cette branche :
@@ -258,12 +258,12 @@ Ne jamais réimplémenter ce qui existe déjà dans ces libs. Les inclure avec `
 
 **Usage :** pour fetch un fichier précis, construire l'URL raw :
 ```
-https://raw.githubusercontent.com/Dolibarr/dolibarr/21.0/htdocs/[chemin]
+https://raw.githubusercontent.com/Dolibarr/dolibarr/23.0/htdocs/[chemin]
 ```
 
 Exemple :
 ```
-https://raw.githubusercontent.com/Dolibarr/dolibarr/21.0/htdocs/modulebuilder/template/class/myobject.class.php
+https://raw.githubusercontent.com/Dolibarr/dolibarr/23.0/htdocs/modulebuilder/template/class/myobject.class.php
 ```
 
 ### 7.2 `.claude/legacy/dolifleet/` — Ancien module dolifleet (branche V5)
@@ -323,7 +323,7 @@ Le script doit être idempotent (pouvoir être relancé sans dupliquer les donn�
 - Respecter le format `$this->error` / `$this->errors[]` pour la gestion des erreurs
 - Chaque nouvelle classe doit déclarer ses `$fields` complets (pattern ModuleBuilder)
 - Poids PHP min requis dans `modWorkshop.class.php` : `$this->phpmin = array(8, 0)`
-- Version Dolibarr min requise : `$this->need_dolibarr_version = array(21, 0)`
+- Version Dolibarr min requise : `$this->need_dolibarr_version = array(23, 0)`
 
 ## 11. Workflow de développement (directives Claude Code)
 
