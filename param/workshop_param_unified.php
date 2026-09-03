@@ -265,7 +265,7 @@ if (empty($reshook)) {
 // Count total records for pagination
 $sqlCount  = 'SELECT COUNT(*) as nb FROM '.$db->prefix().$object->table_element;
 $sqlCount .= $object->ismultientitymanaged
-	? ' WHERE entity IN ('.getEntity('workshop').')'
+	? ' WHERE entity IN (0, '.getEntity('workshop').')'
 	: ' WHERE 1=1';
 $resCount = $db->query($sqlCount);
 $nbtotalofrecords = 0;

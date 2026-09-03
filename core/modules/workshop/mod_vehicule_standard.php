@@ -36,7 +36,7 @@ class mod_vehicule_standard extends ModeleNumRefVehicule
 	 */
 	public $version = 'dolibarr'; // 'development', 'experimental', 'dolibarr'
 
-	public $prefix = 'MYOBJECT';
+	public $prefix = 'VH';
 
 	/**
 	 * @var string Error code (or message)

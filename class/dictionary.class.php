@@ -188,7 +188,7 @@ abstract class dictionary extends CommonObject
 		$sql .= ' FROM '.$this->db->prefix().$this->table_element;
 		$sql .= ' WHERE active = 1';
 		if ($this->ismultientitymanaged) {
-			$sql .= ' AND entity IN ('.getEntity('workshop').')';
+			$sql .= ' AND entity IN (0, '.getEntity('workshop').')';
 		}
 
 		$resql = $this->db->query($sql);
@@ -235,7 +235,7 @@ abstract class dictionary extends CommonObject
 	{
 		$sql = 'SELECT rowid FROM '.$this->db->prefix().$this->table_element;
 		if ($this->ismultientitymanaged) {
-			$sql .= ' WHERE entity IN ('.getEntity($this->module).')';
+			$sql .= ' WHERE entity IN (0, '.getEntity($this->module).')';
 		} else {
 			$sql .= ' WHERE 1=1';
 		}
