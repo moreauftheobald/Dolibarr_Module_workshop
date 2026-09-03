@@ -367,7 +367,7 @@ if (empty($reshook)) {
 		$error = 0;
 
 		$fk_service_type     = GETPOSTINT('job_fk_service_type');
-		$_voRaw              = isset($_GET['job_vehicule_operations']) ? $_GET['job_vehicule_operations'] : (isset($_POST['job_vehicule_operations']) ? $_POST['job_vehicule_operations'] : '');
+		$_voRaw              = GETPOST('job_vehicule_operations', 'array');
 		$voIds               = is_array($_voRaw) ? array_values(array_filter(array_map('intval', $_voRaw))) : array_values(array_filter(array_map('intval', explode(',', (string) $_voRaw))));
 		$description         = GETPOST('job_description', 'restricthtml');
 		$qty_mo                = (float) price2num(str_replace(',', '.', GETPOST('job_qty_mo', 'alpha')), 'MU');
@@ -603,7 +603,7 @@ if (empty($reshook)) {
 		$error           = 0;
 		$editJobId       = GETPOSTINT('jobid');
 		$fk_service_type = GETPOSTINT('job_fk_service_type');
-		$_voRaw          = isset($_GET['job_vehicule_operations']) ? $_GET['job_vehicule_operations'] : (isset($_POST['job_vehicule_operations']) ? $_POST['job_vehicule_operations'] : '');
+		$_voRaw          = GETPOST('job_vehicule_operations', 'array');
 		$voIds           = is_array($_voRaw) ? array_values(array_filter(array_map('intval', $_voRaw))) : array_values(array_filter(array_map('intval', explode(',', (string) $_voRaw))));
 		$description     = GETPOST('job_description', 'restricthtml');
 		$qty_mo          = (float) price2num(str_replace(',', '.', GETPOST('job_qty_mo', 'alpha')), 'MU');
@@ -889,15 +889,13 @@ if ($id > 0) {
 	dol_banner_tab($object, 'ref', $linkback, 1, 'ref', 'ref', $morehtmlref, '', $object->getLibStatut(4));
 
 	// ── Chargement du véhicule pour la colonne droite ─────────────────────
-	// ismultientitymanaged désactivé temporairement : le véhicule peut être
-	// dans une entité partagée différente de l'OR (cross-entity sharing).
+	// fetch($id) ne filtre jamais par entité (comportement CommonObject) : on
+	// vérifie explicitement que le véhicule appartient bien à l'entité courante.
 	$vehiculeObj = null;
 	if ($object->fk_vehicule > 0) {
 		$vehiculeObj = new Vehicule($db);
-		$vehiculeObj->ismultientitymanaged = 0;
 		$ret = $vehiculeObj->fetch($object->fk_vehicule);
-		$vehiculeObj->ismultientitymanaged = 1;
-		if ($ret <= 0) {
+		if ($ret <= 0 || (int) $vehiculeObj->entity !== (int) $conf->entity) {
 			$vehiculeObj = null;
 		}
 	}
@@ -1087,10 +1085,8 @@ if ($id > 0) {
 		if (is_array($vehiculeObj->linkedVehicules) && !empty($vehiculeObj->linkedVehicules)) {
 			$lv = reset($vehiculeObj->linkedVehicules);
 			$linkedVeh = new Vehicule($db);
-			$linkedVeh->ismultientitymanaged = 0;
 			$retLinked = $linkedVeh->fetch($lv->fk_other_vehicule);
-			$linkedVeh->ismultientitymanaged = 1;
-			if ($retLinked > 0) {
+			if ($retLinked > 0 && (int) $linkedVeh->entity === (int) $conf->entity) {
 				print $linkedVeh->getNomUrl(1);
 			}
 		} else {
@@ -1348,7 +1344,7 @@ if ($id > 0) {
 		// ── Sélecteur multiple (optionnel) : opérations de maintenance du véhicule ──
 		$htmlVOSelect = '';
 		if ($object->fk_vehicule > 0) {
-			$_voRaw        = isset($_GET['job_vehicule_operations']) ? $_GET['job_vehicule_operations'] : (isset($_POST['job_vehicule_operations']) ? $_POST['job_vehicule_operations'] : '');
+			$_voRaw        = GETPOST('job_vehicule_operations', 'array');
 			$selectedVoIds = is_array($_voRaw) ? array_values(array_filter(array_map('intval', $_voRaw))) : array_values(array_filter(array_map('intval', explode(',', (string) $_voRaw))));
 			$sqlVO  = 'SELECT vo.rowid, cmo.code, cmo.label AS op_label, vo.date_next';
 			$sqlVO .= ' FROM '.MAIN_DB_PREFIX.'workshop_vehicule_operation vo';
@@ -1465,7 +1461,7 @@ if ($id > 0) {
 			$htmlEditVOSelect = '';
 			if ($object->fk_vehicule > 0) {
 				if ($action === 'confirm_edit_job') {
-					$_voRaw   = isset($_GET['job_vehicule_operations']) ? $_GET['job_vehicule_operations'] : (isset($_POST['job_vehicule_operations']) ? $_POST['job_vehicule_operations'] : '');
+					$_voRaw   = GETPOST('job_vehicule_operations', 'array');
 					$curVoIds = is_array($_voRaw) ? array_values(array_filter(array_map('intval', $_voRaw))) : array_values(array_filter(array_map('intval', explode(',', (string) $_voRaw))));
 				} else {
 					$curVoIds = $editJob->fetchLinkedMaintenanceOperationIds();

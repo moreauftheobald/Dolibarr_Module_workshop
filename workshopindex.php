@@ -73,19 +73,13 @@ if (isset($user->socid) && $user->socid > 0) {
 	$socid = $user->socid;
 }
 
-// Security check (enable the most restrictive one)
-//if ($user->socid > 0) accessforbidden();
-//if ($user->socid > 0) $socid = $user->socid;
-//if (!isModEnabled('workshop')) {
-//	accessforbidden('Module not enabled');
-//}
-//if (! $user->hasRight('workshop', 'myobject', 'read')) {
-//	accessforbidden();
-//}
-//restrictedArea($user, 'workshop', 0, 'workshop_myobject', 'myobject', '', 'rowid');
-//if (empty($user->admin)) {
-//	accessforbidden('Must be admin');
-//}
+// Security check
+if (!isModEnabled('workshop')) {
+	accessforbidden('Module not enabled');
+}
+if (!$user->hasRight('workshop', 'operationorders', 'read') && !$user->hasRight('workshop', 'vehicule', 'read')) {
+	accessforbidden();
+}
 
 
 /*
