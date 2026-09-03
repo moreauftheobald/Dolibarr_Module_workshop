@@ -92,7 +92,10 @@ function workshop_get_day_slot_range($db, $date_ts, $entity = null)
 
 	// ISO weekday (1=Mon … 7=Sun) → French day key used in llx_workshop_planning.
 	$daykeys = array(1 => 'lundi', 2 => 'mardi', 3 => 'mercredi', 4 => 'jeudi', 5 => 'vendredi', 6 => 'samedi', 7 => 'dimanche');
-	$dow     = (int) date('N', $date_ts);
+	$dow     = (int) dol_print_date($date_ts, '%w'); // 0=Sun..6=Sat, timezone-aware
+	if ($dow === 0) {
+		$dow = 7; // Convert to ISO (1=Mon..7=Sun)
+	}
 	$daykey  = isset($daykeys[$dow]) ? $daykeys[$dow] : 'lundi';
 
 	$colstart = $daykey.'_heuredam';
@@ -118,7 +121,7 @@ function workshop_get_day_slot_range($db, $date_ts, $entity = null)
 	}
 
 	// Safety: ensure max > min, otherwise fall back to defaults.
-	if (strtotime('2000-01-01 '.$max) <= strtotime('2000-01-01 '.$min)) {
+	if (dol_stringtotime('2000-01-01 '.$max, 'tzuserrel') <= dol_stringtotime('2000-01-01 '.$min, 'tzuserrel')) {
 		$min = '07:00';
 		$max = '18:00';
 	}

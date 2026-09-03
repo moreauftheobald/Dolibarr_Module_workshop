@@ -115,5 +115,6 @@ Un collègue peut pousser en parallèle sur la même branche (`V1_CLAUDE`) du m�
 | 2026-09-03 | ⚪ FAIBLE | PHPDoc, accolades, typage, TODO, casse des droits (+ bug i18n réel : 12/20 libellés sans traduction anglaise), échappement | `c654e27` |
 | 2026-09-03 | Étape 7 | Constantes résiduelles, escape/sanitize, setEventMessages hors métier, JS inline | `70a1baf`, `1d85094` |
 | 2026-09-03 | Catégorie 9 (fonctions natives), partiel | `number_format()`→`price()`, `basename()`→`dol_basename()`/`dol_sanitizeFileName()`. Reste à faire : `date()`/`strtotime()`/`mktime()` dans `workshop_planning.php`/`ajax/planning_ajax.php`/`lib/workshop_planning.lib.php` — différé, Florian travaille sur ces fichiers | `fb406e9` |
+| 2026-09-03 | Catégorie 9, complété | `date()`/`strtotime()`/`mktime()` → `dol_print_date()`/`dol_stringtotime()`/`dol_mktime()` dans les 3 fichiers planning, une fois Florian passé à autre chose. Code WIP de Florian dans `ajax/planning_ajax.php` (dont un `print $sqlu; exit;` de debug) laissé intact. Catégorie 9 close. | `b11a1f4` |
 
 *Ajouter une ligne à chaque nouvelle exécution (date, portée, résumé, commits).*
