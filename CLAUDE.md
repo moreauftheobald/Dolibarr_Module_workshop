@@ -1,5 +1,9 @@
 # CLAUDE.md — Module Workshop (Dolibarr 23.0)
 
+@.agents/AGENTS.md
+
+> Les standards de codage Dolibarr sont dans `.agents/AGENTS.md` (importé ci-dessus) et les skills dans `.agents/skills/` (lien `.claude/skills`). En cas de contradiction, les règles propres au module décrites ci-dessous priment.
+
 > Ce fichier est le guide de référence pour tout développement sur ce module.
 > Il doit être lu intégralement avant toute modification ou création de code.
 
